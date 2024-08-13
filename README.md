@@ -1,1 +1,1 @@
-RAMLx-standard implementation for Go
+RAML 1.0 parser for Go
