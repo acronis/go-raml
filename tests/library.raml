@@ -1,0 +1,125 @@
+#%RAML 1.0 Library
+
+usage: |
+  Test library
+
+(Annotation): Test Example
+(ObjectAnnotation):
+  field1: abc
+  field2: test
+(ArrayAnnotation):
+  - abc
+  - 123
+
+uses:
+  common: ./common.raml
+  lib: ./other_lib.raml
+  sublibrary: ./nested_libs/sublibrary.raml
+
+annotationTypes:
+  Annotation: StringShape
+  ObjectAnnotation: object
+  ArrayAnnotation: array
+
+resourceTypes:
+  # TODO
+
+types:
+  Obj1: object
+  Obj2: object
+  MultiObjInline: [Obj1, Obj2]
+
+  MultiObj: 
+    type: [Obj1, Obj2]
+
+  MyFileType:
+    type: file
+
+  IntegerType:
+    type: string
+
+  DerivedIntegerType:
+    type: IntegerType
+
+  DerivedIntegerTypeInline: IntegerType
+
+  IncludedTypeInline: !include ./dtype.raml
+
+  IncludedType:
+    type: !include ./dtype.raml
+
+  JSONTypeInline: !include ./dtype.json
+
+  JSONTypeInlineString: "{}"
+
+  JSONType:
+    type: "{}"
+
+  StringShape:
+    displayName: String type
+    type: string
+
+    facets:
+      custom: string
+    
+    minLength: 0
+    maxLength: 15
+    pattern: ^Test Example$
+    enum:
+    - Test Example
+
+    examples:
+      Inline example: Test Example
+      Included example: !include example.yaml
+
+  InheritedStringType:
+    displayName: Inherited string type
+    type: StringShape
+    custom: ...
+
+  ImplicitStringType:
+    displayName: Implicit string type
+  
+  ImplicitObjectType:
+    displayName: Inline string type
+    additionalProperties: false
+  
+  ObjectNoPropertiesType:
+    displayName: Object type (no properties)
+    type: object
+  
+  ObjectWithPropertiesType:
+    displayName: Object type (with properties)
+    type: object
+    properties:
+      required?:
+        required: true
+        type: object
+        additionalProperties: false
+      optional:
+        required: false
+        type: object
+        additionalProperties: false
+
+  ArrayTypeNoItems:
+    displayName: Array type no items type
+    type: array
+  
+  ArrayShape:
+    displayName: Array type
+    type: array
+    items:
+      type: string
+
+  UnionTypeInline: string | number
+
+  UnionType:
+    type: string | number
+
+  InlineType: string
+
+  NullableTypeNotation:
+    type: string?
+  
+  UnionNullableType:
+    type: string | nil
