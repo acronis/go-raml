@@ -1,8 +1,8 @@
 package raml
 
 var SetOfScalarTypes = map[string]struct{}{
-	String: {}, Integer: {}, Number: {}, Boolean: {}, Datetime: {}, DatetimeOnly: {},
-	DateOnly: {}, TimeOnly: {}, File: {},
+	TypeString: {}, TypeInteger: {}, TypeNumber: {}, TypeBoolean: {}, TypeDatetime: {}, TypeDatetimeOnly: {},
+	TypeDateOnly: {}, TypeTimeOnly: {}, TypeFile: {},
 }
 
 var SetOfStringFacets = map[string]struct{}{
@@ -32,24 +32,24 @@ var SetOfArrayFacets = map[string]struct{}{
 
 // Standard types according to specification
 const (
-	Any          = "any"
-	String       = "string"
-	Integer      = "integer"
-	Number       = "number"
-	Boolean      = "boolean"
-	Datetime     = "datetime"
-	DatetimeOnly = "datetime-only"
-	DateOnly     = "date-only"
-	TimeOnly     = "time-only"
-	Array        = "array"
-	Object       = "object"
-	File         = "file"
-	Nil          = "nil"
+	TypeAny          = "any"
+	TypeString       = "string"
+	TypeInteger      = "integer"
+	TypeNumber       = "number"
+	TypeBoolean      = "boolean"
+	TypeDatetime     = "datetime"
+	TypeDatetimeOnly = "datetime-only"
+	TypeDateOnly     = "date-only"
+	TypeTimeOnly     = "time-only"
+	TypeArray        = "array"
+	TypeObject       = "object"
+	TypeFile         = "file"
+	TypeNil          = "nil"
 )
 
 // Special non-standard types
 const (
-	Union     = "union"     // Can be used in RAML
-	JSON      = "json"      // Cannot be used in RAML
-	Composite = "composite" // Cannot be used in RAML
+	TypeUnion     = "union"     // Can be used in RAML
+	TypeJSON      = "json"      // Cannot be used in RAML
+	TypeComposite = "composite" // Cannot be used in RAML
 )

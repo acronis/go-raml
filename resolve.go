@@ -67,7 +67,7 @@ func Resolve(shape *Shape) error {
 	}
 
 	shapeType := target.Base().Type
-	if shapeType == Composite {
+	if shapeType == TypeComposite {
 		// Special case for multiple inheritance
 		s, err := ResolveMultipleInheritance(target)
 		if err != nil {

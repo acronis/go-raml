@@ -73,24 +73,24 @@ type Shape interface {
 }
 
 func identifyShapeType(shapeFacets []*yaml.Node) string {
-	var t = String
+	var t = TypeString
 	for i := 0; i != len(shapeFacets); i += 2 {
 		node := shapeFacets[i]
 		if _, ok := SetOfStringFacets[node.Value]; ok {
-			t = String
+			t = TypeString
 		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
-			t = Integer
+			t = TypeInteger
 		} else if _, ok := SetOfFileFacets[node.Value]; ok {
-			t = File
+			t = TypeFile
 			break // File has a unique facet
 		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
-			t = Number
+			t = TypeNumber
 			break // Number has a unique facet
 		} else if _, ok := SetOfObjectFacets[node.Value]; ok {
-			t = Object
+			t = TypeObject
 			break
 		} else if _, ok := SetOfArrayFacets[node.Value]; ok {
-			t = Array
+			t = TypeArray
 			break
 		}
 	}
@@ -106,35 +106,35 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 	default:
 		// NOTE: UnknownShape is a special type of shape that will be resolved later.
 		shape = &UnknownShape{BaseShape: *base}
-	case Any:
+	case TypeAny:
 		shape = &AnyShape{BaseShape: *base}
-	case Nil:
+	case TypeNil:
 		shape = &NilShape{BaseShape: *base}
-	case Object:
+	case TypeObject:
 		shape = &ObjectShape{BaseShape: *base}
-	case Array:
+	case TypeArray:
 		shape = &ArrayShape{BaseShape: *base}
-	case String:
+	case TypeString:
 		shape = &StringShape{BaseShape: *base}
-	case Integer:
+	case TypeInteger:
 		shape = &IntegerShape{BaseShape: *base}
-	case Number:
+	case TypeNumber:
 		shape = &NumberShape{BaseShape: *base}
-	case Datetime:
+	case TypeDatetime:
 		shape = &DateTimeShape{BaseShape: *base}
-	case DatetimeOnly:
+	case TypeDatetimeOnly:
 		shape = &DateTimeOnlyShape{BaseShape: *base}
-	case DateOnly:
+	case TypeDateOnly:
 		shape = &DateOnlyShape{BaseShape: *base}
-	case TimeOnly:
+	case TypeTimeOnly:
 		shape = &TimeOnlyShape{BaseShape: *base}
-	case File:
+	case TypeFile:
 		shape = &FileShape{BaseShape: *base}
-	case Boolean:
+	case TypeBoolean:
 		shape = &BooleanShape{BaseShape: *base}
-	case Union:
+	case TypeUnion:
 		shape = &UnionShape{BaseShape: *base}
-	case JSON:
+	case TypeJSON:
 		shape = &JSONShape{BaseShape: *base}
 	}
 
@@ -166,7 +166,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				if shapeType == "" {
 					shapeType = identifyShapeType(shapeFacets)
 				} else if shapeType[0] == '{' {
-					shapeType = JSON
+					shapeType = TypeJSON
 				}
 			} else if shapeTypeNode.Tag == "!include" {
 				baseDir := filepath.Dir(location)
@@ -191,7 +191,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				inherits[i] = s
 			}
 			base.Inherits = inherits
-			shapeType = Composite
+			shapeType = TypeComposite
 		}
 	}
 

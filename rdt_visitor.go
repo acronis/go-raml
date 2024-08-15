@@ -89,7 +89,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext) (*Shape, erro
 	}
 	nilShape, _ := MakeConcreteShape(visitor.Target.Base(), "nil", make([]*yaml.Node, 0))
 	base := *visitor.Target.Base()
-	base.Type = Union
+	base.Type = TypeUnion
 	var unionShape Shape = &UnionShape{
 		BaseShape: base,
 		UnionFacets: UnionFacets{
@@ -105,7 +105,7 @@ func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext) (*Shape, error) {
 		return nil, err
 	}
 	base := *visitor.Target.Base()
-	base.Type = Array
+	base.Type = TypeArray
 	var arrayShape Shape = &ArrayShape{
 		BaseShape: base,
 		ArrayFacets: ArrayFacets{
@@ -121,7 +121,7 @@ func (visitor *RdtVisitor) VisitUnion(ctx *rdt.UnionContext) (*Shape, error) {
 		return nil, err
 	}
 	base := *visitor.Target.Base()
-	base.Type = Union
+	base.Type = TypeUnion
 	var unionShape Shape = &UnionShape{
 		BaseShape: base,
 		UnionFacets: UnionFacets{
