@@ -22,13 +22,13 @@ func ResolveMultipleInheritance(target Shape) (*Shape, error) {
 	inherits := target.Base().Inherits
 	for _, inherit := range inherits {
 		if err := Resolve(inherit); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("resolve inherit: %w", err)
 		}
 	}
 	// Multiple inheritance validation to be performed in a separate validation stage
 	s, err := MakeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	return &s, nil
 }
@@ -36,11 +36,11 @@ func ResolveMultipleInheritance(target Shape) (*Shape, error) {
 func ResolveLink(target Shape) (*Shape, error) {
 	link := target.Base().Link
 	if err := Resolve(link.Shape); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolve link shape: %w", err)
 	}
 	s, err := MakeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	return &s, nil
 }

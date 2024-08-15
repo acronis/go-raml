@@ -1,7 +1,6 @@
 package raml
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -161,7 +160,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 
 	shapeTypeNode, shapeFacets, err := base.Decode(v)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
 	var shapeType string
@@ -193,11 +192,11 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 			var inherits = make([]*Shape, len(shapeTypeNode.Content))
 			for i, node := range shapeTypeNode.Content {
 				if node.Kind != yaml.ScalarNode {
-					return nil, errors.New("must be string")
+					return nil, fmt.Errorf("node kind must be string")
 				}
 				s, err := MakeShape(node, name, location)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("make shape: %w", err)
 				}
 				inherits[i] = s
 			}
@@ -208,7 +207,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 
 	s, err := MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	ptr := &s
 	if _, ok := s.(*UnknownShape); ok {
@@ -224,7 +223,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	}
 
 	if value.Kind != yaml.MappingNode {
-		return nil, nil, errors.New("must be map")
+		return nil, nil, fmt.Errorf("value kind must be map")
 	}
 
 	var shapeTypeNode *yaml.Node
@@ -236,22 +235,22 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 		if IsCustomDomainExtensionNode(node.Value) {
 			name, de, err := UnmarshalCustomDomainExtension(s.Location, node, valueNode)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("unmarshal custom domain extension: %w", err)
 			}
 			s.CustomDomainProperties[name] = de
 		} else if node.Value == "type" {
 			shapeTypeNode = valueNode
 		} else if node.Value == "displayName" {
 			if err := valueNode.Decode(&s.DisplayName); err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decode display name: %w", err)
 			}
 		} else if node.Value == "description" {
 			if err := valueNode.Decode(&s.Description); err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decode description: %w", err)
 			}
 		} else if node.Value == "required" {
 			if err := valueNode.Decode(&s.Required); err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decode required: %w", err)
 			}
 		} else if node.Value == "facets" {
 			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions)
@@ -261,7 +260,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				data := valueNode.Content[j+1]
 				shape, err := MakeShape(data, name, s.Location)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, fmt.Errorf("make shape: %w", err)
 				}
 				s.CustomShapeFacetDefinitions[name] = shape
 			}
@@ -270,7 +269,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				Location: s.Location,
 			}
 			if err := example.UnmarshalYAML(valueNode); err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("unmarshal example: %w", err)
 			}
 			s.Examples = append(s.Examples, example)
 		} else if node.Value == "examples" {
@@ -283,13 +282,13 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 					Location: s.Location,
 				}
 				if err := example.UnmarshalYAML(data); err != nil {
-					return nil, nil, err
+					return nil, nil, fmt.Errorf("unmarshal examples: [%d]: %w", j, err)
 				}
 				s.Examples = append(s.Examples, example)
 			}
 		} else if node.Value == "default" {
 			if err := valueNode.Decode(&s.Default); err != nil {
-				return nil, nil, err
+				return nil, nil, fmt.Errorf("decode default: %w", err)
 			}
 		} else if node.Value == "allowedTargets" {
 			// TODO: Included by annotationTypes

@@ -30,7 +30,7 @@ func NewFragmentDecoder(f *os.File, kind FragmentKind) (*yaml.Decoder, error) {
 	r := bufio.NewReader(f)
 	head, err := r.ReadString('\n')
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read fragment head: %w", err)
 	}
 	frag := IdentifyFragment(strings.TrimRight(head, "\r\n"))
 	if frag != kind {
@@ -47,7 +47,7 @@ func ParseDataType(path string) (*DataType, error) {
 	if !filepath.IsAbs(path) {
 		workdir, err := os.Getwd()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get workdir: %w", err)
 		}
 		path = filepath.Join(workdir, path)
 	}
@@ -60,7 +60,7 @@ func ParseDataType(path string) (*DataType, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		log.Fatalf("open file error: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("open file: %w", err)
 	}
 	defer func(f *os.File) {
 		err = f.Close()
@@ -73,11 +73,11 @@ func ParseDataType(path string) (*DataType, error) {
 	if strings.HasSuffix(path, ".json") {
 		data, err := io.ReadAll(f)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read file: %w", err)
 		}
 		dt := MakeDataType(path)
 		if err := dt.UnmarshalJSON(data); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal json: %w", err)
 		}
 		GetRegistry().PutFragment(path, dt)
 		return dt, nil
@@ -85,12 +85,12 @@ func ParseDataType(path string) (*DataType, error) {
 
 	decoder, err := NewFragmentDecoder(f, FragmentDataType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new fragment decoder: %w", err)
 	}
 
 	dt := MakeDataType(path)
 	if err := decoder.Decode(&dt); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode fragment: %w", err)
 	}
 	GetRegistry().PutFragment(path, dt)
 
@@ -104,7 +104,7 @@ func ParseLibrary(path string) (*Library, error) {
 	if !filepath.IsAbs(path) {
 		workdir, err := os.Getwd()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get workdir: %w", err)
 		}
 		path = filepath.Join(workdir, path)
 	}
@@ -117,7 +117,7 @@ func ParseLibrary(path string) (*Library, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		log.Fatalf("open file error: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("open file: %w", err)
 	}
 	defer func(f *os.File) {
 		err = f.Close()
@@ -128,12 +128,12 @@ func ParseLibrary(path string) (*Library, error) {
 
 	decoder, err := NewFragmentDecoder(f, FragmentLibrary)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new fragment decoder: %w", err)
 	}
 
 	lib := MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode fragment: %w", err)
 	}
 	GetRegistry().PutFragment(path, lib)
 

@@ -69,7 +69,7 @@ func DetectFileMimeType(path string) string {
 func ReadExample(path string) (*Example, error) {
 	bytes, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 	return &Example{
 		Value:    string(bytes),
