@@ -1,6 +1,8 @@
-package goraml
+package raml
 
 import (
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,30 +52,30 @@ func (s *IntegerShape) Clone() Shape {
 // 	return nil
 // }
 
-func (s *IntegerShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *IntegerShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "minimum" {
 			if err := valueNode.Decode(&s.Minimum); err != nil {
-				return err
+				return fmt.Errorf("decode minimum: %w", err)
 			}
 		} else if node.Value == "maximum" {
 			if err := valueNode.Decode(&s.Maximum); err != nil {
-				return err
+				return fmt.Errorf("decode maximum: %w", err)
 			}
 		} else if node.Value == "format" {
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return err
+				return fmt.Errorf("decode format: %w", err)
 			}
 		} else if node.Value == "enum" {
 			if err := valueNode.Decode(&s.Enum); err != nil {
-				return err
+				return fmt.Errorf("decode enum: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -103,34 +105,34 @@ func (s *NumberShape) Clone() Shape {
 	return &c
 }
 
-func (s *NumberShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *NumberShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "minimum" {
 			if err := valueNode.Decode(&s.Minimum); err != nil {
-				return err
+				return fmt.Errorf("decode minimum: %w", err)
 			}
 		} else if node.Value == "maximum" {
 			if err := valueNode.Decode(&s.Maximum); err != nil {
-				return err
+				return fmt.Errorf("decode maximum: %w", err)
 			}
 		} else if node.Value == "format" {
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return err
+				return fmt.Errorf("decode format: %w", err)
 			}
 		} else if node.Value == "enum" {
 			if err := valueNode.Decode(&s.Enum); err != nil {
-				return err
+				return fmt.Errorf("decode enum: %w", err)
 			}
 		} else if node.Value == "multipleOf" {
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
-				return err
+				return fmt.Errorf("decode multipleOf: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -164,31 +166,31 @@ func (s *StringShape) Clone() Shape {
 	return &c
 }
 
-func (s *StringShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 
 		if node.Value == "minLength" {
 			if err := valueNode.Decode(&s.MinLength); err != nil {
-				return err
+				return fmt.Errorf("decode minLength: %w", err)
 			}
 		} else if node.Value == "maxLength" {
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
-				return err
+				return fmt.Errorf("decode maxLength: %w", err)
 			}
 		} else if node.Value == "pattern" {
 			if err := valueNode.Decode(&s.Pattern); err != nil {
-				return err
+				return fmt.Errorf("decode pattern: %w", err)
 			}
 		} else if node.Value == "enum" {
 			if err := valueNode.Decode(&s.Enum); err != nil {
-				return err
+				return fmt.Errorf("decode enum: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -216,27 +218,27 @@ func (s *FileShape) Clone() Shape {
 	return &c
 }
 
-func (s *FileShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 
 		if node.Value == "minLength" {
 			if err := valueNode.Decode(&s.MinLength); err != nil {
-				return err
+				return fmt.Errorf("decode minLength: %w", err)
 			}
 		} else if node.Value == "maxLength" {
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
-				return err
+				return fmt.Errorf("decode maxLength: %w", err)
 			}
 		} else if node.Value == "fileTypes" {
 			if err := valueNode.Decode(&s.FileTypes); err != nil {
-				return err
+				return fmt.Errorf("decode fileTypes: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -259,19 +261,19 @@ func (s *BooleanShape) Base() *BaseShape {
 	return &s.BaseShape
 }
 
-func (s *BooleanShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *BooleanShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 
 		if node.Value == "enum" {
 			if err := valueNode.Decode(&s.Enum); err != nil {
-				return err
+				return fmt.Errorf("decode enum: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -295,18 +297,18 @@ func (s *DateTimeShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateTimeShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *DateTimeShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "format" {
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return err
+				return fmt.Errorf("decode format: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -327,7 +329,7 @@ func (s *DateTimeOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateTimeOnlyShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *DateTimeOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -344,7 +346,7 @@ func (s *DateOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateOnlyShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *DateOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -361,7 +363,7 @@ func (s *TimeOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *TimeOnlyShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *TimeOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -378,7 +380,7 @@ func (s *AnyShape) Clone() Shape {
 	return &c
 }
 
-func (s *AnyShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *AnyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -395,6 +397,6 @@ func (s *NilShape) Clone() Shape {
 	return &c
 }
 
-func (s *NilShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *NilShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }

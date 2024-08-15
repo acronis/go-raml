@@ -1,8 +1,9 @@
-package goraml
+package raml
 
 import "fmt"
 
-// Not thread-safe
+// Registry is a global store for all fragments and shapes.
+// WARNING: Not thread-safe
 type Registry struct {
 	// TODO: Implement interface for fragments.
 	fragmentsCache map[string]any // Library, NamedExample, DataType
@@ -64,6 +65,7 @@ func (c *Registry) PutFragment(location string, fragment any) {
 	}
 }
 
+// AppendUnresolvedShape appends a shape to the unresolved shapes list.
 // TODO: Switch to map
 func (c *Registry) AppendUnresolvedShape(shape *Shape) {
 	c.UnresolvedShapes = append(c.UnresolvedShapes, shape)

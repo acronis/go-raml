@@ -1,7 +1,6 @@
-package goraml
+package raml
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -11,13 +10,13 @@ import (
 type FragmentKind int
 
 const (
-	UNKNOWN FragmentKind = iota - 1
-	LIBRARY
-	DATATYPE
-	NAMED_EXAMPLE
+	FragmentUnknown FragmentKind = iota - 1
+	FragmentLibrary
+	FragmentDataType
+	FragmentNamedExample
 )
 
-// RAML 1.0 Library
+// Library is the RAML 1.0 Library
 type Library struct {
 	Id              string
 	Usage           string
@@ -34,7 +33,7 @@ type Library struct {
 
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return errors.New("must be map")
+		return fmt.Errorf("value must be map")
 	}
 
 	l.CustomDomainProperties = make(CustomDomainProperties)
@@ -45,7 +44,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		if IsCustomDomainExtensionNode(node.Value) {
 			name, de, err := UnmarshalCustomDomainExtension(l.Location, node, valueNode)
 			if err != nil {
-				return err
+				return fmt.Errorf("unmarshal custom domain extension: %w", err)
 			}
 			l.CustomDomainProperties[name] = de
 		} else if node.Value == "uses" {
@@ -61,7 +60,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				path := valueNode.Content[j+1].Value
 				lib, err := ParseLibrary(filepath.Join(baseDir, path))
 				if err != nil {
-					return err
+					return fmt.Errorf("parse uses: parse library: %w", err)
 				}
 				l.Uses[name] = lib
 			}
@@ -77,7 +76,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := MakeShape(data, name, l.Location)
 				if err != nil {
-					return fmt.Errorf("parse types: %w", err)
+					return fmt.Errorf("parse types: make shape: %w", err)
 				}
 				l.Types[name] = shape
 				GetRegistry().PutIntoFragment(name, l.Location, shape)
@@ -94,14 +93,14 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := MakeShape(data, name, l.Location)
 				if err != nil {
-					return fmt.Errorf("parse types: %w", err)
+					return fmt.Errorf("parse annotation types: make shape: %w", err)
 				}
 				l.AnnotationTypes[name] = shape
 				// GetRegistry().Put(name, l.Location, shape)
 			}
 		} else if node.Value == "usage" {
 			if err := valueNode.Decode(&l.Usage); err != nil {
-				return err
+				return fmt.Errorf("parse usage: value node decode: %w", err)
 			}
 		}
 	}
@@ -115,7 +114,7 @@ func MakeLibrary(path string) *Library {
 	}
 }
 
-// RAML 1.0 DataType
+// DataType is the RAML 1.0 DataType
 type DataType struct {
 	Id    string
 	Usage string
@@ -150,7 +149,7 @@ func (dt *DataType) UnmarshalJSON(value []byte) error {
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return errors.New("must be map")
+		return fmt.Errorf("value kind must be map")
 	}
 
 	shapeValue := &yaml.Node{
@@ -174,7 +173,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 				path := valueNode.Content[j+1].Value
 				lib, err := ParseLibrary(filepath.Join(baseDir, path))
 				if err != nil {
-					return err
+					return fmt.Errorf("parse uses: parse library: %w", err)
 				}
 				dt.Uses[name] = lib
 			}
@@ -184,7 +183,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	}
 	shape, err := MakeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
 	if err != nil {
-		return fmt.Errorf("parse types: %w", err)
+		return fmt.Errorf("parse types: make shape: %w", err)
 	}
 	dt.Shape = shape
 	return nil
