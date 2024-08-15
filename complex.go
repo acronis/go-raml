@@ -1,4 +1,4 @@
-package goraml
+package raml
 
 import (
 	"fmt"
@@ -29,35 +29,35 @@ func (s *ArrayShape) Clone() Shape {
 	return &c
 }
 
-func (s *ArrayShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 
 		if node.Value == "minItems" {
 			if err := valueNode.Decode(&s.MinItems); err != nil {
-				return err
+				return fmt.Errorf("decode minItems: %w", err)
 			}
 		} else if node.Value == "maxItems" {
 			if err := valueNode.Decode(&s.MaxItems); err != nil {
-				return err
+				return fmt.Errorf("decode maxItems: %w", err)
 			}
 		} else if node.Value == "items" {
 			name := "items"
 			shape, err := MakeShape(valueNode, name, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make shape: %w", err)
 			}
 			s.Items = shape
 			GetRegistry().PutIntoFragment(s.Name+"#items", s.Location, s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
-				return err
+				return fmt.Errorf("decode uniqueItems: %w", err)
 			}
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -80,7 +80,7 @@ type ObjectShape struct {
 	ObjectFacets
 }
 
-func (s *ObjectShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	s.AdditionalProperties = true // Additional properties is true by default
 
 	for i := 0; i != len(v); i += 2 {
@@ -89,23 +89,23 @@ func (s *ObjectShape) UnmarshalYAML(v []*yaml.Node) error {
 
 		if node.Value == "additionalProperties" {
 			if err := valueNode.Decode(&s.AdditionalProperties); err != nil {
-				return err
+				return fmt.Errorf("decode additionalProperties: %w", err)
 			}
 		} else if node.Value == "discriminator" {
 			if err := valueNode.Decode(&s.Discriminator); err != nil {
-				return err
+				return fmt.Errorf("decode discriminator: %w", err)
 			}
 		} else if node.Value == "discriminatorValue" {
 			if err := valueNode.Decode(&s.DiscriminatorValue); err != nil {
-				return err
+				return fmt.Errorf("decode discriminatorValue: %w", err)
 			}
 		} else if node.Value == "minProperties" {
 			if err := valueNode.Decode(&s.MinProperties); err != nil {
-				return err
+				return fmt.Errorf("decode minProperties: %w", err)
 			}
 		} else if node.Value == "maxProperties" {
 			if err := valueNode.Decode(&s.MaxProperties); err != nil {
-				return err
+				return fmt.Errorf("decode maxProperties: %w", err)
 			}
 		} else if node.Value == "properties" {
 			s.Properties = make(map[string]*Property)
@@ -122,7 +122,7 @@ func (s *ObjectShape) UnmarshalYAML(v []*yaml.Node) error {
 		} else {
 			dt, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return err
+				return fmt.Errorf("make node: %w", err)
 			}
 			s.CustomShapeFacets[node.Value] = dt
 		}
@@ -181,7 +181,7 @@ type UnionShape struct {
 	UnionFacets
 }
 
-func (s *UnionShape) UnmarshalYAML(values []*yaml.Node) error {
+func (s *UnionShape) UnmarshalYAMLNodes(values []*yaml.Node) error {
 	return nil
 }
 
@@ -207,7 +207,7 @@ func (s *JSONShape) Clone() Shape {
 	return &c
 }
 
-func (s *JSONShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *JSONShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -226,7 +226,7 @@ func (s *UnknownShape) Clone() Shape {
 	return &c
 }
 
-func (s *UnknownShape) UnmarshalYAML(v []*yaml.Node) error {
+func (s *UnknownShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	s.facets = v
 	return nil
 }

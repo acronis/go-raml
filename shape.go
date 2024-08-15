@@ -1,4 +1,4 @@
-package goraml
+package raml
 
 import (
 	"errors"
@@ -30,37 +30,67 @@ type BaseShape struct {
 	Position        // computed.
 }
 
-type Shape interface {
+// ShapeBaser is the interface that represents a retriever of a base shape.
+type ShapeBaser interface {
 	Base() *BaseShape
-	// Validate(v interface{}) error
-	// Merge(v interface{}) error
+}
+
+// ShapeValidator is the interface that represents a validator of a RAML shape.
+type ShapeValidator interface {
+	Validate(v interface{}) error
+}
+
+// ShapeMerger is the interface that represents a merger of a RAML shape.
+type ShapeMerger interface {
+	Merge(v interface{}) error
+}
+
+// ShapeCloner is the interface that represents a maker of a clone of a RAML shape.
+type ShapeCloner interface {
 	Clone() Shape
+}
 
-	UnmarshalYAML(v []*yaml.Node) error
+// ShapeJsonSchema is the interface that represents a maker of JSON schema from a RAML shape.
+type ShapeJsonSchema interface {
+	ToJSONSchema() interface{}
+}
 
-	// ToJSONSchema() interface{}
-	// ToRAMLDataType() interface{}
+// ShapeRAMLDataType is the interface that represents a maker of RAML data type from a RAML shape.
+type ShapeRAMLDataType interface {
+	ToRAMLDataType() interface{}
+}
+
+// YAMLNodesUnmarshaller is the interface that represents an unmarshaller of a RAML shape from YAML nodes.
+type YAMLNodesUnmarshaller interface {
+	UnmarshalYAMLNodes(v []*yaml.Node) error
+}
+
+// Shape is the interface that represents a RAML shape.
+type Shape interface {
+	ShapeBaser
+	ShapeCloner
+	YAMLNodesUnmarshaller
 }
 
 func identifyShapeType(shapeFacets []*yaml.Node) string {
-	var t string = STRING
+	var t = TypeString
 	for i := 0; i != len(shapeFacets); i += 2 {
 		node := shapeFacets[i]
-		if _, ok := STRING_FACETS[node.Value]; ok {
-			t = STRING
-		} else if _, ok := INTEGER_FACETS[node.Value]; ok {
-			t = INTEGER
-		} else if _, ok := FILE_FACETS[node.Value]; ok {
-			t = FILE
+		if _, ok := SetOfStringFacets[node.Value]; ok {
+			t = TypeString
+		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
+			t = TypeInteger
+		} else if _, ok := SetOfFileFacets[node.Value]; ok {
+			t = TypeFile
 			break // File has a unique facet
-		} else if _, ok := INTEGER_FACETS[node.Value]; ok {
-			t = NUMBER
+		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
+			t = TypeNumber
 			break // Number has a unique facet
-		} else if _, ok := OBJECT_FACETS[node.Value]; ok {
-			t = OBJECT
+		} else if _, ok := SetOfObjectFacets[node.Value]; ok {
+			t = TypeObject
 			break
-		} else if _, ok := ARRAY_FACETS[node.Value]; ok {
-			t = ARRAY
+		} else if _, ok := SetOfArrayFacets[node.Value]; ok {
+			t = TypeArray
 			break
 		}
 	}
@@ -76,40 +106,40 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 	default:
 		// NOTE: UnknownShape is a special type of shape that will be resolved later.
 		shape = &UnknownShape{BaseShape: *base}
-	case ANY:
+	case TypeAny:
 		shape = &AnyShape{BaseShape: *base}
-	case NIL:
+	case TypeNil:
 		shape = &NilShape{BaseShape: *base}
-	case OBJECT:
+	case TypeObject:
 		shape = &ObjectShape{BaseShape: *base}
-	case ARRAY:
+	case TypeArray:
 		shape = &ArrayShape{BaseShape: *base}
-	case STRING:
+	case TypeString:
 		shape = &StringShape{BaseShape: *base}
-	case INTEGER:
+	case TypeInteger:
 		shape = &IntegerShape{BaseShape: *base}
-	case NUMBER:
+	case TypeNumber:
 		shape = &NumberShape{BaseShape: *base}
-	case DATETIME:
+	case TypeDatetime:
 		shape = &DateTimeShape{BaseShape: *base}
-	case DATETIME_ONLY:
+	case TypeDatetimeOnly:
 		shape = &DateTimeOnlyShape{BaseShape: *base}
-	case DATE_ONLY:
+	case TypeDateOnly:
 		shape = &DateOnlyShape{BaseShape: *base}
-	case TIME_ONLY:
+	case TypeTimeOnly:
 		shape = &TimeOnlyShape{BaseShape: *base}
-	case FILE:
+	case TypeFile:
 		shape = &FileShape{BaseShape: *base}
-	case BOOLEAN:
+	case TypeBoolean:
 		shape = &BooleanShape{BaseShape: *base}
-	case UNION:
+	case TypeUnion:
 		shape = &UnionShape{BaseShape: *base}
-	case JSON:
+	case TypeJSON:
 		shape = &JSONShape{BaseShape: *base}
 	}
 
-	if err := shape.UnmarshalYAML(shapeFacets); err != nil {
-		return nil, err
+	if err := shape.UnmarshalYAMLNodes(shapeFacets); err != nil {
+		return nil, fmt.Errorf("unmarshal yaml nodes: shape type: %s: err: %w", shapeType, err)
 	}
 
 	return shape, nil
@@ -136,7 +166,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				if shapeType == "" {
 					shapeType = identifyShapeType(shapeFacets)
 				} else if shapeType[0] == '{' {
-					shapeType = JSON
+					shapeType = TypeJSON
 				}
 			} else if shapeTypeNode.Tag == "!include" {
 				baseDir := filepath.Dir(location)
@@ -149,7 +179,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				return nil, fmt.Errorf("type must be string")
 			}
 		case yaml.SequenceNode:
-			var inherits []*Shape = make([]*Shape, len(shapeTypeNode.Content))
+			var inherits = make([]*Shape, len(shapeTypeNode.Content))
 			for i, node := range shapeTypeNode.Content {
 				if node.Kind != yaml.ScalarNode {
 					return nil, errors.New("must be string")
@@ -161,7 +191,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				inherits[i] = s
 			}
 			base.Inherits = inherits
-			shapeType = COMPOSITE
+			shapeType = TypeComposite
 		}
 	}
 

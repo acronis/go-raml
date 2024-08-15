@@ -1,4 +1,4 @@
-package goraml
+package raml
 
 import (
 	"bufio"
@@ -16,13 +16,13 @@ import (
 
 func IdentifyFragment(head string) FragmentKind {
 	if head == "#%RAML 1.0 Library" {
-		return LIBRARY
+		return FragmentLibrary
 	} else if head == "#%RAML 1.0 DataType" {
-		return DATATYPE
+		return FragmentDataType
 	} else if head == "#%RAML 1.0 NamedExample" {
-		return NAMED_EXAMPLE
+		return FragmentNamedExample
 	} else {
-		return UNKNOWN
+		return FragmentUnknown
 	}
 }
 
@@ -62,7 +62,12 @@ func ParseDataType(path string) (*DataType, error) {
 		log.Fatalf("open file error: %v", err)
 		return nil, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			log.Fatal(fmt.Errorf("close file error: %w", err))
+		}
+	}(f)
 
 	// TODO: This is a temporary workaround for JSON data types.
 	if strings.HasSuffix(path, ".json") {
@@ -78,7 +83,7 @@ func ParseDataType(path string) (*DataType, error) {
 		return dt, nil
 	}
 
-	decoder, err := NewFragmentDecoder(f, DATATYPE)
+	decoder, err := NewFragmentDecoder(f, FragmentDataType)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +119,14 @@ func ParseLibrary(path string) (*Library, error) {
 		log.Fatalf("open file error: %v", err)
 		return nil, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			log.Fatal(fmt.Errorf("close file error: %w", err))
+		}
+	}(f)
 
-	decoder, err := NewFragmentDecoder(f, LIBRARY)
+	decoder, err := NewFragmentDecoder(f, FragmentLibrary)
 	if err != nil {
 		return nil, err
 	}

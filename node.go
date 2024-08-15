@@ -1,4 +1,4 @@
-package goraml
+package raml
 
 import (
 	"fmt"

@@ -1,12 +1,14 @@
-package goraml
+package raml
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
+// Example represents an example of a shape
 type Example struct {
 	Id              string
 	Name            string
@@ -20,12 +22,13 @@ type Example struct {
 	Position
 }
 
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
 func (e *Example) UnmarshalYAML(value *yaml.Node) error {
 	if value.Tag == "!include" {
 		baseDir := filepath.Dir(e.Location)
 		example, err := ReadExample(filepath.Join(baseDir, value.Value))
 		if err != nil {
-			return err
+			return fmt.Errorf("read example: %w", err)
 		}
 		e.Link = example
 		return nil
@@ -35,11 +38,13 @@ func (e *Example) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// DetectContentType detects the content type of the given value.
 // TODO: Detect content type based on the file header
 func DetectContentType(value string) string {
 	return "text/plain"
 }
 
+// DetectFileMimeType detects the MIME type of the file at the given path.
 func DetectFileMimeType(path string) string {
 	switch filepath.Ext(path) {
 	default:
@@ -59,6 +64,7 @@ func DetectFileMimeType(path string) string {
 	}
 }
 
+// ReadExample reads an example from the file at the given path.
 // TODO: Move to parse.go?
 func ReadExample(path string) (*Example, error) {
 	bytes, err := os.ReadFile(path)

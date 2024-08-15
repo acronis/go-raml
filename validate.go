@@ -1,3 +1,3 @@
-package goraml
+package raml
 
 // TODO: Validation

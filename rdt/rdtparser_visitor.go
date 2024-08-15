@@ -1,6 +1,6 @@
 // Code generated from ./rdtParser.g4 by ANTLR 4.13.2. DO NOT EDIT.
 
-package parser // rdtParser
+package rdt // rdtParser
 
 import "github.com/antlr4-go/antlr/v4"
 

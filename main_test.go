@@ -1,4 +1,4 @@
-package main_test
+package raml
 
 import (
 	"fmt"
@@ -6,25 +6,24 @@ import (
 	"testing"
 	"time"
 
-	goraml "github.com/acronis/go-raml/pkg"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_main(t *testing.T) {
 	start := time.Now()
-	lib, err := goraml.ParseLibrary(`./tests/library.raml`)
+	lib, err := ParseLibrary(`./tests/library.raml`)
 	require.NoError(t, err)
 	elapsed := time.Since(start)
 	t.Logf("ParseLibrary took %d ms", elapsed.Milliseconds())
 	fmt.Printf("Library location: %s\n", lib.Location)
 
-	vals := goraml.GetRegistry().GetAllShapes()
+	vals := GetRegistry().GetAllShapes()
 	fmt.Printf("Total shapes: %d\n", len(vals))
-	fmt.Printf("Unresolved: %d\n", len(goraml.GetRegistry().UnresolvedShapes))
+	fmt.Printf("Unresolved: %d\n", len(GetRegistry().UnresolvedShapes))
 
-	require.NoError(t, goraml.ResolveShapes())
+	require.NoError(t, ResolveShapes())
 
-	fmt.Printf("Resolved: %d\n", len(goraml.GetRegistry().ResolvedShapes))
+	fmt.Printf("Resolved: %d\n", len(GetRegistry().ResolvedShapes))
 
 	printMemUsage(t)
 }

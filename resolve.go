@@ -1,14 +1,17 @@
-package goraml
+package raml
 
 import (
-	rdt "github.com/acronis/go-raml/pkg/rdt"
+	"fmt"
+
 	"github.com/antlr4-go/antlr/v4"
+
+	"github.com/acronis/go-raml/rdt"
 )
 
 func ResolveShapes() error {
 	for _, shape := range GetRegistry().UnresolvedShapes {
 		if err := Resolve(shape); err != nil {
-			return err
+			return fmt.Errorf("resolve shape: %w", err)
 		}
 	}
 
@@ -42,7 +45,7 @@ func ResolveLink(target Shape) (*Shape, error) {
 	return &s, nil
 }
 
-// Resolves an unknown shape in-place.
+// Resolve resolves an unknown shape in-place.
 func Resolve(shape *Shape) error {
 	target := *shape
 	// Skip already resolved and JSON shapes
@@ -56,7 +59,7 @@ func Resolve(shape *Shape) error {
 	if link != nil {
 		s, err := ResolveLink(target)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve link: %w", err)
 		}
 		*shape = *s
 		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
@@ -64,11 +67,11 @@ func Resolve(shape *Shape) error {
 	}
 
 	shapeType := target.Base().Type
-	if shapeType == COMPOSITE {
+	if shapeType == TypeComposite {
 		// Special case for multiple inheritance
 		s, err := ResolveMultipleInheritance(target)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve multiple inheritance: %w", err)
 		}
 		*shape = *s
 		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
@@ -84,7 +87,7 @@ func Resolve(shape *Shape) error {
 
 	s, err := visitor.Visit(tree)
 	if err != nil {
-		return err
+		return fmt.Errorf("visit tree: %w", err)
 	}
 	*shape = *s
 	GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
