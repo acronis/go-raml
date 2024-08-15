@@ -1,7 +1,7 @@
 package raml
 
 import (
-	"errors"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,11 +24,11 @@ type DomainExtension struct {
 func UnmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNode *yaml.Node) (string, *DomainExtension, error) {
 	name := keyNode.Value[1 : len(keyNode.Value)-1]
 	if name == "" {
-		return "", nil, errors.New("annotation name cannot be empty")
+		return "", nil, fmt.Errorf("annotation name must not be empty")
 	}
 	dt, err := MakeNode(valueNode, location)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("make node: %w", err)
 	}
 	de := &DomainExtension{
 		Name:      name,

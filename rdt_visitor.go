@@ -55,7 +55,7 @@ func (visitor *RdtVisitor) VisitChildren(node antlr.RuleNode, target *UnknownSha
 		implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
 		s, err := visitor.Visit(n.(antlr.ParseTree), implicitAnonShape)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("visit children: %w", err)
 		}
 		shapes = append(shapes, s)
 	}
@@ -77,7 +77,7 @@ func (visitor *RdtVisitor) VisitType(ctx *rdt.TypeContext, target *UnknownShape)
 func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *UnknownShape) (*Shape, error) {
 	s, err := MakeConcreteShape(target.Base(), ctx.GetText(), make([]*yaml.Node, 0))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	return &s, nil
 }
@@ -86,7 +86,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("visit: %w", err)
 	}
 	base := target.Base()
 	base.Type = TypeUnion
@@ -105,7 +105,7 @@ func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShap
 	implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("visit: %w", err)
 	}
 	base := target.Base()
 	base.Type = TypeArray
@@ -121,7 +121,7 @@ func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShap
 func (visitor *RdtVisitor) VisitUnion(ctx *rdt.UnionContext, target *UnknownShape) (*Shape, error) {
 	ss, err := visitor.VisitChildren(ctx, target)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("visit children: %w", err)
 	}
 	base := target.Base()
 	base.Type = TypeUnion
@@ -165,11 +165,11 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
 	}
 	if err := Resolve(ref); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolve: %w", err)
 	}
 	s, err := MakeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	s.Base().Inherits = append(target.Base().Inherits, ref)
 	return &s, nil

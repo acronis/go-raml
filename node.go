@@ -22,7 +22,7 @@ func MakeNode(node *yaml.Node, location string) (*Node, error) {
 		Location: location,
 	}
 	if err := n.UnmarshalYAML(node); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse node: %w", err)
 	}
 	return n, nil
 }
