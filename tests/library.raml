@@ -36,7 +36,7 @@ types:
     type: file
 
   IntegerType:
-    type: string
+    type: integer
 
   DerivedIntegerType:
     type: IntegerType
@@ -111,6 +111,12 @@ types:
     items:
       type: string
 
+  ArrayShapeInline: string[]
+
+  ArrayShapeInlineType:
+    (Annotation): Test Example
+    type: string[]
+
   UnionTypeInline: string | number
 
   UnionType:
@@ -122,4 +128,5 @@ types:
     type: string?
   
   UnionNullableType:
+    (Annotation): Test Example
     type: string | nil

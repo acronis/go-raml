@@ -62,6 +62,7 @@ func Resolve(shape *Shape) error {
 			return fmt.Errorf("resolve link: %w", err)
 		}
 		*shape = *s
+		// TODO: Only for debugging purposes. To be removed.
 		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
 		return nil
 	}
@@ -74,6 +75,7 @@ func Resolve(shape *Shape) error {
 			return fmt.Errorf("resolve multiple inheritance: %w", err)
 		}
 		*shape = *s
+		// TODO: Only for debugging purposes. To be removed.
 		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
 		return nil
 	}
@@ -82,14 +84,15 @@ func Resolve(shape *Shape) error {
 	lexer := rdt.NewrdtLexer(is)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	rdtParser := rdt.NewrdtParser(tokens)
-	visitor := NewRdtVisitor(target)
+	visitor := NewRdtVisitor()
 	tree := rdtParser.Entrypoint()
 
-	s, err := visitor.Visit(tree)
+	s, err := visitor.Visit(tree, target.(*UnknownShape))
 	if err != nil {
 		return fmt.Errorf("visit tree: %w", err)
 	}
 	*shape = *s
+	// TODO: Only for debugging purposes. To be removed.
 	GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
 	return nil
 }

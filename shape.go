@@ -145,8 +145,19 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 	return shape, nil
 }
 
+func MakeBaseShape(name string, location string, position *Position) *BaseShape {
+	return &BaseShape{
+		Name:     name,
+		Location: location,
+		Position: *position,
+
+		CustomDomainProperties: make(CustomDomainProperties),
+		CustomShapeFacets:      make(CustomShapeFacets),
+	}
+}
+
 func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
-	base := BaseShape{Name: name, Location: location, Position: Position{Line: v.Line, Column: v.Column}}
+	base := MakeBaseShape(name, location, &Position{Line: v.Line, Column: v.Column})
 
 	shapeTypeNode, shapeFacets, err := base.Decode(v)
 	if err != nil {
@@ -195,7 +206,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 		}
 	}
 
-	s, err := MakeConcreteShape(&base, shapeType, shapeFacets)
+	s, err := MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +230,6 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	var shapeTypeNode *yaml.Node
 	var shapeFacets []*yaml.Node
 
-	s.CustomShapeFacets = make(CustomShapeFacets)
-	s.CustomDomainProperties = make(CustomDomainProperties)
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
