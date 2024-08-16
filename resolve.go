@@ -2,6 +2,7 @@ package raml
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/antlr4-go/antlr/v4"
 
@@ -14,6 +15,61 @@ func ResolveShapes() error {
 			return fmt.Errorf("resolve shape: %w", err)
 		}
 	}
+
+	return nil
+}
+
+func ResolveDomainExtensions() error {
+	for _, de := range GetRegistry().DomainExtensions {
+		if err := ResolveDomainExtension(de); err != nil {
+			return fmt.Errorf("resolve domain extension: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func ResolveDomainExtension(de *DomainExtension) error {
+	// TODO: Maybe fuse resolution and value validation stage?
+	parts := strings.Split(de.Name, ".")
+
+	var ref *Shape
+	// TODO: Probably can be done prettier. Needs refactor.
+	switch frag := GetRegistry().GetFragment(de.Location).(type) {
+	case *Library:
+		if len(parts) == 1 {
+			ref = frag.AnnotationTypes[parts[0]]
+			if ref == nil {
+				return fmt.Errorf("reference %s not found", parts[0])
+			}
+		} else if len(parts) == 2 {
+			lib := frag.Uses[parts[0]]
+			if lib == nil {
+				return fmt.Errorf("library %s not found", parts[0])
+			}
+			ref = lib.AnnotationTypes[parts[1]]
+			if ref == nil {
+				return fmt.Errorf("reference %s not found", parts[1])
+			}
+		} else {
+			return fmt.Errorf("invalid reference %s", de.Name)
+		}
+	case *DataType:
+		// DataType cannot have local reference to annotation type.
+		if len(parts) == 2 {
+			lib := frag.Uses[parts[0]]
+			if lib == nil {
+				return fmt.Errorf("library %s not found", parts[0])
+			}
+			ref = lib.AnnotationTypes[parts[1]]
+			if ref == nil {
+				return fmt.Errorf("reference %s not found", parts[1])
+			}
+		} else {
+			return fmt.Errorf("invalid reference %s", de.Name)
+		}
+	}
+	de.DefinedBy = ref
 
 	return nil
 }

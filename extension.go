@@ -35,6 +35,7 @@ func UnmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNo
 		Extension: dt,
 		Location:  location,
 	}
+	GetRegistry().DomainExtensions = append(GetRegistry().DomainExtensions, de)
 	return name, de, nil
 }
 
