@@ -22,6 +22,7 @@ func Test_main(t *testing.T) {
 	fmt.Printf("Unresolved: %d\n", len(GetRegistry().UnresolvedShapes))
 
 	require.NoError(t, ResolveShapes())
+	require.NoError(t, ResolveDomainExtensions())
 
 	fmt.Printf("Resolved: %d\n", len(GetRegistry().ResolvedShapes))
 
