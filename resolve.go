@@ -10,7 +10,7 @@ import (
 
 func ResolveShapes() error {
 	for _, shape := range GetRegistry().UnresolvedShapes {
-		if err := Resolve(shape); err != nil {
+		if err := ResolveShape(shape); err != nil {
 			return fmt.Errorf("resolve shape: %w", err)
 		}
 	}
@@ -21,7 +21,7 @@ func ResolveShapes() error {
 func ResolveMultipleInheritance(target Shape) (*Shape, error) {
 	inherits := target.Base().Inherits
 	for _, inherit := range inherits {
-		if err := Resolve(inherit); err != nil {
+		if err := ResolveShape(inherit); err != nil {
 			return nil, fmt.Errorf("resolve inherit: %w", err)
 		}
 	}
@@ -35,7 +35,7 @@ func ResolveMultipleInheritance(target Shape) (*Shape, error) {
 
 func ResolveLink(target Shape) (*Shape, error) {
 	link := target.Base().Link
-	if err := Resolve(link.Shape); err != nil {
+	if err := ResolveShape(link.Shape); err != nil {
 		return nil, fmt.Errorf("resolve link shape: %w", err)
 	}
 	s, err := MakeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
@@ -45,8 +45,8 @@ func ResolveLink(target Shape) (*Shape, error) {
 	return &s, nil
 }
 
-// Resolve resolves an unknown shape in-place.
-func Resolve(shape *Shape) error {
+// ResolveShape resolves an unknown shape in-place.
+func ResolveShape(shape *Shape) error {
 	target := *shape
 	// Skip already resolved and JSON shapes
 	if _, ok := target.(*UnknownShape); !ok {
