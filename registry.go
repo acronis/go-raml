@@ -8,6 +8,9 @@ type Registry struct {
 	// TODO: Implement interface for fragments.
 	fragmentsCache map[string]any // Library, NamedExample, DataType
 	fragmentShapes map[string]map[string]*Shape
+
+	// May be reused for both validation and resolution.
+	DomainExtensions []*DomainExtension
 	// TODO: Temporary shape buffers for resolution and counting.
 	UnresolvedShapes []*Shape
 	ResolvedShapes   []*Shape

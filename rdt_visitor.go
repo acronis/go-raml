@@ -164,7 +164,7 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	} else {
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
 	}
-	if err := Resolve(ref); err != nil {
+	if err := ResolveShape(ref); err != nil {
 		return nil, fmt.Errorf("resolve: %w", err)
 	}
 	s, err := MakeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
