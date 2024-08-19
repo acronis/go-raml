@@ -59,7 +59,6 @@ func ReadRawFile(path string) (io.ReadCloser, error) {
 
 	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		log.Fatalf("open file error: %v", err)
 		return nil, fmt.Errorf("open file: %w", err)
 	}
 
