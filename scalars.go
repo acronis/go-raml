@@ -196,7 +196,7 @@ func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 		} else if node.Value == "maxLength" {
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
-				return fmt.Errorf("decode maxLength: %w", err)
+				return NewWrappedError(fmt.Errorf("decode maxLength: %w", err), s.Location).SetPosition(Position{valueNode.Line, valueNode.Column})
 			}
 		} else if node.Value == "pattern" {
 			if err := valueNode.Decode(&s.Pattern); err != nil {

@@ -32,10 +32,15 @@ func NewFragmentDecoder(f *os.File, kind FragmentKind) (*yaml.Decoder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read fragment head: %w", err)
 	}
-	frag := IdentifyFragment(strings.TrimRight(head, "\r\n"))
+	frag := IdentifyFragment(strings.TrimRight(head, "\r\n "))
 	if frag != kind {
 		return nil, fmt.Errorf("unexpected RAML fragment kind")
 	}
+	_, err = f.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, fmt.Errorf("seek to start: %w", err)
+	}
+	r.Reset(f)
 
 	return yaml.NewDecoder(r), nil
 }
@@ -167,7 +172,11 @@ func ParseLibrary(path string) (*Library, error) {
 
 	lib := MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
-		return nil, fmt.Errorf("decode fragment: %w", err)
+		Err := NewWrappedError(fmt.Errorf("decode fragment: %w", err), lib.Location)
+		Err.SetSeverity(SeverityCritical)
+		Err.SetType(ErrTypeParsing)
+		Err.Info.Add("123", Stringer(456))
+		return nil, Err
 	}
 	GetRegistry().PutFragment(path, lib)
 

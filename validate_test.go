@@ -1,39 +1,34 @@
 package raml
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestIsValidationError(t *testing.T) {
 	type args struct {
 		err error
 	}
-	firstValidErr := NewValidationError(
+	firstValidErr := NewError(
 		"first validation error",
 		"/usr/local/raml.raml",
-		Position{
-			Line:   10,
-			Column: 1,
-		},
-	)
+	).SetPosition(Position{Line: 10, Column: 1})
 	simpleErr := fmt.Errorf("simple error")
 	wrappedSimpleErr := fmt.Errorf("wrapped simpleErr: %w", simpleErr)
 	wrappedFirstValidErr := fmt.Errorf("wrapped firstValidErr: %w", firstValidErr)
-	secondValidErr := NewValidationErrorFromError(
+	secondValidErr := NewWrappedError(
 		wrappedFirstValidErr,
 		"/usr/local/raml2.raml",
-		Position{
-			Line:   20,
-			Column: 2,
-		},
-	)
+	).SetPosition(Position{Line: 20, Column: 2})
 	wrappedSecondValidErr := fmt.Errorf("wrapped secondValidErr: %w", secondValidErr)
 	tests := []struct {
 		name    string
 		args    args
-		want    *ValidationError
+		want    *Error
 		want1   bool
 		wantMsg string
 	}{
@@ -51,7 +46,7 @@ func TestIsValidationError(t *testing.T) {
 			args: args{
 				err: wrappedFirstValidErr,
 			},
-			want: &ValidationError{
+			want: &Error{
 				Severity:        SeverityError,
 				ErrType:         ErrTypeValidating,
 				Message:         firstValidErr.Message,
@@ -91,14 +86,14 @@ func TestIsValidationError(t *testing.T) {
 		{
 			name: "Check validation error wrapped in another error",
 			args: args{
-				err: NewValidationErrorFromError(wrappedSimpleErr, "/usr/local/raml3.raml", Position{Line: 30, Column: 3}),
+				err: NewWrappedError(wrappedSimpleErr, "/usr/local/raml3.raml").SetPosition(Position{Line: 30, Column: 3}),
 			},
-			want: &ValidationError{
+			want: &Error{
 				Severity:        SeverityError,
 				ErrType:         ErrTypeValidating,
 				Message:         wrappedSimpleErr.Error(),
 				Location:        "/usr/local/raml3.raml",
-				Position:        Position{Line: 30, Column: 3},
+				Position:        &Position{Line: 30, Column: 3},
 				Err:             wrappedSimpleErr,
 				WrappedMessages: "",
 				Info:            *NewStructInfo(),
@@ -111,7 +106,7 @@ func TestIsValidationError(t *testing.T) {
 			args: args{
 				err: wrappedSecondValidErr,
 			},
-			want: &ValidationError{
+			want: &Error{
 				Severity:        SeverityError,
 				ErrType:         ErrTypeValidating,
 				Message:         secondValidErr.Message,
@@ -120,7 +115,7 @@ func TestIsValidationError(t *testing.T) {
 				Err:             wrappedSecondValidErr,
 				WrappedMessages: "wrapped secondValidErr",
 				Info:            *NewStructInfo(),
-				Wrapped: &ValidationError{
+				Wrapped: &Error{
 					Severity:        SeverityError,
 					ErrType:         ErrTypeValidating,
 					Message:         firstValidErr.Message,
@@ -137,16 +132,16 @@ func TestIsValidationError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := IsValidationError(tt.args.err)
+			got, got1 := UnwrapError(tt.args.err)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("IsValidationError()\ngot:\n%v\nwant:\n%v\n", got, tt.want)
+				t.Errorf("UnwrapError()\ngot:\n%v\nwant:\n%v\n", got, tt.want)
 			}
 			if got1 != tt.want1 {
-				t.Errorf("IsValidationError() got1 = %v, want %v", got1, tt.want1)
+				t.Errorf("UnwrapError() got1 = %v, want %v", got1, tt.want1)
 			}
 			if got != nil {
 				if got.Error() != tt.wantMsg {
-					t.Errorf("IsValidationError() Message\ngot:\n%s\nwant:\n%s\n", got.Error(), tt.wantMsg)
+					t.Errorf("UnwrapError() Message\ngot:\n%s\nwant:\n%s\n", got.Error(), tt.wantMsg)
 				}
 			}
 		})
@@ -551,7 +546,7 @@ func TestValidationError_SetSeverity(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *ValidationError
+		want   *Error
 	}{
 		{
 			name: "Check set severity",
@@ -561,14 +556,14 @@ func TestValidationError_SetSeverity(t *testing.T) {
 			args: args{
 				severity: SeverityCritical,
 			},
-			want: &ValidationError{
+			want: &Error{
 				Severity: SeverityCritical,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				Severity: tt.fields.Severity,
 			}
 			if got := v.SetSeverity(tt.args.severity); !reflect.DeepEqual(got, tt.want) {
@@ -589,7 +584,7 @@ func TestValidationError_SetType(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *ValidationError
+		want   *Error
 	}{
 		{
 			name: "Check set type",
@@ -599,14 +594,14 @@ func TestValidationError_SetType(t *testing.T) {
 			args: args{
 				errType: ErrTypeParsing,
 			},
-			want: &ValidationError{
+			want: &Error{
 				ErrType: ErrTypeParsing,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				ErrType: tt.fields.ErrType,
 			}
 			if got := v.SetType(tt.args.errType); !reflect.DeepEqual(got, tt.want) {
@@ -629,7 +624,7 @@ func TestValidationError_SetLocationAndPosition(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *ValidationError
+		want   *Error
 	}{
 		{
 			name: "Check set location and position",
@@ -647,9 +642,9 @@ func TestValidationError_SetLocationAndPosition(t *testing.T) {
 					Column: 2,
 				},
 			},
-			want: &ValidationError{
+			want: &Error{
 				Location: "/usr/local/raml2.raml",
-				Position: Position{
+				Position: &Position{
 					Line:   20,
 					Column: 2,
 				},
@@ -658,9 +653,9 @@ func TestValidationError_SetLocationAndPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				Location: tt.fields.Location,
-				Position: tt.fields.Position,
+				Position: &tt.fields.Position,
 			}
 			if got := v.SetLocation(tt.args.location).SetPosition(tt.args.pos); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SetLocation() = %v, want %v", got, tt.want)
@@ -681,7 +676,7 @@ func TestValidationError_SetMessage(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *ValidationError
+		want   *Error
 	}{
 		{
 			name: "Check set message",
@@ -692,7 +687,7 @@ func TestValidationError_SetMessage(t *testing.T) {
 				message: "new message",
 				a:       []any{},
 			},
-			want: &ValidationError{
+			want: &Error{
 				Message: "new message",
 			},
 		},
@@ -705,14 +700,14 @@ func TestValidationError_SetMessage(t *testing.T) {
 				message: "new message with %s",
 				a:       []any{"argument"},
 			},
-			want: &ValidationError{
+			want: &Error{
 				Message: "new message with argument",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				Message: tt.fields.Message,
 			}
 			if got := v.SetMessage(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
@@ -734,7 +729,7 @@ func TestValidationError_SetWrappedMessages(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *ValidationError
+		want   *Error
 	}{
 		{
 			name: "Check set message",
@@ -745,7 +740,7 @@ func TestValidationError_SetWrappedMessages(t *testing.T) {
 				message: "new message",
 				a:       []any{},
 			},
-			want: &ValidationError{
+			want: &Error{
 				WrappedMessages: "new message",
 			},
 		},
@@ -758,14 +753,14 @@ func TestValidationError_SetWrappedMessages(t *testing.T) {
 				message: "new message with %s",
 				a:       []any{"argument"},
 			},
-			want: &ValidationError{
+			want: &Error{
 				WrappedMessages: "new message with argument",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				WrappedMessages: tt.fields.Message,
 			}
 			if got := v.SetWrappedMessages(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
@@ -781,7 +776,7 @@ func TestValidationError_Error(t *testing.T) {
 		ErrType         ErrType
 		Location        string
 		Position        Position
-		Wrapped         *ValidationError
+		Wrapped         *Error
 		Err             error
 		Message         string
 		WrappedMessages string
@@ -856,17 +851,17 @@ func TestValidationError_Error(t *testing.T) {
 				ErrType:  ErrTypeParsing,
 				Location: "/usr/local/raml.raml",
 				Position: Position{Line: 10, Column: 1},
-				Wrapped: &ValidationError{
+				Wrapped: &Error{
 					Severity: SeverityCritical,
 					ErrType:  ErrTypeValidating,
 					Location: "/usr/local/raml2.raml",
-					Position: Position{Line: 20, Column: 2},
+					Position: &Position{Line: 20, Column: 2},
 					Message:  "message 1",
-					Wrapped: &ValidationError{
+					Wrapped: &Error{
 						Severity: SeverityError,
 						ErrType:  ErrTypeResolving,
 						Location: "/usr/local/raml3.raml",
-						Position: Position{Line: 30, Column: 3},
+						Position: &Position{Line: 30, Column: 3},
 						Message:  "message 2",
 					},
 				},
@@ -877,11 +872,11 @@ func TestValidationError_Error(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				Severity:        tt.fields.Severity,
 				ErrType:         tt.fields.ErrType,
 				Location:        tt.fields.Location,
-				Position:        tt.fields.Position,
+				Position:        &tt.fields.Position,
 				Wrapped:         tt.fields.Wrapped,
 				Err:             tt.fields.Err,
 				Message:         tt.fields.Message,
@@ -901,7 +896,7 @@ func TestValidationError_OrigString(t *testing.T) {
 		ErrType         ErrType
 		Location        string
 		Position        Position
-		Wrapped         *ValidationError
+		Wrapped         *Error
 		Err             error
 		Message         string
 		WrappedMessages string
@@ -921,11 +916,11 @@ func TestValidationError_OrigString(t *testing.T) {
 				Position: Position{Line: 10, Column: 1},
 				Message:  "message",
 				Info:     *NewStructInfo().Add("key", Stringer("value")),
-				Wrapped: &ValidationError{
+				Wrapped: &Error{
 					Severity: SeverityError,
 					ErrType:  ErrTypeValidating,
 					Location: "/usr/local/raml2.raml",
-					Position: Position{Line: 20, Column: 2},
+					Position: &Position{Line: 20, Column: 2},
 					Message:  "wrapped",
 					Info:     *NewStructInfo().Add("key", Stringer("value")),
 				},
@@ -935,11 +930,11 @@ func TestValidationError_OrigString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &ValidationError{
+			v := &Error{
 				Severity:        tt.fields.Severity,
 				ErrType:         tt.fields.ErrType,
 				Location:        tt.fields.Location,
-				Position:        tt.fields.Position,
+				Position:        &tt.fields.Position,
 				Wrapped:         tt.fields.Wrapped,
 				Err:             tt.fields.Err,
 				Message:         tt.fields.Message,
@@ -948,6 +943,85 @@ func TestValidationError_OrigString(t *testing.T) {
 			}
 			if got := v.OrigString(); got != tt.want {
 				t.Errorf("OrigString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetYamlError(t *testing.T) {
+	type args struct {
+		err error
+	}
+	tests := []struct {
+		name string
+		args args
+		want *yaml.TypeError
+	}{
+		{
+			name: "Check yaml error",
+			args: args{
+				err: &yaml.TypeError{
+					Errors: []string{"error"},
+				},
+			},
+			want: &yaml.TypeError{
+				Errors: []string{"error"},
+			},
+		},
+		{
+			name: "Check not yaml error",
+			args: args{
+				err: fmt.Errorf("error"),
+			},
+			want: nil,
+		},
+		{
+			name: "Check wrapped yaml error",
+			args: args{
+				err: fmt.Errorf("wrapped error: %w", &yaml.TypeError{
+					Errors: []string{"error"},
+				}),
+			},
+			want: &yaml.TypeError{
+				Errors: []string{
+					"wrapped error",
+					"error",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetYamlError(tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetYamlError() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFixYamlError(t *testing.T) {
+	type args struct {
+		err error
+	}
+	tests := []struct {
+		name string
+		args args
+		want error
+	}{
+		{
+			name: "Check fix yaml error",
+			args: args{
+				err: &yaml.TypeError{
+					Errors: []string{"error"},
+				},
+			},
+			want: errors.New("error"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := FixYamlError(tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FixYamlError() = %v, want %v", got, tt.want)
 			}
 		})
 	}
