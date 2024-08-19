@@ -219,7 +219,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 
 	s, err := MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
-		return nil, fmt.Errorf("make concrete shape: %w", err)
+		return nil, NewWrappedError(fmt.Errorf("make concrete shape: %w", err), base.Location).SetPosition(base.Position)
 	}
 	ptr := &s
 	if _, ok := s.(*UnknownShape); ok {

@@ -12,6 +12,9 @@ import (
 func Test_main(t *testing.T) {
 	start := time.Now()
 	lib, err := ParseLibrary(`./tests/library.raml`)
+	if vErr, ok := UnwrapError(err); ok {
+		t.Logf("Validation error: %s", vErr.Error())
+	}
 	require.NoError(t, err)
 	elapsed := time.Since(start)
 	t.Logf("ParseLibrary took %d ms", elapsed.Milliseconds())
