@@ -9,7 +9,7 @@ import (
 type CustomDomainProperties map[string]*DomainExtension
 
 type CustomShapeFacets map[string]*Node
-type CustomShapeFacetDefinitions map[string]*Shape
+type CustomShapeFacetDefinitions map[string]*Property // Object properties share the same syntax with custom shape facets.
 
 type DomainExtension struct {
 	Id        string
