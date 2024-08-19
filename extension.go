@@ -26,13 +26,13 @@ func UnmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNo
 	if name == "" {
 		return "", nil, fmt.Errorf("annotation name must not be empty")
 	}
-	dt, err := MakeNode(valueNode, location)
+	n, err := MakeNode(valueNode, location)
 	if err != nil {
 		return "", nil, fmt.Errorf("make node: %w", err)
 	}
 	de := &DomainExtension{
 		Name:      name,
-		Extension: dt,
+		Extension: n,
 		Location:  location,
 		Position:  Position{keyNode.Line, keyNode.Column},
 	}

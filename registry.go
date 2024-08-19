@@ -11,6 +11,7 @@ type Registry struct {
 
 	// May be reused for both validation and resolution.
 	DomainExtensions []*DomainExtension
+
 	// TODO: Temporary shape buffers for resolution and counting.
 	UnresolvedShapes []*Shape
 	ResolvedShapes   []*Shape

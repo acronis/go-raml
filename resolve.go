@@ -47,7 +47,7 @@ func ResolveDomainExtension(de *DomainExtension) error {
 			if lib == nil {
 				return fmt.Errorf("library %s not found", parts[0])
 			}
-			ref = lib.AnnotationTypes[parts[1]]
+			ref = lib.Link.AnnotationTypes[parts[1]]
 			if ref == nil {
 				return fmt.Errorf("reference %s not found", parts[1])
 			}
@@ -61,7 +61,7 @@ func ResolveDomainExtension(de *DomainExtension) error {
 			if lib == nil {
 				return fmt.Errorf("library %s not found", parts[0])
 			}
-			ref = lib.AnnotationTypes[parts[1]]
+			ref = lib.Link.AnnotationTypes[parts[1]]
 			if ref == nil {
 				return fmt.Errorf("reference %s not found", parts[1])
 			}

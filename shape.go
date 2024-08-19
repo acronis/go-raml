@@ -8,25 +8,37 @@ import (
 )
 
 type BaseShape struct {
-	Id          string // computed
-	Name        string // computed
+	Id          string
+	Name        string
 	DisplayName *string
 	Description *string
 	Type        string
-	Examples    []*Example
-	Inherits    []*Shape // computed
+	Example     *Example
+	Examples    *Examples
+	Inherits    []*Shape
 	Default     *Node
 	Required    *bool
 
-	// To support !include
-	Link *DataType // computed
+	// To support !include of DataType fragment
+	Link *DataType
 
-	CustomShapeFacets           CustomShapeFacets // computed. Map of custom facets with values
-	CustomShapeFacetDefinitions CustomShapeFacetDefinitions
-	CustomDomainProperties      CustomDomainProperties // computed. Map of custom annotations
+	CustomShapeFacets           CustomShapeFacets           // Map of custom facets with values
+	CustomShapeFacetDefinitions CustomShapeFacetDefinitions // Map of custom facet definitions
+	CustomDomainProperties      CustomDomainProperties      // Map of custom annotations
 
-	Location string // computed.
-	Position        // computed.
+	Location string
+	Position
+}
+
+type Examples struct {
+	Id       string
+	Examples map[string]*Example
+
+	// To support !include of NamedExample fragment
+	Link *NamedExample
+
+	Location string
+	Position
 }
 
 // ShapeBaser is the interface that represents a retriever of a base shape.
@@ -253,7 +265,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				return nil, nil, fmt.Errorf("decode required: %w", err)
 			}
 		} else if node.Value == "facets" {
-			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions)
+			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions, len(valueNode.Content)/2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
@@ -265,31 +277,46 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				s.CustomShapeFacetDefinitions[name] = shape
 			}
 		} else if node.Value == "example" {
-			example := &Example{
-				Location: s.Location,
+			if s.Examples != nil {
+				return nil, nil, fmt.Errorf("example and examples cannot be defined together")
 			}
-			if err := example.UnmarshalYAML(valueNode); err != nil {
-				return nil, nil, fmt.Errorf("unmarshal example: %w", err)
+			example, err := MakeExample(valueNode, "", s.Location)
+			if err != nil {
+				return nil, nil, fmt.Errorf("make example: %w", err)
 			}
-			s.Examples = append(s.Examples, example)
+			s.Example = example
 		} else if node.Value == "examples" {
-			// TODO: Add NamedExample support
+			if s.Example != nil {
+				return nil, nil, fmt.Errorf("example and examples cannot be defined together")
+			}
+			if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == "!include" {
+				baseDir := filepath.Dir(s.Location)
+				n, err := ParseNamedExample(filepath.Join(baseDir, valueNode.Value))
+				if err != nil {
+					return nil, nil, fmt.Errorf("parse named example: %w", err)
+				}
+				s.Examples = &Examples{Link: n, Location: s.Location}
+				continue
+			} else if valueNode.Kind != yaml.MappingNode {
+				return nil, nil, fmt.Errorf("examples must be map")
+			}
+			examples := make(map[string]*Example, len(valueNode.Content)/2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				example := &Example{
-					Name:     name,
-					Location: s.Location,
+				example, err := MakeExample(data, name, s.Location)
+				if err != nil {
+					return nil, nil, fmt.Errorf("make examples: [%d]: %w", j, err)
 				}
-				if err := example.UnmarshalYAML(data); err != nil {
-					return nil, nil, fmt.Errorf("unmarshal examples: [%d]: %w", j, err)
-				}
-				s.Examples = append(s.Examples, example)
+				examples[name] = example
 			}
+			s.Examples = &Examples{Examples: examples, Location: s.Location}
 		} else if node.Value == "default" {
-			if err := valueNode.Decode(&s.Default); err != nil {
-				return nil, nil, fmt.Errorf("decode default: %w", err)
+			n, err := MakeNode(valueNode, s.Location)
+			if err != nil {
+				return nil, nil, fmt.Errorf("make node default: %w", err)
 			}
+			s.Default = n
 		} else if node.Value == "allowedTargets" {
 			// TODO: Included by annotationTypes
 		} else {

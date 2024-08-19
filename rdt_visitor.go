@@ -157,7 +157,7 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 		if lib == nil {
 			return nil, fmt.Errorf("library %s not found", parts[0])
 		}
-		ref = lib.Types[parts[1]]
+		ref = lib.Link.Types[parts[1]]
 		if ref == nil {
 			return nil, fmt.Errorf("reference %s not found", parts[1])
 		}
