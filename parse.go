@@ -40,9 +40,32 @@ func NewFragmentDecoder(f *os.File, kind FragmentKind) (*yaml.Decoder, error) {
 	return yaml.NewDecoder(r), nil
 }
 
-func ParseDataType(path string) (*DataType, error) {
+func ReadRawFile(path string) (io.ReadCloser, error) {
 	// Library paths must be normalized to simplify dependent libraries resolution.
 	// Convert rel to abs relative to current workdir if necessary.
+	// TODO: Add support for URI
+	if !filepath.IsAbs(path) {
+		workdir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("get workdir: %w", err)
+		}
+		path = filepath.Join(workdir, path)
+	}
+
+	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalf("open file error: %v", err)
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+
+	return f, nil
+}
+
+func ParseDataType(path string) (*DataType, error) {
+	// IMPORTANT: May generate recursive structure.
+	// Consumers (resolvers, validators, external clients) must implement recursion detection when traversing links.
+
+	// Fragment paths must be normalized to absolute paths to simplify dependent libraries resolution.
 	// TODO: Add support for URI
 	if !filepath.IsAbs(path) {
 		workdir, err := os.Getwd()
@@ -75,9 +98,9 @@ func ParseDataType(path string) (*DataType, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read file: %w", err)
 		}
-		dt := MakeDataType(path)
-		if err := dt.UnmarshalJSON(data); err != nil {
-			return nil, fmt.Errorf("unmarshal json: %w", err)
+		dt, err := MakeJsonDataType(data, path)
+		if err != nil {
+			return nil, fmt.Errorf("make json data type: %w", err)
 		}
 		GetRegistry().PutFragment(path, dt)
 		return dt, nil
@@ -94,12 +117,23 @@ func ParseDataType(path string) (*DataType, error) {
 	}
 	GetRegistry().PutFragment(path, dt)
 
+	baseDir := filepath.Dir(dt.Location)
+	for _, include := range dt.Uses {
+		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value))
+		if err != nil {
+			return nil, fmt.Errorf("parse library: %w", err)
+		}
+		include.Link = sublib
+	}
+
 	return dt, nil
 }
 
 func ParseLibrary(path string) (*Library, error) {
-	// Library paths must be normalized to simplify dependent libraries resolution.
-	// Convert rel to abs relative to current workdir if necessary.
+	// IMPORTANT: May generate recursive structure.
+	// Consumers (resolvers, validators, external clients) must implement recursion detection when traversing links.
+
+	// Fragment paths must be normalized to absolute paths to simplify dependent libraries resolution.
 	// TODO: Add support for URI
 	if !filepath.IsAbs(path) {
 		workdir, err := os.Getwd()
@@ -137,5 +171,58 @@ func ParseLibrary(path string) (*Library, error) {
 	}
 	GetRegistry().PutFragment(path, lib)
 
+	// Resolve included libraries in a separate stage.
+	baseDir := filepath.Dir(lib.Location)
+	for _, include := range lib.Uses {
+		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value))
+		if err != nil {
+			return nil, fmt.Errorf("parse library: %w", err)
+		}
+		include.Link = sublib
+	}
+
 	return lib, nil
+}
+
+func ParseNamedExample(path string) (*NamedExample, error) {
+	// Library paths must be normalized to simplify dependent libraries resolution.
+	// Convert rel to abs relative to current workdir if necessary.
+	// TODO: Add support for URI
+	if !filepath.IsAbs(path) {
+		workdir, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("get workdir: %w", err)
+		}
+		path = filepath.Join(workdir, path)
+	}
+
+	if lib := GetRegistry().GetFragment(path); lib != nil {
+		// log.Printf("reusing fragment %s", path)
+		return lib.(*NamedExample), nil
+	}
+
+	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		log.Fatalf("open file error: %v", err)
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			log.Fatal(fmt.Errorf("close file error: %w", err))
+		}
+	}(f)
+
+	decoder, err := NewFragmentDecoder(f, FragmentNamedExample)
+	if err != nil {
+		return nil, fmt.Errorf("new fragment decoder: %w", err)
+	}
+
+	ne := MakeNamedExample(path)
+	if err := decoder.Decode(&ne); err != nil {
+		return nil, fmt.Errorf("decode fragment: %w", err)
+	}
+	GetRegistry().PutFragment(path, ne)
+
+	return ne, nil
 }

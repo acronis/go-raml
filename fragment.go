@@ -24,18 +24,27 @@ type Library struct {
 	// TODO: Specific to API fragments. Not supported yet.
 	// ResourceTypes   map[string]interface{} `yaml:"resourceTypes"`
 	Types map[string]*Shape
-	Uses  map[string]*Library
+	Uses  map[string]*LibraryLink
 
 	CustomDomainProperties CustomDomainProperties
 
 	Location string
 }
 
+type LibraryLink struct {
+	Id    string
+	Value string
+
+	Link *Library
+
+	Location string
+	Position
+}
+
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("value must be map")
+		return fmt.Errorf("must be map")
 	}
-
 	l.CustomDomainProperties = make(CustomDomainProperties)
 
 	for i := 0; i != len(value.Content); i += 2 {
@@ -52,24 +61,23 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				continue
 			}
 
-			l.Uses = make(map[string]*Library)
-			baseDir := filepath.Dir(l.Location)
+			l.Uses = make(map[string]*LibraryLink, len(valueNode.Content)/2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
-				path := valueNode.Content[j+1].Value
-				lib, err := ParseLibrary(filepath.Join(baseDir, path))
-				if err != nil {
-					return fmt.Errorf("parse uses: parse library: %w", err)
+				path := valueNode.Content[j+1]
+				l.Uses[name] = &LibraryLink{
+					Value:    path.Value,
+					Location: l.Location,
+					Position: Position{path.Line, path.Column},
 				}
-				l.Uses[name] = lib
 			}
 		} else if node.Value == "types" {
 			if valueNode.Tag == "!!null" {
 				continue
 			}
 
-			l.Types = make(map[string]*Shape)
+			l.Types = make(map[string]*Shape, len(valueNode.Content)/2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
@@ -86,7 +94,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				continue
 			}
 
-			l.AnnotationTypes = make(map[string]*Shape)
+			l.AnnotationTypes = make(map[string]*Shape, len(valueNode.Content)/2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
@@ -118,33 +126,10 @@ func MakeLibrary(path string) *Library {
 type DataType struct {
 	Id    string
 	Usage string
-	Uses  map[string]*Library
+	Uses  map[string]*LibraryLink
 	Shape *Shape
 
 	Location string
-}
-
-func (dt *DataType) UnmarshalJSON(value []byte) error {
-	node := &yaml.Node{
-		Kind: yaml.MappingNode,
-		Content: []*yaml.Node{
-			{
-				Kind:  yaml.ScalarNode,
-				Value: "type",
-			},
-			{
-				Kind:  yaml.ScalarNode,
-				Value: string(value),
-				Tag:   "!!str",
-			},
-		},
-	}
-	shape, err := MakeShape(node, filepath.Base(dt.Location), dt.Location)
-	if err != nil {
-		return fmt.Errorf("parse types: %w", err)
-	}
-	dt.Shape = shape
-	return nil
 }
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
@@ -165,17 +150,16 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 				continue
 			}
 
-			dt.Uses = make(map[string]*Library)
-			baseDir := filepath.Dir(dt.Location)
+			dt.Uses = make(map[string]*LibraryLink, len(valueNode.Content)/2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
-				path := valueNode.Content[j+1].Value
-				lib, err := ParseLibrary(filepath.Join(baseDir, path))
-				if err != nil {
-					return fmt.Errorf("parse uses: parse library: %w", err)
+				path := valueNode.Content[j+1]
+				dt.Uses[name] = &LibraryLink{
+					Value:    path.Value,
+					Location: dt.Location,
+					Position: Position{path.Line, path.Column},
 				}
-				dt.Uses[name] = lib
 			}
 		} else {
 			shapeValue.Content = append(shapeValue.Content, node, valueNode)
@@ -195,9 +179,59 @@ func MakeDataType(path string) *DataType {
 	}
 }
 
-// RAML 1.0 NamedExample
-// type NamedExample struct {
-// 	Id string
-// 	example.Example
-// 	Location string
-// }
+func MakeJsonDataType(value []byte, path string) (*DataType, error) {
+	dt := MakeDataType(path)
+	// Convert to yaml node to reuse the same data node creation interface
+	node := &yaml.Node{
+		Kind: yaml.MappingNode,
+		Content: []*yaml.Node{
+			{
+				Kind:  yaml.ScalarNode,
+				Value: "type",
+				Tag:   "!!str",
+			},
+			{
+				Kind:  yaml.ScalarNode,
+				Value: string(value),
+				Tag:   "!!str",
+			},
+		},
+	}
+	if err := node.Decode(&dt); err != nil {
+		return nil, fmt.Errorf("decode fragment: %w", err)
+	}
+	return dt, nil
+}
+
+// NamedExample is the RAML 1.0 NamedExample
+type NamedExample struct {
+	Id       string
+	Examples map[string]*Example
+
+	Location string
+}
+
+func MakeNamedExample(path string) *NamedExample {
+	return &NamedExample{
+		Location: path,
+	}
+}
+
+func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("must be map")
+	}
+	examples := make(map[string]*Example, len(value.Content)/2)
+	for i := 0; i != len(value.Content); i += 2 {
+		node := value.Content[i]
+		valueNode := value.Content[i+1]
+		example, err := MakeExample(valueNode, node.Value, ne.Location)
+		if err != nil {
+			return fmt.Errorf("make example: %w", err)
+		}
+		examples[node.Value] = example
+	}
+	ne.Examples = examples
+
+	return nil
+}

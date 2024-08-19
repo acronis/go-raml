@@ -7,7 +7,22 @@ import (
 )
 
 type EnumFacets struct {
-	Enum []Node
+	Enum []*Node
+}
+
+func MakeEnum(v *yaml.Node, location string) ([]*Node, error) {
+	if v.Kind != yaml.SequenceNode {
+		return nil, fmt.Errorf("enum must be sequence node")
+	}
+	var enums []*Node = make([]*Node, len(v.Content))
+	for i, v := range v.Content {
+		n, err := MakeNode(v, location)
+		if err != nil {
+			return nil, fmt.Errorf("make node enum: %w", err)
+		}
+		enums[i] = n
+	}
+	return enums, nil
 }
 
 type FormatFacets struct {
@@ -69,15 +84,17 @@ func (s *IntegerShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode format: %w", err)
 			}
 		} else if node.Value == "enum" {
-			if err := valueNode.Decode(&s.Enum); err != nil {
-				return fmt.Errorf("decode enum: %w", err)
+			enums, err := MakeEnum(valueNode, s.Location)
+			if err != nil {
+				return fmt.Errorf("make enum: %w", err)
 			}
+			s.Enum = enums
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
@@ -122,19 +139,21 @@ func (s *NumberShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode format: %w", err)
 			}
 		} else if node.Value == "enum" {
-			if err := valueNode.Decode(&s.Enum); err != nil {
-				return fmt.Errorf("decode enum: %w", err)
+			enums, err := MakeEnum(valueNode, s.Location)
+			if err != nil {
+				return fmt.Errorf("make enum: %w", err)
 			}
+			s.Enum = enums
 		} else if node.Value == "multipleOf" {
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
 				return fmt.Errorf("decode multipleOf: %w", err)
 			}
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
@@ -184,15 +203,17 @@ func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode pattern: %w", err)
 			}
 		} else if node.Value == "enum" {
-			if err := valueNode.Decode(&s.Enum); err != nil {
-				return fmt.Errorf("decode enum: %w", err)
+			enums, err := MakeEnum(valueNode, s.Location)
+			if err != nil {
+				return fmt.Errorf("make enum: %w", err)
 			}
+			s.Enum = enums
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
@@ -236,11 +257,11 @@ func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode fileTypes: %w", err)
 			}
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
@@ -267,15 +288,17 @@ func (s *BooleanShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 		valueNode := v[i+1]
 
 		if node.Value == "enum" {
-			if err := valueNode.Decode(&s.Enum); err != nil {
-				return fmt.Errorf("decode enum: %w", err)
+			enums, err := MakeEnum(valueNode, s.Location)
+			if err != nil {
+				return fmt.Errorf("make enum: %w", err)
 			}
+			s.Enum = enums
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 
@@ -306,11 +329,11 @@ func (s *DateTimeShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode format: %w", err)
 			}
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil

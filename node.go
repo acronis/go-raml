@@ -1,80 +1,92 @@
 package raml
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Node struct {
-	Id string
-	*ScalarNode
-	*ObjectNode
-	*ArrayNode
+	Id    string
+	Value any
 
-	// TODO: Possibly needs !include support?
+	Link *Node
+
 	Location string
 	Position
 }
 
 func MakeNode(node *yaml.Node, location string) (*Node, error) {
-	n := &Node{
-		Location: location,
-	}
-	if err := n.UnmarshalYAML(node); err != nil {
-		return nil, fmt.Errorf("parse node: %w", err)
-	}
-	return n, nil
-}
+	n := &Node{Location: location, Position: Position{node.Line, node.Column}}
 
-func (dn *Node) UnmarshalYAML(value *yaml.Node) error {
-	node := YamlNodeToDataNode(value)
-	switch t := node.(type) {
-	default:
-		return fmt.Errorf("unexpected type %T", t)
-	case *ScalarNode:
-		dn.ScalarNode = t
-	case *ObjectNode:
-		dn.ObjectNode = t
-	case *ArrayNode:
-		dn.ArrayNode = t
-	}
-	return nil
-}
-
-type ScalarNode struct {
-	Value string
-}
-
-type ObjectNode struct {
-	Properties map[string]any
-}
-
-type ArrayNode struct {
-	Items []any
-}
-
-func YamlNodeToDataNode(node *yaml.Node) any {
 	switch node.Kind {
 	default:
-		return nil
+		return nil, fmt.Errorf("unexpected kind %v", node.Kind)
 	case yaml.ScalarNode:
-		return &ScalarNode{
-			Value: node.Value,
+		switch node.Tag {
+		default:
+			if err := node.Decode(&n.Value); err != nil {
+				return nil, err
+			}
+		case "!!str":
+			if node.Value != "" && node.Value[0] == '{' {
+				if err := json.Unmarshal([]byte(node.Value), &n.Value); err != nil {
+					return nil, err
+				}
+			} else {
+				n.Value = node.Value
+			}
+		// TODO: In case with includes that are explicitly required to be string value, probably need to introduce a new tag.
+		// !includestr sounds like a good candidate.
+		case "!include":
+			baseDir := filepath.Dir(location)
+			fragmentPath := filepath.Join(baseDir, node.Value)
+			// TODO: Need to refactor and move out IO logic from this function.
+			r, err := ReadRawFile(filepath.Join(baseDir, node.Value))
+			if err != nil {
+				return nil, err
+			}
+			defer func(r io.ReadCloser) {
+				err = r.Close()
+				if err != nil {
+					log.Fatal(fmt.Errorf("close file error: %w", err))
+				}
+			}(r)
+			// TODO: This logic should be more complex because content type may depend on the header reported by remote server.
+			link := &Node{Location: fragmentPath}
+			ext := filepath.Ext(node.Value)
+			if ext == ".json" {
+				d := json.NewDecoder(r)
+				if err := d.Decode(&link.Value); err != nil {
+					return nil, err
+				}
+			} else if ext == ".yaml" || ext == ".yml" {
+				d := yaml.NewDecoder(r)
+				if err := d.Decode(&link.Value); err != nil {
+					return nil, err
+				}
+			} else {
+				v, err := io.ReadAll(r)
+				if err != nil {
+					return nil, err
+				}
+				link.Value = v
+			}
+			n.Link = link
 		}
+		return n, nil
 	case yaml.MappingNode:
-		properties := make(map[string]any)
-		for i := 0; i != len(node.Content); i += 2 {
-			key := node.Content[i].Value
-			value := node.Content[i+1]
-			properties[key] = YamlNodeToDataNode(value)
+		if err := node.Decode(&n.Value); err != nil {
+			return nil, err
 		}
-		return &ObjectNode{Properties: properties}
 	case yaml.SequenceNode:
-		items := make([]any, len(node.Content))
-		for i, item := range node.Content {
-			items[i] = YamlNodeToDataNode(item)
+		if err := node.Decode(&n.Value); err != nil {
+			return nil, err
 		}
-		return &ArrayNode{Items: items}
 	}
+	return n, nil
 }

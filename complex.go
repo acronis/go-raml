@@ -55,11 +55,11 @@ func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode uniqueItems: %w", err)
 			}
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
@@ -108,7 +108,7 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return fmt.Errorf("decode maxProperties: %w", err)
 			}
 		} else if node.Value == "properties" {
-			s.Properties = make(map[string]*Property)
+			s.Properties = make(map[string]*Property, len(valueNode.Content)/2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
@@ -120,11 +120,11 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				GetRegistry().PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 			}
 		} else {
-			dt, err := MakeNode(valueNode, s.Location)
+			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
 				return fmt.Errorf("make node: %w", err)
 			}
-			s.CustomShapeFacets[node.Value] = dt
+			s.CustomShapeFacets[node.Value] = n
 		}
 	}
 	return nil
