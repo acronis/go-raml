@@ -53,7 +53,7 @@ func Stringer(v interface{}) fmt.Stringer {
 }
 
 // StructInfo is a map of string keys to fmt.Stringer values.
-// It is used to store additional information about a validation error.
+// It is used to store additional information about an error.
 // WARNING: Not thread-safe
 type StructInfo struct {
 	info map[string]fmt.Stringer
@@ -137,7 +137,7 @@ func NewStructInfo() *StructInfo {
 	}
 }
 
-// Error contains information about a validation error.
+// Error contains information about a parser error.
 type Error struct {
 	// Severity is the severity of the error.
 	Severity Severity
@@ -148,19 +148,19 @@ type Error struct {
 	// Position is the position of the error in the file.
 	Position *Position
 
-	// Wrapped errors is the validation error that wraps this error.
+	// Wrapped is the error that wrapped by this error.
 	Wrapped *Error
 	// Err is the underlying error. It is not used for the error message.
 	Err error
 	// Message is the error message.
 	Message string
-	// WrappedMessages is the error messages of the wrapped errors.
-	WrappedMessages string
+	// WrappingMessage is the error messages of the wrapped errors.
+	WrappingMessage string
 	// Info is the additional information about the error.
 	Info StructInfo
 }
 
-// Header returns the header of the error.
+// Header returns the header of the Error.
 func (e *Error) Header() string {
 	result := fmt.Sprintf("[%s] %s: %s",
 		e.Severity,
@@ -177,17 +177,17 @@ func (e *Error) Header() string {
 
 // FullMessage returns the full message of the error including the wrapped messages.
 func (e *Error) FullMessage() string {
-	if e.WrappedMessages != "" {
+	if e.WrappingMessage != "" {
 		if e.Message != "" {
-			return fmt.Sprintf("%s: %s", e.WrappedMessages, e.Message)
+			return fmt.Sprintf("%s: %s", e.WrappingMessage, e.Message)
 		}
-		return e.WrappedMessages
+		return e.WrappingMessage
 	} else {
 		return e.Message
 	}
 }
 
-// OrigString returns the original error message without the wrapped messages.
+// OrigString returns the original error message without the wrapping messages.
 func (e *Error) OrigString() string {
 	result := e.Header()
 	if e.Message != "" {
@@ -209,6 +209,7 @@ func (e *Error) OrigStringW() string {
 }
 
 // String implements the fmt.Stringer interface.
+// It returns the string representation of the Error.
 func (e *Error) String() string {
 	result := e.Header()
 	msg := e.FullMessage()
@@ -225,43 +226,43 @@ func (e *Error) String() string {
 }
 
 // Error implements the error interface.
+// It returns the string representation of the Error.
 func (e *Error) Error() string {
 	return e.String()
 }
 
-// UnwrapError checks if the given error is a validation error and returns it.
-// It returns false if the error is not a validation error.
+// UnwrapError checks if the given error is an Error and returns it.
+// It returns false if the error is not an Error.
 func UnwrapError(err error) (*Error, bool) {
 	err = FixYamlError(err)
-	validationError, ok := err.(*Error)
+	e, ok := err.(*Error)
 	if !ok {
 		wrappedErr := errors.Unwrap(err)
 		if wrappedErr == nil {
 			return nil, false
 		}
-		validationError, ok = UnwrapError(wrappedErr)
+		e, ok = UnwrapError(wrappedErr)
 		if ok {
-			msg := strings.ReplaceAll(err.Error(), validationError.OrigStringW(), "")
+			msg := strings.ReplaceAll(err.Error(), e.OrigStringW(), "")
 			msg = strings.TrimSuffix(msg, ": ")
-			validationError.WrappedMessages = msg
-			validationError.Err = err
+			e.WrappingMessage = msg
+			e.Err = err
 		}
 	}
 
-	// Clone the validation error to avoid modifying the original error.
-	return validationError.Clone(), ok
+	// Clone the error to avoid modifying the original error.
+	return e.Clone(), ok
 }
 
-// NewError creates a new validation error.
+// NewError creates a new Error.
 func NewError(message string, location string) *Error {
-	validationError := &Error{
+	e := &Error{
 		Severity: SeverityError,
 		ErrType:  ErrTypeValidating,
 		Message:  message,
-		Info:     *NewStructInfo(),
 		Location: location,
 	}
-	return validationError
+	return e
 }
 
 // GetYamlError returns the yaml type error from the given error.
@@ -285,6 +286,7 @@ func GetYamlError(err error) *yaml.TypeError {
 	}
 }
 
+// FixYamlError fixes the yaml type error from the given error.
 func FixYamlError(err error) error {
 	if yamlError := GetYamlError(err); yamlError != nil {
 		err = fmt.Errorf("%s", strings.Join(yamlError.Errors, ": "))
@@ -292,67 +294,67 @@ func FixYamlError(err error) error {
 	return err
 }
 
-// NewWrappedError creates a new validation error from the given error.
+// NewWrappedError creates a new Error from the given go error.
 func NewWrappedError(err error, location string) *Error {
 	err = FixYamlError(err)
-	if validationError, ok := UnwrapError(err); ok {
+	if e, ok := UnwrapError(err); ok {
 		return NewError(
 			"",
 			location,
-		).Wrap(validationError).SetErr(validationError.Err)
+		).Wrap(e).SetErr(e.Err)
 	}
 	return NewError(err.Error(), location).SetErr(err)
 }
 
-// SetSeverity sets the severity of the validation error and returns it
+// SetSeverity sets the severity of the Error and returns it
 func (e *Error) SetSeverity(severity Severity) *Error {
 	e.Severity = severity
 	return e
 }
 
-// SetType sets the type of the validation error and returns it
+// SetType sets the type of the Error and returns it
 func (e *Error) SetType(errType ErrType) *Error {
 	e.ErrType = errType
 	return e
 }
 
-// SetLocation sets the location of the validation error and returns it
+// SetLocation sets the location of the Error and returns it
 func (e *Error) SetLocation(location string) *Error {
 	e.Location = location
 	return e
 }
 
-// SetPosition sets the position of the validation error and returns it
+// SetPosition sets the position of the Error and returns it
 func (e *Error) SetPosition(pos Position) *Error {
 	e.Position = &pos
 	return e
 }
 
-// SetWrappedMessages sets the wrapped messages of the validation error and returns it
-func (e *Error) SetWrappedMessages(wrappedMessages string, a ...any) *Error {
-	e.WrappedMessages = fmt.Sprintf(wrappedMessages, a...)
+// SetWrappingMessage sets a message which wraps the message of Error and returns *Error
+func (e *Error) SetWrappingMessage(msg string, a ...any) *Error {
+	e.WrappingMessage = fmt.Sprintf(msg, a...)
 	return e
 }
 
-// SetMessage sets the message of the validation error and returns it
+// SetMessage sets the message of the Error and returns it
 func (e *Error) SetMessage(message string, a ...any) *Error {
 	e.Message = fmt.Sprintf(message, a...)
 	return e
 }
 
-// SetErr sets the underlying error of the validation error and returns it
+// SetErr sets the underlying error of the Error and returns it
 func (e *Error) SetErr(err error) *Error {
 	e.Err = err
 	return e
 }
 
-// Wrap wraps the given validation error and returns it
+// Wrap wraps the given Error and returns it
 func (e *Error) Wrap(w *Error) *Error {
 	e.Wrapped = w
 	return e
 }
 
-// Clone returns a clone of the validation error.
+// Clone returns a clone of the Error.
 func (e *Error) Clone() *Error {
 	if e == nil {
 		return nil

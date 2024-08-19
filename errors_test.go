@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestIsValidationError(t *testing.T) {
+func TestUnwrapError(t *testing.T) {
 	type args struct {
 		err error
 	}
@@ -52,7 +52,7 @@ func TestIsValidationError(t *testing.T) {
 				Message:         firstValidErr.Message,
 				Location:        firstValidErr.Location,
 				Position:        firstValidErr.Position,
-				WrappedMessages: "wrapped firstValidErr",
+				WrappingMessage: "wrapped firstValidErr",
 				Err:             wrappedFirstValidErr,
 				Info:            *NewStructInfo(),
 			},
@@ -95,7 +95,7 @@ func TestIsValidationError(t *testing.T) {
 				Location:        "/usr/local/raml3.raml",
 				Position:        &Position{Line: 30, Column: 3},
 				Err:             wrappedSimpleErr,
-				WrappedMessages: "",
+				WrappingMessage: "",
 				Info:            *NewStructInfo(),
 			},
 			want1:   true,
@@ -113,7 +113,7 @@ func TestIsValidationError(t *testing.T) {
 				Location:        secondValidErr.Location,
 				Position:        secondValidErr.Position,
 				Err:             wrappedSecondValidErr,
-				WrappedMessages: "wrapped secondValidErr",
+				WrappingMessage: "wrapped secondValidErr",
 				Info:            *NewStructInfo(),
 				Wrapped: &Error{
 					Severity:        SeverityError,
@@ -122,7 +122,7 @@ func TestIsValidationError(t *testing.T) {
 					Location:        firstValidErr.Location,
 					Position:        firstValidErr.Position,
 					Err:             wrappedFirstValidErr,
-					WrappedMessages: "wrapped firstValidErr",
+					WrappingMessage: "wrapped firstValidErr",
 					Info:            *NewStructInfo(),
 				},
 			},
@@ -535,7 +535,7 @@ func TestStructInfo_Update(t *testing.T) {
 	}
 }
 
-func TestValidationError_SetSeverity(t *testing.T) {
+func TestError_SetSeverity(t *testing.T) {
 	type fields struct {
 		Severity Severity
 	}
@@ -573,7 +573,7 @@ func TestValidationError_SetSeverity(t *testing.T) {
 	}
 }
 
-func TestValidationError_SetType(t *testing.T) {
+func TestError_SetType(t *testing.T) {
 	type fields struct {
 		ErrType ErrType
 	}
@@ -611,7 +611,7 @@ func TestValidationError_SetType(t *testing.T) {
 	}
 }
 
-func TestValidationError_SetLocationAndPosition(t *testing.T) {
+func TestError_SetLocationAndPosition(t *testing.T) {
 	type fields struct {
 		Location string
 		Position Position
@@ -664,7 +664,7 @@ func TestValidationError_SetLocationAndPosition(t *testing.T) {
 	}
 }
 
-func TestValidationError_SetMessage(t *testing.T) {
+func TestError_SetMessage(t *testing.T) {
 	type fields struct {
 		Message string
 	}
@@ -717,7 +717,7 @@ func TestValidationError_SetMessage(t *testing.T) {
 	}
 }
 
-func TestValidationError_SetWrappedMessages(t *testing.T) {
+func TestError_SetWrappingMessage(t *testing.T) {
 	type fields struct {
 		Message string
 	}
@@ -741,7 +741,7 @@ func TestValidationError_SetWrappedMessages(t *testing.T) {
 				a:       []any{},
 			},
 			want: &Error{
-				WrappedMessages: "new message",
+				WrappingMessage: "new message",
 			},
 		},
 		{
@@ -754,23 +754,23 @@ func TestValidationError_SetWrappedMessages(t *testing.T) {
 				a:       []any{"argument"},
 			},
 			want: &Error{
-				WrappedMessages: "new message with argument",
+				WrappingMessage: "new message with argument",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := &Error{
-				WrappedMessages: tt.fields.Message,
+				WrappingMessage: tt.fields.Message,
 			}
-			if got := v.SetWrappedMessages(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SetWrappedMessages() = %v, want %v", got, tt.want)
+			if got := v.SetWrappingMessage(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SetWrappingMessage() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestValidationError_Error(t *testing.T) {
+func TestError_Error(t *testing.T) {
 	type fields struct {
 		Severity        Severity
 		ErrType         ErrType
@@ -880,7 +880,7 @@ func TestValidationError_Error(t *testing.T) {
 				Wrapped:         tt.fields.Wrapped,
 				Err:             tt.fields.Err,
 				Message:         tt.fields.Message,
-				WrappedMessages: tt.fields.WrappedMessages,
+				WrappingMessage: tt.fields.WrappedMessages,
 				Info:            tt.fields.Info,
 			}
 			if got := v.Error(); got != tt.want {
@@ -890,7 +890,7 @@ func TestValidationError_Error(t *testing.T) {
 	}
 }
 
-func TestValidationError_OrigString(t *testing.T) {
+func TestError_OrigString(t *testing.T) {
 	type fields struct {
 		Severity        Severity
 		ErrType         ErrType
@@ -938,7 +938,7 @@ func TestValidationError_OrigString(t *testing.T) {
 				Wrapped:         tt.fields.Wrapped,
 				Err:             tt.fields.Err,
 				Message:         tt.fields.Message,
-				WrappedMessages: tt.fields.WrappedMessages,
+				WrappingMessage: tt.fields.WrappedMessages,
 				Info:            tt.fields.Info,
 			}
 			if got := v.OrigString(); got != tt.want {

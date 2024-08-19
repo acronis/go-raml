@@ -173,9 +173,6 @@ func ParseLibrary(path string) (*Library, error) {
 	lib := MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
 		Err := NewWrappedError(fmt.Errorf("decode fragment: %w", err), lib.Location)
-		Err.SetSeverity(SeverityCritical)
-		Err.SetType(ErrTypeParsing)
-		Err.Info.Add("123", Stringer(456))
 		return nil, Err
 	}
 	GetRegistry().PutFragment(path, lib)
