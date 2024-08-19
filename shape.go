@@ -266,15 +266,14 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			}
 		} else if node.Value == "facets" {
 			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions, len(valueNode.Content)/2)
-			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				shape, err := MakeShape(data, name, s.Location)
+				property, err := MakeProperty(name, data, s.Location)
 				if err != nil {
-					return nil, nil, fmt.Errorf("make shape: %w", err)
+					return nil, nil, fmt.Errorf("make property: %w", err)
 				}
-				s.CustomShapeFacetDefinitions[name] = shape
+				s.CustomShapeFacetDefinitions[name] = property
 			}
 		} else if node.Value == "example" {
 			if s.Examples != nil {
