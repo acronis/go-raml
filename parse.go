@@ -62,7 +62,9 @@ func ReadRawFile(path string) (io.ReadCloser, error) {
 }
 
 func ParseDataType(path string) (*DataType, error) {
-	// NOTE: May generate recursive structure.
+	// IMPORTANT: May generate recursive structure.
+	// Consumers (resolvers, validators, external clients) must implement recursion detection when traversing links.
+
 	// Fragment paths must be normalized to absolute paths to simplify dependent libraries resolution.
 	// TODO: Add support for URI
 	if !filepath.IsAbs(path) {
@@ -117,9 +119,7 @@ func ParseDataType(path string) (*DataType, error) {
 
 	baseDir := filepath.Dir(dt.Location)
 	for _, include := range dt.Uses {
-		// IMPORTANT: Library recursion will NEVER happen inside data types on the parser level since data type is a leaf fragment.
-		// However, consumers (resolvers, external clients) must implement recursion detection when traversing links.
-		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value), make([]string, 0))
+		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
 			return nil, fmt.Errorf("parse library: %w", err)
 		}
@@ -129,8 +129,10 @@ func ParseDataType(path string) (*DataType, error) {
 	return dt, nil
 }
 
-func ParseLibrary(path string, history []string) (*Library, error) {
-	// NOTE: May generate recursive structure.
+func ParseLibrary(path string) (*Library, error) {
+	// IMPORTANT: May generate recursive structure.
+	// Consumers (resolvers, validators, external clients) must implement recursion detection when traversing links.
+
 	// Fragment paths must be normalized to absolute paths to simplify dependent libraries resolution.
 	// TODO: Add support for URI
 	if !filepath.IsAbs(path) {
@@ -140,18 +142,6 @@ func ParseLibrary(path string, history []string) (*Library, error) {
 		}
 		path = filepath.Join(workdir, path)
 	}
-
-	// NOTE: Library recursion may happen on the parser level in cases when a library includes itself directly or indirectly.
-	for i, item := range history {
-		if item == path {
-			p := strings.Join(history[i:], " -> ")
-			return nil, fmt.Errorf("circular reference detected: %s -> %s", p, path)
-		}
-	}
-	// We need to create a new history slice to avoid modifying the original one in subsequent calls.
-	newHistory := make([]string, len(history)+1)
-	copy(newHistory, history)
-	newHistory[len(history)] = path
 
 	if lib := GetRegistry().GetFragment(path); lib != nil {
 		// log.Printf("reusing fragment %s", path)
@@ -184,7 +174,7 @@ func ParseLibrary(path string, history []string) (*Library, error) {
 	// Resolve included libraries in a separate stage.
 	baseDir := filepath.Dir(lib.Location)
 	for _, include := range lib.Uses {
-		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value), newHistory)
+		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
 			return nil, fmt.Errorf("parse library: %w", err)
 		}
