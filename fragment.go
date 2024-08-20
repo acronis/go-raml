@@ -53,7 +53,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		if IsCustomDomainExtensionNode(node.Value) {
 			name, de, err := UnmarshalCustomDomainExtension(l.Location, node, valueNode)
 			if err != nil {
-				return fmt.Errorf("unmarshal custom domain extension: %w", err)
+				return NewWrappedError("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
 			}
 			l.CustomDomainProperties[name] = de
 		} else if node.Value == "uses" {
@@ -84,7 +84,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := MakeShape(data, name, l.Location)
 				if err != nil {
-					return fmt.Errorf("parse types: make shape: %w", err)
+					return NewWrappedError("parse types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.Types[name] = shape
 				GetRegistry().PutIntoFragment(name, l.Location, shape)
@@ -101,14 +101,14 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := MakeShape(data, name, l.Location)
 				if err != nil {
-					return fmt.Errorf("parse annotation types: make shape: %w", err)
+					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.AnnotationTypes[name] = shape
 				// GetRegistry().Put(name, l.Location, shape)
 			}
 		} else if node.Value == "usage" {
 			if err := valueNode.Decode(&l.Usage); err != nil {
-				return fmt.Errorf("parse usage: value node decode: %w", err)
+				return NewWrappedError("parse usage: value node decode", err, l.Location, WithNodePosition(valueNode))
 			}
 		}
 	}
@@ -167,7 +167,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	}
 	shape, err := MakeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
 	if err != nil {
-		return fmt.Errorf("parse types: make shape: %w", err)
+		return NewWrappedError("parse types: make shape", err, dt.Location, WithNodePosition(shapeValue))
 	}
 	dt.Shape = shape
 	return nil
@@ -198,7 +198,7 @@ func MakeJsonDataType(value []byte, path string) (*DataType, error) {
 		},
 	}
 	if err := node.Decode(&dt); err != nil {
-		return nil, fmt.Errorf("decode fragment: %w", err)
+		return nil, NewWrappedError("decode fragment", err, path)
 	}
 	return dt, nil
 }
@@ -227,7 +227,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 		valueNode := value.Content[i+1]
 		example, err := MakeExample(valueNode, node.Value, ne.Location)
 		if err != nil {
-			return fmt.Errorf("make example: %w", err)
+			return NewWrappedError("make example", err, ne.Location, WithNodePosition(valueNode))
 		}
 		examples[node.Value] = example
 	}

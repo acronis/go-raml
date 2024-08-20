@@ -25,17 +25,17 @@ func MakeNode(node *yaml.Node, location string) (*Node, error) {
 
 	switch node.Kind {
 	default:
-		return nil, fmt.Errorf("unexpected kind %v", node.Kind)
+		return nil, NewError("unexpected kind", location, WithInfo("node.kind", Stringer(node.Kind)), WithNodePosition(node))
 	case yaml.ScalarNode:
 		switch node.Tag {
 		default:
 			if err := node.Decode(&n.Value); err != nil {
-				return nil, err
+				return nil, NewWrappedError("decode scalar", err, location, WithNodePosition(node))
 			}
 		case "!!str":
 			if node.Value != "" && node.Value[0] == '{' {
 				if err := json.Unmarshal([]byte(node.Value), &n.Value); err != nil {
-					return nil, err
+					return nil, NewWrappedError("json unmarshal", err, location, WithNodePosition(node))
 				}
 			} else {
 				n.Value = node.Value
@@ -48,7 +48,7 @@ func MakeNode(node *yaml.Node, location string) (*Node, error) {
 			// TODO: Need to refactor and move out IO logic from this function.
 			r, err := ReadRawFile(filepath.Join(baseDir, node.Value))
 			if err != nil {
-				return nil, err
+				return nil, NewWrappedError("include: read raw file", err, fragmentPath)
 			}
 			defer func(r io.ReadCloser) {
 				err = r.Close()
@@ -62,17 +62,17 @@ func MakeNode(node *yaml.Node, location string) (*Node, error) {
 			if ext == ".json" {
 				d := json.NewDecoder(r)
 				if err := d.Decode(&link.Value); err != nil {
-					return nil, err
+					return nil, NewWrappedError("include: json decode", err, link.Location)
 				}
 			} else if ext == ".yaml" || ext == ".yml" {
 				d := yaml.NewDecoder(r)
 				if err := d.Decode(&link.Value); err != nil {
-					return nil, err
+					return nil, NewWrappedError("include: yaml decode", err, link.Location)
 				}
 			} else {
 				v, err := io.ReadAll(r)
 				if err != nil {
-					return nil, err
+					return nil, NewWrappedError("include: read all", err, link.Location)
 				}
 				link.Value = v
 			}
@@ -81,11 +81,11 @@ func MakeNode(node *yaml.Node, location string) (*Node, error) {
 		return n, nil
 	case yaml.MappingNode:
 		if err := node.Decode(&n.Value); err != nil {
-			return nil, err
+			return nil, NewWrappedError("decode mapping", err, location, WithNodePosition(node))
 		}
 	case yaml.SequenceNode:
 		if err := node.Decode(&n.Value); err != nil {
-			return nil, err
+			return nil, NewWrappedError("decode sequence", err, location, WithNodePosition(node))
 		}
 	}
 	return n, nil

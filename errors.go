@@ -78,36 +78,48 @@ func (s *StructInfo) String() string {
 	return result
 }
 
+func (s *StructInfo) ensureMap() {
+	if s.info == nil {
+		s.info = make(map[string]fmt.Stringer)
+	}
+}
+
 // Add adds a key-value pair to the struct info.
 func (s *StructInfo) Add(key string, value fmt.Stringer) *StructInfo {
+	s.ensureMap()
 	s.info[key] = value
 	return s
 }
 
 // Get returns the value of the given key.
 func (s *StructInfo) Get(key string) fmt.Stringer {
+	s.ensureMap()
 	return s.info[key]
 }
 
 // StringBy returns the string value of the given key.
 func (s *StructInfo) StringBy(key string) string {
+	s.ensureMap()
 	return s.info[key].String()
 }
 
 // Remove removes the given key from the struct info.
 func (s *StructInfo) Remove(key string) *StructInfo {
+	s.ensureMap()
 	delete(s.info, key)
 	return s
 }
 
 // Has checks if the given key exists in the struct info.
 func (s *StructInfo) Has(key string) bool {
+	s.ensureMap()
 	_, ok := s.info[key]
 	return ok
 }
 
 // Keys returns the keys of the struct info.
 func (s *StructInfo) Keys() []string {
+	s.ensureMap()
 	result := make([]string, 0, len(s.info))
 	for k := range s.info {
 		result = append(result, k)
@@ -117,6 +129,7 @@ func (s *StructInfo) Keys() []string {
 
 // SortedKeys returns the sorted keys of the struct info.
 func (s *StructInfo) SortedKeys() []string {
+	s.ensureMap()
 	keys := s.Keys()
 	sort.Strings(keys)
 	return keys
@@ -124,6 +137,7 @@ func (s *StructInfo) SortedKeys() []string {
 
 // Update updates the struct info with the given struct info.
 func (s *StructInfo) Update(u *StructInfo) *StructInfo {
+	s.ensureMap()
 	for k, v := range u.info {
 		s.info[k] = v
 	}
@@ -185,6 +199,10 @@ func (e *Error) FullMessage() string {
 	} else {
 		return e.Message
 	}
+}
+
+type ErrOpt interface {
+	Apply(*Error)
 }
 
 // OrigString returns the original error message without the wrapping messages.
@@ -255,12 +273,15 @@ func UnwrapError(err error) (*Error, bool) {
 }
 
 // NewError creates a new Error.
-func NewError(message string, location string) *Error {
+func NewError(message string, location string, opts ...ErrOpt) *Error {
 	e := &Error{
 		Severity: SeverityError,
 		ErrType:  ErrTypeValidating,
 		Message:  message,
 		Location: location,
+	}
+	for _, opt := range opts {
+		opt.Apply(e)
 	}
 	return e
 }
@@ -294,16 +315,71 @@ func FixYamlError(err error) error {
 	return err
 }
 
+type optErrInfo struct {
+	Key   string
+	Value fmt.Stringer
+}
+
+func (o optErrInfo) Apply(e *Error) {
+	e.Info.Add(o.Key, o.Value)
+}
+
+type optErrPosition struct {
+	Pos *Position
+}
+
+func (o optErrPosition) Apply(e *Error) {
+	e.Position = o.Pos
+}
+
+type optErrSeverity struct {
+	Severity Severity
+}
+
+func (o optErrSeverity) Apply(e *Error) {
+	e.Severity = o.Severity
+}
+
+type optErrType struct {
+	ErrType ErrType
+}
+
+func (o optErrType) Apply(e *Error) {
+	e.ErrType = o.ErrType
+}
+
+func WithInfo(key string, value any) ErrOpt {
+	return optErrInfo{Key: key, Value: Stringer(value)}
+}
+
+func WithPosition(pos *Position) ErrOpt {
+	return optErrPosition{Pos: pos}
+}
+
+func WithSeverity(severity Severity) ErrOpt {
+	return optErrSeverity{Severity: severity}
+}
+
+func WithType(errType ErrType) ErrOpt {
+	return optErrType{ErrType: errType}
+}
+
 // NewWrappedError creates a new Error from the given go error.
-func NewWrappedError(err error, location string) *Error {
+func NewWrappedError(message string, err error, location string, opts ...ErrOpt) *Error {
 	err = FixYamlError(err)
+	resultErr := &Error{}
 	if e, ok := UnwrapError(err); ok {
-		return NewError(
-			"",
+		resultErr = NewError(
+			message,
 			location,
 		).Wrap(e).SetErr(e.Err)
+	} else {
+		resultErr = NewError(fmt.Sprintf("%s: %s", message, err.Error()), location).SetErr(err)
 	}
-	return NewError(err.Error(), location).SetErr(err)
+	for _, opt := range opts {
+		opt.Apply(resultErr)
+	}
+	return resultErr
 }
 
 // SetSeverity sets the severity of the Error and returns it
@@ -325,8 +401,8 @@ func (e *Error) SetLocation(location string) *Error {
 }
 
 // SetPosition sets the position of the Error and returns it
-func (e *Error) SetPosition(pos Position) *Error {
-	e.Position = &pos
+func (e *Error) SetPosition(pos *Position) *Error {
+	e.Position = pos
 	return e
 }
 
