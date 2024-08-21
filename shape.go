@@ -78,8 +78,8 @@ type YAMLNodesUnmarshaller interface {
 
 // Shape is the interface that represents a RAML shape.
 type Shape interface {
+	Clone() Shape
 	ShapeBaser
-	ShapeCloner
 	YAMLNodesUnmarshaller
 }
 
@@ -150,7 +150,8 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 	}
 
 	if err := shape.UnmarshalYAMLNodes(shapeFacets); err != nil {
-		return nil, fmt.Errorf("unmarshal yaml nodes: shape type: %s: err: %w", shapeType, err)
+		return nil, NewWrappedError("unmarshal yaml nodes", err, base.Location,
+			WithPosition(&base.Position), WithInfo("shape type", shapeType))
 	}
 
 	return shape, nil
@@ -172,7 +173,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 
 	shapeTypeNode, shapeFacets, err := base.Decode(v)
 	if err != nil {
-		return nil, fmt.Errorf("decode: %w", err)
+		return nil, NewWrappedError("decode", err, location, WithNodePosition(v))
 	}
 
 	var shapeType string
@@ -204,11 +205,11 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 			var inherits = make([]*Shape, len(shapeTypeNode.Content))
 			for i, node := range shapeTypeNode.Content {
 				if node.Kind != yaml.ScalarNode {
-					return nil, fmt.Errorf("node kind must be string")
+					return nil, NewError("node kind must be scalar", location, WithNodePosition(node))
 				}
 				s, err := MakeShape(node, name, location)
 				if err != nil {
-					return nil, fmt.Errorf("make shape: %w", err)
+					return nil, NewWrappedError("make shape", err, location, WithNodePosition(node))
 				}
 				inherits[i] = s
 			}
@@ -219,7 +220,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 
 	s, err := MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
-		return nil, NewWrappedError(fmt.Errorf("make concrete shape: %w", err), base.Location).SetPosition(base.Position)
+		return nil, NewWrappedError("make concrete shape", err, base.Location, WithPosition(&base.Position))
 	}
 	ptr := &s
 	if _, ok := s.(*UnknownShape); ok {
@@ -271,7 +272,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				data := valueNode.Content[j+1]
 				property, err := MakeProperty(name, data, s.Location)
 				if err != nil {
-					return nil, nil, fmt.Errorf("make property: %w", err)
+					return nil, nil, NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
 				s.CustomShapeFacetDefinitions[name] = property
 			}

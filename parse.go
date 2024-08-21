@@ -100,11 +100,11 @@ func ParseDataType(path string) (*DataType, error) {
 	if strings.HasSuffix(path, ".json") {
 		data, err := io.ReadAll(f)
 		if err != nil {
-			return nil, fmt.Errorf("read file: %w", err)
+			return nil, NewWrappedError("read file", err, path, WithType(ErrTypeReading))
 		}
 		dt, err := MakeJsonDataType(data, path)
 		if err != nil {
-			return nil, fmt.Errorf("make json data type: %w", err)
+			return nil, NewWrappedError("make json data type", err, path, WithType(ErrTypeParsing))
 		}
 		GetRegistry().PutFragment(path, dt)
 		return dt, nil
@@ -166,13 +166,12 @@ func ParseLibrary(path string) (*Library, error) {
 
 	decoder, err := NewFragmentDecoder(f, FragmentLibrary)
 	if err != nil {
-		return nil, fmt.Errorf("new fragment decoder: %w", err)
+		return nil, NewWrappedError("new fragment decoder", err, path, WithType(ErrTypeReading))
 	}
 
 	lib := MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
-		Err := NewWrappedError(fmt.Errorf("decode fragment: %w", err), lib.Location)
-		return nil, Err
+		return nil, NewWrappedError("decode fragment", err, lib.Location)
 	}
 	GetRegistry().PutFragment(path, lib)
 
@@ -181,7 +180,7 @@ func ParseLibrary(path string) (*Library, error) {
 	for _, include := range lib.Uses {
 		sublib, err := ParseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
-			return nil, fmt.Errorf("parse library: %w", err)
+			return nil, NewWrappedError("parse library", err, sublib.Location)
 		}
 		include.Link = sublib
 	}

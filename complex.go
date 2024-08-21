@@ -1,7 +1,6 @@
 package raml
 
 import (
-	"fmt"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -36,28 +35,28 @@ func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "minItems" {
 			if err := valueNode.Decode(&s.MinItems); err != nil {
-				return fmt.Errorf("decode minItems: %w", err)
+				return NewWrappedError("decode minItems", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxItems" {
 			if err := valueNode.Decode(&s.MaxItems); err != nil {
-				return fmt.Errorf("decode maxItems: %w", err)
+				return NewWrappedError("decode maxItems: %w", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "items" {
 			name := "items"
 			shape, err := MakeShape(valueNode, name, s.Location)
 			if err != nil {
-				return fmt.Errorf("make shape: %w", err)
+				return NewWrappedError("make shape", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Items = shape
 			GetRegistry().PutIntoFragment(s.Name+"#items", s.Location, s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
-				return fmt.Errorf("decode uniqueItems: %w", err)
+				return NewWrappedError("decode uniqueItems", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
 			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return fmt.Errorf("make node: %w", err)
+				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets[node.Value] = n
 		}
@@ -89,23 +88,23 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "additionalProperties" {
 			if err := valueNode.Decode(&s.AdditionalProperties); err != nil {
-				return fmt.Errorf("decode additionalProperties: %w", err)
+				return NewWrappedError("decode additionalProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "discriminator" {
 			if err := valueNode.Decode(&s.Discriminator); err != nil {
-				return fmt.Errorf("decode discriminator: %w", err)
+				return NewWrappedError("decode discriminator", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "discriminatorValue" {
 			if err := valueNode.Decode(&s.DiscriminatorValue); err != nil {
-				return fmt.Errorf("decode discriminatorValue: %w", err)
+				return NewWrappedError("decode discriminatorValue", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "minProperties" {
 			if err := valueNode.Decode(&s.MinProperties); err != nil {
-				return fmt.Errorf("decode minProperties: %w", err)
+				return NewWrappedError("decode minProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxProperties" {
 			if err := valueNode.Decode(&s.MaxProperties); err != nil {
-				return fmt.Errorf("decode maxProperties: %w", err)
+				return NewWrappedError("decode maxProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "properties" {
 			s.Properties = make(map[string]*Property, len(valueNode.Content)/2)
@@ -114,7 +113,7 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				data := valueNode.Content[j+1]
 				property, err := MakeProperty(name, data, s.Location)
 				if err != nil {
-					return fmt.Errorf("make property: %w", err)
+					return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
 				s.Properties[property.Name] = property
 				GetRegistry().PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
@@ -122,7 +121,7 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 		} else {
 			n, err := MakeNode(valueNode, s.Location)
 			if err != nil {
-				return fmt.Errorf("make node: %w", err)
+				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets[node.Value] = n
 		}
@@ -142,7 +141,7 @@ func (s *ObjectShape) Clone() Shape {
 func MakeProperty(name string, v *yaml.Node, location string) (*Property, error) {
 	shape, err := MakeShape(v, name, location)
 	if err != nil {
-		return nil, fmt.Errorf("make shape: %w", err)
+		return nil, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
 	propertyName := name
 	shapeRequired := (*shape).Base().Required
