@@ -6,9 +6,20 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
+
+type Nodes []*Node
+
+func (n Nodes) String() string {
+	vals := make([]string, len(n))
+	for i, node := range n {
+		vals[i] = node.String()
+	}
+	return strings.Join(vals, ", ")
+}
 
 type Node struct {
 	Id    string
@@ -18,6 +29,10 @@ type Node struct {
 
 	Location string
 	Position
+}
+
+func (n *Node) String() string {
+	return fmt.Sprintf("%v", n.Value)
 }
 
 func MakeNode(node *yaml.Node, location string) (*Node, error) {
