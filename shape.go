@@ -161,8 +161,9 @@ func MakeBaseShape(name string, location string, position *Position) *BaseShape 
 		Location: location,
 		Position: *position,
 
-		CustomDomainProperties: make(CustomDomainProperties),
-		CustomShapeFacets:      make(CustomShapeFacets),
+		CustomDomainProperties:      make(CustomDomainProperties),
+		CustomShapeFacets:           make(CustomShapeFacets),
+		CustomShapeFacetDefinitions: make(CustomShapeFacetDefinitions),
 	}
 }
 
