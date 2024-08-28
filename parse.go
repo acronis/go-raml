@@ -189,9 +189,11 @@ func (r *RAML) decodeLibrary(f *os.File) (*Library, error) {
 	// Resolve included libraries in a separate stage.
 	baseDir := filepath.Dir(lib.Location)
 	for _, include := range lib.Uses {
-		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
+
+		slibloc := filepath.Join(baseDir, include.Value)
+		sublib, err := r.parseLibrary(slibloc)
 		if err != nil {
-			return nil, NewWrappedError("parse uses library", err, sublib.Location)
+			return nil, NewWrappedError("parse uses library", err, slibloc)
 		}
 		include.Link = sublib
 	}
