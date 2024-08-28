@@ -17,14 +17,15 @@ type DomainExtension struct {
 
 	Location string
 	Position
+	raml *RAML
 }
 
-func UnmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNode *yaml.Node) (string, *DomainExtension, error) {
+func (r *RAML) unmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNode *yaml.Node) (string, *DomainExtension, error) {
 	name := keyNode.Value[1 : len(keyNode.Value)-1]
 	if name == "" {
 		return "", nil, NewError("annotation name must not be empty", location, WithNodePosition(keyNode))
 	}
-	n, err := MakeNode(valueNode, location)
+	n, err := r.makeNode(valueNode, location)
 	if err != nil {
 		return "", nil, NewWrappedError("make node", err, location, WithNodePosition(valueNode))
 	}
@@ -33,8 +34,9 @@ func UnmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNo
 		Extension: n,
 		Location:  location,
 		Position:  Position{keyNode.Line, keyNode.Column},
+		raml:      r,
 	}
-	GetRegistry().DomainExtensions = append(GetRegistry().DomainExtensions, de)
+	r.domainExtensions = append(r.domainExtensions, de)
 	return name, de, nil
 }
 

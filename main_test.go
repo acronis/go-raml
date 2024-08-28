@@ -11,24 +11,34 @@ import (
 
 func Test_main(t *testing.T) {
 	start := time.Now()
-	lib, err := ParseLibrary(`./tests/library.raml`)
+	rml, err := ParseFromPath(`./tests/library.raml`, OptWithUnwrap())
 	if vErr, ok := UnwrapError(err); ok {
 		t.Logf("Validation error: %s", vErr.Error())
+		err = vErr
 	}
 	require.NoError(t, err)
 	elapsed := time.Since(start)
-	t.Logf("ParseLibrary took %d ms", elapsed.Milliseconds())
-	fmt.Printf("Library location: %s\n", lib.Location)
+	t.Logf("ParseFromPath took %d ms", elapsed.Milliseconds())
+	fmt.Printf("Library location: %s\n", rml.entryPoint.GetLocation())
 
-	vals := GetRegistry().GetAllShapes()
-	fmt.Printf("Total shapes: %d\n", len(vals))
-	fmt.Printf("Unresolved: %d\n", len(GetRegistry().UnresolvedShapes))
+	shapesAll := rml.GetAllShapes()
+	fmt.Printf("Total shapes: %d\n", len(shapesAll))
+	//fmt.Printf("Unresolved: %d\n", len(rml.unresolvedShapes))
+	//fmt.Printf("Resolved: %d\n", len(rml.shapes))
 
-	require.NoError(t, ResolveShapes())
-	require.NoError(t, ResolveDomainExtensions())
-	require.NoError(t, UnwrapShapes())
+	resolved := 0
+	unresolved := 0
+	for _, shape := range shapesAll {
+		if shape.Base().resolved {
+			resolved++
+		} else {
+			unresolved++
+		}
+		fmt.Printf("Shape: %s: resolved: %v: unwrapped: %v\n", shape, shape.Base().resolved, shape.Base().unwrapped)
+	}
 
-	fmt.Printf("Resolved: %d\n", len(GetRegistry().ResolvedShapes))
+	fmt.Printf("Resolved: %d\n", resolved)
+	fmt.Printf("Unresolved: %d\n", unresolved)
 
 	printMemUsage(t)
 }

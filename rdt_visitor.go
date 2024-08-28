@@ -13,10 +13,11 @@ import (
 // RdtVisitor defines a struct that implements the visitor
 type RdtVisitor struct {
 	rdt.BaserdtParserVisitor // Embedding the base visitor class
+	raml                     *RAML
 }
 
-func NewRdtVisitor() *RdtVisitor {
-	return &RdtVisitor{}
+func NewRdtVisitor(rml *RAML) *RdtVisitor {
+	return &RdtVisitor{raml: rml}
 }
 
 func (visitor *RdtVisitor) Visit(tree antlr.ParseTree, target *UnknownShape) (*Shape, error) {
@@ -52,7 +53,7 @@ func (visitor *RdtVisitor) VisitChildren(node antlr.RuleNode, target *UnknownSha
 		if _, ok := n.(*antlr.TerminalNodeImpl); ok {
 			continue
 		}
-		implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
+		implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
 		s, err := visitor.Visit(n.(antlr.ParseTree), implicitAnonShape)
 		if err != nil {
 			return nil, fmt.Errorf("visit children: %w", err)
@@ -75,7 +76,7 @@ func (visitor *RdtVisitor) VisitType(ctx *rdt.TypeContext, target *UnknownShape)
 }
 
 func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *UnknownShape) (*Shape, error) {
-	s, err := MakeConcreteShape(target.Base(), ctx.GetText(), make([]*yaml.Node, 0))
+	s, err := visitor.raml.makeConcreteShape(target.Base(), ctx.GetText(), make([]*yaml.Node, 0))
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
@@ -83,7 +84,7 @@ func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *Unk
 }
 
 func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
+	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -91,7 +92,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	base := target.Base()
 	base.Type = TypeUnion
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
-	nilShape, _ := MakeConcreteShape(&BaseShape{Location: base.Location}, "nil", make([]*yaml.Node, 0))
+	nilShape, _ := visitor.raml.makeConcreteShape(&BaseShape{Location: base.Location}, "nil", make([]*yaml.Node, 0))
 	var unionShape Shape = &UnionShape{
 		BaseShape: *base,
 		UnionFacets: UnionFacets{
@@ -102,7 +103,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 }
 
 func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *MakeBaseShape("", target.Base().Location, &Position{})}
+	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -140,7 +141,7 @@ func (visitor *RdtVisitor) VisitGroup(ctx *rdt.GroupContext, target *UnknownShap
 
 func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *UnknownShape) (*Shape, error) {
 	// TODO: In theory, this can be not only library so this type assertion may fail.
-	frag := GetRegistry().GetFragment(target.Base().Location).(*Library)
+	frag := visitor.raml.GetFragment(target.Location).(*Library)
 
 	// External ref - lib.Type
 	// Internal ref - Type
@@ -164,10 +165,10 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	} else {
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
 	}
-	if err := ResolveShape(ref); err != nil {
+	if err := visitor.raml.resolveShape(ref); err != nil {
 		return nil, fmt.Errorf("resolve: %w", err)
 	}
-	s, err := MakeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
+	s, err := visitor.raml.makeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}

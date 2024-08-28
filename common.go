@@ -12,10 +12,12 @@ type Value[T any] struct {
 	Position
 }
 
+// NewNodePosition creates a new position from the given node.
 func NewNodePosition(node *yaml.Node) *Position {
 	return &Position{Line: node.Line, Column: node.Column}
 }
 
+// NewPosition creates a new position with the given line and column.
 func NewPosition(line, column int) *Position {
 	return &Position{Line: line, Column: column}
 }
