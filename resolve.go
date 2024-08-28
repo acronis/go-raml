@@ -101,13 +101,27 @@ func ResolveLink(target Shape) (*Shape, error) {
 	return &s, nil
 }
 
+func ResolveObjectProperties(shape *ObjectShape) error {
+	// NOTE: This function is not susceptible to cyclic dependency because shape resolution returns as soon as shape is resolved.
+	for _, prop := range shape.Properties {
+		// Traverse into object sub-properties recursively
+		if s, ok := (*prop.Shape).(*ObjectShape); ok {
+			if err := ResolveObjectProperties(s); err != nil {
+				return fmt.Errorf("resolve property shape: %w", err)
+			}
+		} else if err := ResolveShape(prop.Shape); err != nil {
+			return fmt.Errorf("resolve property shape: %w", err)
+		}
+	}
+	return nil
+}
+
 // ResolveShape resolves an unknown shape in-place.
+// NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before resolving if necessary.
 func ResolveShape(shape *Shape) error {
 	target := *shape
-	// Skip already resolved and JSON shapes
+	// Skip already resolved shapes
 	if _, ok := target.(*UnknownShape); !ok {
-		return nil
-	} else if _, ok := target.(*JSONShape); ok {
 		return nil
 	}
 
@@ -147,7 +161,19 @@ func ResolveShape(shape *Shape) error {
 	if err != nil {
 		return fmt.Errorf("visit tree: %w", err)
 	}
-	*shape = *s
+	sv := *s
+	*shape = sv
+	if ss, ok := sv.(*ObjectShape); ok && ss.Properties != nil {
+		// Unresolved object shape may contain properties that couldn't be taken into account during parsing.
+		if err := ResolveObjectProperties(ss); err != nil {
+			return fmt.Errorf("resolve property shape: %w", err)
+		}
+	} else if ss, ok := sv.(*ArrayShape); ok && ss.Items != nil {
+		// Unresolved array shape may contain unresolved items shape.
+		if err := ResolveShape(ss.Items); err != nil {
+			return fmt.Errorf("resolve array items shape: %w", err)
+		}
+	}
 	// TODO: Only for debugging purposes. To be removed.
 	GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
 	return nil
