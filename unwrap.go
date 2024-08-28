@@ -15,12 +15,37 @@ func UnwrapShapes() error {
 			}
 			*s = us
 		}
+		for _, s := range lib.AnnotationTypes {
+			us, err := UnwrapShape(s, true, true, make([]string, 0))
+			if err != nil {
+				return fmt.Errorf("resolve shape: %w", err)
+			}
+			*s = us
+		}
 	}
 
 	return nil
 }
 
+// InheritBase writes inheritable properties of sourceBase into targetBase.
+// Modifies targetBase in-place.
+func InheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
+	// TODO: Maybe needs a bool switch for flexibility?
+	for k, item := range sourceBase.CustomShapeFacets {
+		if _, ok := targetBase.CustomShapeFacets[k]; !ok {
+			targetBase.CustomShapeFacets[k] = item
+		}
+	}
+	for k, item := range sourceBase.CustomDomainProperties {
+		if _, ok := targetBase.CustomDomainProperties[k]; !ok {
+			targetBase.CustomDomainProperties[k] = item
+		}
+	}
+	// TODO: CustomShapeFacetDefinitions are not inheritable in context of unwrapper. But maybe they can be inheritable in other context?
+}
+
 func Inherit(source Shape, target Shape) (Shape, error) {
+	InheritBase(source.Base(), target.Base())
 	// If source type is any, return target as is
 	if _, ok := source.(*AnyShape); ok {
 		return target, nil
