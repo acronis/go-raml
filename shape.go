@@ -159,6 +159,7 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 
 func MakeBaseShape(name string, location string, position *Position) *BaseShape {
 	return &BaseShape{
+		Id:       GenerateShapeId(),
 		Name:     name,
 		Location: location,
 		Position: *position,
@@ -166,6 +167,15 @@ func MakeBaseShape(name string, location string, position *Position) *BaseShape 
 		CustomDomainProperties: make(CustomDomainProperties),
 		CustomShapeFacets:      make(CustomShapeFacets),
 	}
+}
+
+// TODO: Temporary workaround
+var idCounter int = 1
+
+func GenerateShapeId() string {
+	id := "#" + fmt.Sprint(idCounter)
+	idCounter++
+	return id
 }
 
 func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {

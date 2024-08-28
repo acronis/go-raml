@@ -46,6 +46,7 @@ func (s *IntegerShape) Base() *BaseShape {
 
 func (s *IntegerShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -117,6 +118,7 @@ func (s *NumberShape) Base() *BaseShape {
 
 func (s *NumberShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -180,6 +182,7 @@ func (s *StringShape) Base() *BaseShape {
 
 func (s *StringShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -234,6 +237,7 @@ func (s *FileShape) Base() *BaseShape {
 
 func (s *FileShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -273,6 +277,7 @@ type BooleanShape struct {
 
 func (s *BooleanShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -315,6 +320,7 @@ func (s *DateTimeShape) Base() *BaseShape {
 
 func (s *DateTimeShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -347,6 +353,7 @@ func (s *DateTimeOnlyShape) Base() *BaseShape {
 
 func (s *DateTimeOnlyShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -364,6 +371,7 @@ func (s *DateOnlyShape) Base() *BaseShape {
 
 func (s *DateOnlyShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -381,6 +389,7 @@ func (s *TimeOnlyShape) Base() *BaseShape {
 
 func (s *TimeOnlyShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -398,6 +407,7 @@ func (s *AnyShape) Base() *BaseShape {
 
 func (s *AnyShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -415,6 +425,7 @@ func (s *NilShape) Base() *BaseShape {
 
 func (s *NilShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 

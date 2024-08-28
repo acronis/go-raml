@@ -25,6 +25,9 @@ func (s *ArrayShape) Base() *BaseShape {
 
 func (s *ArrayShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
+	items := (*c.Items).Clone()
+	c.Items = &items
 	return &c
 }
 
@@ -134,7 +137,15 @@ func (s *ObjectShape) Base() *BaseShape {
 }
 
 func (s *ObjectShape) Clone() Shape {
+	// TODO: Susceptible to recursion
 	c := *s
+	c.Id = GenerateShapeId()
+	c.Properties = make(map[string]Property, len(s.Properties))
+	for k, v := range s.Properties {
+		p := (*v.Shape).Clone()
+		v.Shape = &p
+		c.Properties[k] = v
+	}
 	return &c
 }
 
@@ -190,6 +201,12 @@ func (s *UnionShape) Base() *BaseShape {
 
 func (s *UnionShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
+	c.AnyOf = make([]*Shape, len(s.AnyOf))
+	for i, item := range s.AnyOf {
+		an := (*item).Clone()
+		c.AnyOf[i] = &an
+	}
 	return &c
 }
 
@@ -203,6 +220,7 @@ func (s *JSONShape) Base() *BaseShape {
 
 func (s *JSONShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
@@ -222,6 +240,7 @@ func (s *UnknownShape) Base() *BaseShape {
 
 func (s *UnknownShape) Clone() Shape {
 	c := *s
+	c.Id = GenerateShapeId()
 	return &c
 }
 
