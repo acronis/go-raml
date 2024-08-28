@@ -7,6 +7,7 @@ import (
 )
 
 func MakeExample(value *yaml.Node, name string, location string) (*Example, error) {
+	// TODO: Example can be either a scalar or a map
 	n, err := MakeNode(value, location)
 	if err != nil {
 		return nil, fmt.Errorf("make node: %w", err)
@@ -21,10 +22,14 @@ func MakeExample(value *yaml.Node, name string, location string) (*Example, erro
 
 // Example represents an example of a shape
 type Example struct {
-	Id       string
-	Name     string
-	Value    *Node
-	Location string
+	Id          string
+	Name        string
+	DisplayName string
+	Description string
+	Value       *Node
 
+	CustomDomainProperties CustomDomainProperties
+
+	Location string
 	Position
 }
