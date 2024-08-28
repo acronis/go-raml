@@ -8,9 +8,9 @@ import (
 
 type ArrayFacets struct {
 	Items       *Shape
-	MinItems    *any
-	MaxItems    *any
-	UniqueItems *bool
+	MinItems    *uint64
+	MaxItems    *uint64
+	UniqueItems bool
 }
 
 type ArrayShape struct {
@@ -23,12 +23,76 @@ func (s *ArrayShape) Base() *BaseShape {
 	return &s.BaseShape
 }
 
+// func (s *ArrayShape) Validate(v interface{}) error {
+// 	a, ok := v.([]interface{})
+// 	if !ok {
+// 		return NewError("value is not an array", s.Location)
+// 	}
+// 	if s.MinItems > uint64(len(a)) {
+// 		return NewError("minItems constraint violation", s.Location)
+// 	}
+// 	if s.MaxItems < uint64(len(a)) {
+// 		return NewError("maxItems constraint violation", s.Location)
+// 	}
+// 	if s.UniqueItems {
+// 		seen := make(map[interface{}]struct{})
+// 		for _, item := range a {
+// 			if _, ok := seen[item]; ok {
+// 				return NewError("uniqueItems constraint violation", s.Location)
+// 			}
+// 			seen[item] = struct{}{}
+// 		}
+// 	}
+// 	for _, item := range a {
+// 		if err := (*s.Items).Validate(item); err != nil {
+// 			return NewWrappedError("validate item", err, s.Location)
+// 		}
+// 	}
+// 	return nil
+// }
+
 func (s *ArrayShape) Clone() Shape {
 	c := *s
 	c.Id = GenerateShapeId()
 	items := (*c.Items).Clone()
 	c.Items = &items
 	return &c
+}
+
+func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
+	ss, ok := source.(*ArrayShape)
+	if !ok {
+		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
+	if s.Items == nil {
+		s.Items = ss.Items
+	} else {
+		_, err := Inherit(*s.Items, *ss.Items)
+		if err != nil {
+			return nil, NewWrappedError("merge array items", err, s.Location)
+		}
+	}
+	if s.MinItems == nil {
+		s.MinItems = ss.MinItems
+	} else if ss.MinItems != nil && *s.MinItems > *ss.MinItems {
+		return nil, NewError("minItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MinItems), WithInfo("target", *s.MinItems))
+	}
+	if s.MaxItems == nil {
+		s.MaxItems = ss.MaxItems
+	} else if ss.MaxItems != nil && *s.MaxItems < *ss.MaxItems {
+		return nil, NewError("maxItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxItems), WithInfo("target", *s.MaxItems))
+	}
+	// If target does not require unique items or facets are matching - apply source value
+	if !s.UniqueItems || s.UniqueItems == ss.UniqueItems {
+		s.UniqueItems = ss.UniqueItems
+	} else {
+		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.UniqueItems), WithInfo("target", s.UniqueItems))
+	}
+	return s, nil
+}
+
+func (s *ArrayShape) Check() error {
+	return nil
 }
 
 func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
@@ -72,8 +136,8 @@ type ObjectFacets struct {
 	DiscriminatorValue   any
 	AdditionalProperties bool
 	Properties           map[string]Property
-	MinProperties        *any
-	MaxProperties        *any
+	MinProperties        *uint64
+	MaxProperties        *uint64
 }
 
 type ObjectShape struct {
@@ -81,6 +145,29 @@ type ObjectShape struct {
 
 	ObjectFacets
 }
+
+// func (s *ObjectShape) Validate(v interface{}) error {
+// 	m, ok := v.(map[string]interface{})
+// 	if !ok {
+// 		return NewError("value is not a map", s.Location)
+// 	}
+// 	if s.MinProperties > uint64(len(m)) {
+// 		return NewError("minProperties constraint violation", s.Location)
+// 	}
+// 	if s.MaxProperties < uint64(len(m)) {
+// 		return NewError("maxProperties constraint violation", s.Location)
+// 	}
+// 	for k, v := range m {
+// 		if p, ok := s.Properties[k]; ok {
+// 			if err := (*p.Shape).Validate(v); err != nil {
+// 				return NewWrappedError("validate property", err, s.Location)
+// 			}
+// 		} else if !s.AdditionalProperties {
+// 			return NewError("additionalProperties constraint violation", s.Location)
+// 		}
+// 	}
+// 	return nil
+// }
 
 func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	s.AdditionalProperties = true // Additional properties is true by default
@@ -149,6 +236,49 @@ func (s *ObjectShape) Clone() Shape {
 	return &c
 }
 
+func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
+	ss, ok := source.(*ObjectShape)
+	if !ok {
+		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
+
+	// Discriminator, DiscriminatorValue, AdditionalProperties are merged unconditionally.
+	s.Discriminator = ss.Discriminator
+	s.DiscriminatorValue = ss.DiscriminatorValue
+	s.AdditionalProperties = ss.AdditionalProperties
+
+	if s.MinProperties == nil {
+		s.MinProperties = ss.MinProperties
+	} else if ss.MinProperties != nil && *s.MinProperties < *ss.MinProperties {
+		return nil, NewError("minProperties constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MinProperties), WithInfo("target", *s.MinProperties))
+	}
+	if s.MaxProperties == nil {
+		s.MaxProperties = ss.MaxProperties
+	} else if ss.MaxProperties != nil && *s.MaxProperties > *ss.MaxProperties {
+		return nil, NewError("maxProperties constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxProperties), WithInfo("target", *s.MaxProperties))
+	}
+
+	if s.Properties == nil {
+		s.Properties = ss.Properties
+	} else {
+		for k, source := range ss.Properties {
+			if _, ok := s.Properties[k]; ok {
+				_, err := Inherit(*source.Shape, *s.Properties[k].Shape)
+				if err != nil {
+					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*source.Shape).Base().Position), WithInfo("property", k))
+				}
+			} else {
+				s.Properties[k] = source
+			}
+		}
+	}
+	return s, nil
+}
+
+func (s *ObjectShape) Check() error {
+	return nil
+}
+
 func MakeProperty(name string, v *yaml.Node, location string) (Property, error) {
 	shape, err := MakeShape(v, name, location)
 	if err != nil {
@@ -191,7 +321,7 @@ type UnionShape struct {
 	UnionFacets
 }
 
-func (s *UnionShape) UnmarshalYAMLNodes(values []*yaml.Node) error {
+func (s *UnionShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -210,6 +340,41 @@ func (s *UnionShape) Clone() Shape {
 	return &c
 }
 
+func (s *UnionShape) Inherit(source Shape) (Shape, error) {
+	ss, ok := source.(*UnionShape)
+	if !ok {
+		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
+	// TODO: Facets need merging
+	// TODO: This can be optimized
+	var sourceUnionTypes map[string]struct{} = make(map[string]struct{})
+	var filtered []*Shape
+	for _, sourceMember := range ss.AnyOf {
+		sourceUnionTypes[(*sourceMember).Base().Type] = struct{}{}
+		for _, targetMember := range s.AnyOf {
+			if (*sourceMember).Base().Type == (*targetMember).Base().Type {
+				// Clone is required to avoid modifying the original target member shape.
+				ms, err := (*targetMember).Clone().Inherit(*sourceMember)
+				if err != nil {
+					return nil, NewWrappedError("merge union member", err, s.Location)
+				}
+				filtered = append(filtered, &ms)
+			}
+		}
+	}
+	for _, targetMember := range s.AnyOf {
+		if _, ok := sourceUnionTypes[(*targetMember).Base().Type]; !ok {
+			return nil, NewError("target union includes an incompatible type", s.Location, WithPosition(&s.Position), WithInfo("target_type", (*targetMember).Base().Type), WithInfo("source_types", sourceUnionTypes))
+		}
+	}
+	s.AnyOf = filtered
+	return s, nil
+}
+
+func (s *UnionShape) Check() error {
+	return nil
+}
+
 type JSONShape struct {
 	BaseShape
 }
@@ -225,6 +390,14 @@ func (s *JSONShape) Clone() Shape {
 }
 
 func (s *JSONShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+	return nil
+}
+
+func (s *JSONShape) Inherit(source Shape) (Shape, error) {
+	return s, nil
+}
+
+func (s *JSONShape) Check() error {
 	return nil
 }
 
@@ -248,3 +421,39 @@ func (s *UnknownShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	s.facets = v
 	return nil
 }
+
+func (s *UnknownShape) Inherit(source Shape) (Shape, error) {
+	return s, nil
+}
+
+func (s *UnknownShape) Check() error {
+	return nil
+}
+
+// type RecursiveShape struct {
+// 	BaseShape
+
+// 	head *Shape
+// }
+
+// func (s *RecursiveShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+// 	return nil
+// }
+
+// func (s *RecursiveShape) Base() *BaseShape {
+// 	return &s.BaseShape
+// }
+
+// func (s *RecursiveShape) Clone() Shape {
+// 	c := *s
+// 	c.Id = GenerateShapeId()
+// 	return &c
+// }
+
+// func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
+// 	return s, nil
+// }
+
+// func (s *RecursiveShape) Check() error {
+// 	return nil
+// }
