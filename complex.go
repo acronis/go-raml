@@ -71,7 +71,7 @@ type ObjectFacets struct {
 	Discriminator        string
 	DiscriminatorValue   any
 	AdditionalProperties bool
-	Properties           map[string]*Property
+	Properties           map[string]Property
 	MinProperties        *any
 	MaxProperties        *any
 }
@@ -110,7 +110,7 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode maxProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "properties" {
-			s.Properties = make(map[string]*Property, len(valueNode.Content)/2)
+			s.Properties = make(map[string]Property, len(valueNode.Content)/2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
@@ -149,10 +149,10 @@ func (s *ObjectShape) Clone() Shape {
 	return &c
 }
 
-func MakeProperty(name string, v *yaml.Node, location string) (*Property, error) {
+func MakeProperty(name string, v *yaml.Node, location string) (Property, error) {
 	shape, err := MakeShape(v, name, location)
 	if err != nil {
-		return nil, NewWrappedError("make shape", err, location, WithNodePosition(v))
+		return Property{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
 	propertyName := name
 	shapeRequired := (*shape).Base().Required
@@ -167,7 +167,7 @@ func MakeProperty(name string, v *yaml.Node, location string) (*Property, error)
 	} else {
 		required = *shapeRequired
 	}
-	return &Property{
+	return Property{
 		Name:     propertyName,
 		Shape:    shape,
 		Required: required,
