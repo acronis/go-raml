@@ -8,14 +8,14 @@ import (
 )
 
 type EnumFacets struct {
-	Enum []*Node
+	Enum Nodes
 }
 
-func MakeEnum(v *yaml.Node, location string) ([]*Node, error) {
+func MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 	if v.Kind != yaml.SequenceNode {
 		return nil, NewError("enum must be sequence node", location, WithNodePosition(v))
 	}
-	var enums []*Node = make([]*Node, len(v.Content))
+	var enums Nodes = make(Nodes, len(v.Content))
 	for i, v := range v.Content {
 		n, err := MakeNode(v, location)
 		if err != nil {
@@ -92,8 +92,8 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsOverridableEnum(ss.Enum, s.Enum) {
-		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum), WithInfo("target", s.Enum))
+	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	// TODO: Formats intersection
 	if s.Format == nil {
@@ -206,8 +206,8 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsOverridableEnum(ss.Enum, s.Enum) {
-		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum), WithInfo("target", s.Enum))
+	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	// TODO: Formats intersection validation
 	if s.Format == nil {
@@ -305,8 +305,8 @@ func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsOverridableEnum(ss.Enum, s.Enum) {
-		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum), WithInfo("target", s.Enum))
+	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
 }
@@ -356,7 +356,7 @@ func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type FileFacets struct {
-	FileTypes []*Node
+	FileTypes Nodes
 }
 
 type FileShape struct {
@@ -419,7 +419,7 @@ func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			if valueNode.Kind != yaml.SequenceNode {
 				return NewError("fileTypes must be sequence node", s.Location, WithNodePosition(valueNode))
 			}
-			var fileTypes []*Node = make([]*Node, len(valueNode.Content))
+			var fileTypes Nodes = make(Nodes, len(valueNode.Content))
 			for i, v := range valueNode.Content {
 				if v.Tag != "!!str" {
 					return NewError("member of fileTypes must be string", s.Location, WithNodePosition(v))
@@ -465,8 +465,8 @@ func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsOverridableEnum(ss.Enum, s.Enum) {
-		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum), WithInfo("target", s.Enum))
+	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
 }
