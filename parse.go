@@ -105,7 +105,7 @@ func (r *RAML) decodeDataType(f *os.File) (*DataType, error) {
 	return dt, nil
 }
 
-func IsFragmentKind(f *os.File, kind FragmentKind) error {
+func CheckFragmentKind(f *os.File, kind FragmentKind) error {
 	if kind == FragmentDataType {
 		// Allow JSON data types.
 		if strings.HasSuffix(f.Name(), ".json") {
@@ -149,7 +149,7 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 		}
 	}(f)
 
-	if err = IsFragmentKind(f, FragmentDataType); err != nil {
+	if err = CheckFragmentKind(f, FragmentDataType); err != nil {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
@@ -223,7 +223,7 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 		}
 	}(f)
 
-	if err = IsFragmentKind(f, FragmentLibrary); err != nil {
+	if err = CheckFragmentKind(f, FragmentLibrary); err != nil {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
@@ -270,7 +270,7 @@ func (r *RAML) parseNamedExample(path string) (*NamedExample, error) {
 		}
 	}(f)
 
-	if err = IsFragmentKind(f, FragmentNamedExample); err != nil {
+	if err = CheckFragmentKind(f, FragmentNamedExample); err != nil {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
