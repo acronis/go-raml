@@ -9,12 +9,8 @@ var SetOfStringFacets = map[string]struct{}{
 	"minLength": {}, "maxLength": {}, "pattern": {},
 }
 
-var SetOfIntegerFacets = map[string]struct{}{
-	"minimum": {}, "maximum": {},
-}
-
 var SetOfNumberFacets = map[string]struct{}{
-	"multipleOf": {},
+	"minimum": {}, "maximum": {}, "multipleOf": {},
 }
 
 var SetOfFileFacets = map[string]struct{}{

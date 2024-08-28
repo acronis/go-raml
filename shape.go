@@ -51,14 +51,10 @@ type ShapeValidator interface {
 	Validate(v interface{}) error
 }
 
-// ShapeMerger is the interface that represents a merger of a RAML shape.
-type ShapeMerger interface {
-	Merge(v interface{}) error
-}
-
-// ShapeCloner is the interface that represents a maker of a clone of a RAML shape.
-type ShapeCloner interface {
-	Clone() Shape
+// ShapeMerger is the interface that represents an inheritor of a RAML shape.
+type ShapeInheritor interface {
+	// TODO: inplace option?
+	Inherit(source Shape) (Shape, error)
 }
 
 // ShapeJsonSchema is the interface that represents a maker of JSON schema from a RAML shape.
@@ -79,6 +75,9 @@ type YAMLNodesUnmarshaller interface {
 // Shape is the interface that represents a RAML shape.
 type Shape interface {
 	Clone() Shape
+	Check() error
+	// ShapeValidator
+	ShapeInheritor
 	ShapeBaser
 	YAMLNodesUnmarshaller
 }
@@ -89,14 +88,12 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 		node := shapeFacets[i]
 		if _, ok := SetOfStringFacets[node.Value]; ok {
 			t = TypeString
-		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
+		} else if _, ok := SetOfNumberFacets[node.Value]; ok {
 			t = TypeInteger
+			break
 		} else if _, ok := SetOfFileFacets[node.Value]; ok {
 			t = TypeFile
 			break // File has a unique facet
-		} else if _, ok := SetOfIntegerFacets[node.Value]; ok {
-			t = TypeNumber
-			break // Number has a unique facet
 		} else if _, ok := SetOfObjectFacets[node.Value]; ok {
 			t = TypeObject
 			break
@@ -159,6 +156,7 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 
 func MakeBaseShape(name string, location string, position *Position) *BaseShape {
 	return &BaseShape{
+		Id:       GenerateShapeId(),
 		Name:     name,
 		Location: location,
 		Position: *position,
@@ -166,6 +164,15 @@ func MakeBaseShape(name string, location string, position *Position) *BaseShape 
 		CustomDomainProperties: make(CustomDomainProperties),
 		CustomShapeFacets:      make(CustomShapeFacets),
 	}
+}
+
+// TODO: Temporary workaround
+var idCounter int = 1
+
+func GenerateShapeId() string {
+	id := "#" + fmt.Sprint(idCounter)
+	idCounter++
+	return id
 }
 
 func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
@@ -206,6 +213,8 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 			for i, node := range shapeTypeNode.Content {
 				if node.Kind != yaml.ScalarNode {
 					return nil, NewError("node kind must be scalar", location, WithNodePosition(node))
+				} else if node.Tag == "!include" {
+					return nil, NewError("!include is not allowed in multiple inheritance", location, WithNodePosition(node))
 				}
 				s, err := MakeShape(node, name, location)
 				if err != nil {

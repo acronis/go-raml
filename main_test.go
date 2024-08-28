@@ -26,6 +26,7 @@ func Test_main(t *testing.T) {
 
 	require.NoError(t, ResolveShapes())
 	require.NoError(t, ResolveDomainExtensions())
+	require.NoError(t, UnwrapShapes())
 
 	fmt.Printf("Resolved: %d\n", len(GetRegistry().ResolvedShapes))
 
