@@ -2,28 +2,15 @@ package raml
 
 import "fmt"
 
-func UnwrapShapes() error {
-	for _, frag := range GetRegistry().fragmentsCache {
-		lib, ok := frag.(*Library)
-		if !ok {
-			continue
+// UnwrapShapes unwraps all shapes in the RAML.
+func (r *RAML) UnwrapShapes() error {
+	for _, shape := range r.GetAllShapesPtr() {
+		us, err := r.UnwrapShape(shape, true, true, make([]string, 0))
+		if err != nil {
+			return fmt.Errorf("unwrap shape: %w", err)
 		}
-		for _, s := range lib.Types {
-			us, err := UnwrapShape(s, true, true, make([]string, 0))
-			if err != nil {
-				return fmt.Errorf("resolve shape: %w", err)
-			}
-			*s = us
-		}
-		for _, s := range lib.AnnotationTypes {
-			us, err := UnwrapShape(s, true, true, make([]string, 0))
-			if err != nil {
-				return fmt.Errorf("resolve shape: %w", err)
-			}
-			*s = us
-		}
+		*shape = us
 	}
-
 	return nil
 }
 
@@ -44,7 +31,8 @@ func InheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 	// TODO: CustomShapeFacetDefinitions are not inheritable in context of unwrapper. But maybe they can be inheritable in other context?
 }
 
-func Inherit(source Shape, target Shape) (Shape, error) {
+// Inherit merges source shape into target shape.
+func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 	InheritBase(source.Base(), target.Base())
 	// If source type is any, return target as is
 	if _, ok := source.(*AnyShape); ok {
@@ -109,22 +97,32 @@ func Inherit(source Shape, target Shape) (Shape, error) {
 // Recursively unwraps shape in-place.
 // Note that this method removes information about links and inheritance.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before unwrapping if necessary.
-func UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []string) (Shape, error) {
+func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []string) (Shape, error) {
+	if s == nil {
+		return nil, fmt.Errorf("shape is nil")
+	}
 	target := *s
+
+	// Skip already unwrapped shapes
+	if target.Base().unwrapped {
+		return target, nil
+	}
 
 	base := target.Base()
 	sid := base.Id
 	for _, item := range history {
 		if item == base.Id {
 			// TODO: Probably should insert RecursiveShape instead of target.
+			target.Base().unwrapped = true
 			return target, nil
 		}
 	}
 	var source Shape
 	link := base.Link
 	inherits := base.Inherits
+	unwrappedInherits := make([]*Shape, 0)
 	if unwrapLinks && link != nil {
-		us, err := UnwrapShape(link.Shape, unwrapLinks, unwrapInherits, append(history, sid))
+		us, err := r.UnwrapShape(link.Shape, unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
 			return nil, NewWrappedError("link unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
@@ -133,14 +131,20 @@ func UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []stri
 		base.Link = nil
 	} else if unwrapInherits && len(inherits) > 0 {
 		// TODO: Taking the first item is probably not a good idea, but it works.
-		ss, err := UnwrapShape(inherits[0], unwrapLinks, unwrapInherits, append(history, sid))
+		ss, err := r.UnwrapShape(inherits[0], unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
 			return nil, NewWrappedError("parent unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
+		if ss != nil {
+			unwrappedInherits = append(unwrappedInherits, &ss)
+		}
 		for i := 1; i < len(inherits); i++ {
-			us, err := UnwrapShape(inherits[i], unwrapLinks, unwrapInherits, append(history, sid))
+			us, err := r.UnwrapShape(inherits[i], unwrapLinks, unwrapInherits, append(history, sid))
 			if err != nil {
 				return nil, err
+			}
+			if us != nil {
+				unwrappedInherits = append(unwrappedInherits, &us)
 			}
 			_, err = ss.Inherit(us)
 			if err != nil {
@@ -149,24 +153,24 @@ func UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []stri
 		}
 		source = ss
 
-		base.Inherits = nil
+		base.Inherits = unwrappedInherits
 	}
 
 	if t, ok := target.(*ArrayShape); ok && t.Items != nil {
-		_, err := UnwrapShape(t.Items, unwrapLinks, unwrapInherits, append(history, sid))
+		_, err := r.UnwrapShape(t.Items, unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
 			return nil, NewWrappedError("array item unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 	} else if t, ok := target.(*ObjectShape); ok && t.Properties != nil {
 		for _, prop := range t.Properties {
-			_, err := UnwrapShape(prop.Shape, unwrapLinks, unwrapInherits, append(history, sid))
+			_, err := r.UnwrapShape(prop.Shape, unwrapLinks, unwrapInherits, append(history, sid))
 			if err != nil {
 				return nil, NewWrappedError("object property unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 			}
 		}
 	} else if t, ok := target.(*UnionShape); ok && t.AnyOf != nil {
 		for _, item := range t.AnyOf {
-			_, err := UnwrapShape(item, unwrapLinks, unwrapInherits, append(history, sid))
+			_, err := r.UnwrapShape(item, unwrapLinks, unwrapInherits, append(history, sid))
 			if err != nil {
 				return nil, NewWrappedError("union unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 			}
@@ -174,11 +178,13 @@ func UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []stri
 	}
 
 	if source != nil {
-		ms, err := Inherit(source, target)
+		ms, err := r.Inherit(source, target)
 		if err != nil {
 			return nil, NewWrappedError("merge shapes", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
+		ms.Base().unwrapped = true
 		return ms, nil
 	}
+	target.Base().unwrapped = true
 	return target, nil
 }

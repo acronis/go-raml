@@ -11,13 +11,13 @@ type EnumFacets struct {
 	Enum Nodes
 }
 
-func MakeEnum(v *yaml.Node, location string) (Nodes, error) {
+func (r *RAML) MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 	if v.Kind != yaml.SequenceNode {
 		return nil, NewError("enum must be sequence node", location, WithNodePosition(v))
 	}
 	var enums Nodes = make(Nodes, len(v.Content))
 	for i, v := range v.Content {
-		n, err := MakeNode(v, location)
+		n, err := r.makeNode(v, location)
 		if err != nil {
 			return nil, NewWrappedError("make node enum", err, location, WithNodePosition(v))
 		}
@@ -50,7 +50,7 @@ func (s *IntegerShape) Base() *BaseShape {
 
 func (s *IntegerShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -106,7 +106,7 @@ func (s *IntegerShape) Check() error {
 	return nil
 }
 
-func (s *IntegerShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -143,13 +143,13 @@ func (s *IntegerShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "enum" {
-			enums, err := MakeEnum(valueNode, s.Location)
+			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -180,7 +180,7 @@ func (s *NumberShape) Base() *BaseShape {
 
 func (s *NumberShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -220,7 +220,7 @@ func (s *NumberShape) Check() error {
 	return nil
 }
 
-func (s *NumberShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -237,7 +237,7 @@ func (s *NumberShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "enum" {
-			enums, err := MakeEnum(valueNode, s.Location)
+			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -247,7 +247,7 @@ func (s *NumberShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -280,7 +280,7 @@ func (s *StringShape) Base() *BaseShape {
 
 func (s *StringShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -315,7 +315,7 @@ func (s *StringShape) Check() error {
 	return nil
 }
 
-func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -339,13 +339,13 @@ func (s *StringShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Pattern = re
 		} else if node.Value == "enum" {
-			enums, err := MakeEnum(valueNode, s.Location)
+			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -372,7 +372,7 @@ func (s *FileShape) Base() *BaseShape {
 
 func (s *FileShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -402,7 +402,7 @@ func (s *FileShape) Check() error {
 	return nil
 }
 
-func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -424,7 +424,7 @@ func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				if v.Tag != "!!str" {
 					return NewError("member of fileTypes must be string", s.Location, WithNodePosition(v))
 				}
-				n, err := MakeNode(v, s.Location)
+				n, err := s.raml.makeNode(v, s.Location)
 				if err != nil {
 					return NewWrappedError("make node fileTypes", err, s.Location, WithNodePosition(v))
 				}
@@ -432,7 +432,7 @@ func (s *FileShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.FileTypes = fileTypes
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -454,7 +454,7 @@ func (s *BooleanShape) Base() *BaseShape {
 
 func (s *BooleanShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -475,19 +475,19 @@ func (s *BooleanShape) Check() error {
 	return nil
 }
 
-func (s *BooleanShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
 
 		if node.Value == "enum" {
-			enums, err := MakeEnum(valueNode, s.Location)
+			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -510,7 +510,7 @@ func (s *DateTimeShape) Base() *BaseShape {
 
 func (s *DateTimeShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -530,7 +530,7 @@ func (s *DateTimeShape) Check() error {
 	return nil
 }
 
-func (s *DateTimeShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -539,7 +539,7 @@ func (s *DateTimeShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -559,7 +559,7 @@ func (s *DateTimeOnlyShape) Base() *BaseShape {
 
 func (s *DateTimeOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -571,7 +571,7 @@ func (s *DateTimeOnlyShape) Check() error {
 	return nil
 }
 
-func (s *DateTimeOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -585,7 +585,7 @@ func (s *DateOnlyShape) Base() *BaseShape {
 
 func (s *DateOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -597,7 +597,7 @@ func (s *DateOnlyShape) Check() error {
 	return nil
 }
 
-func (s *DateOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -611,7 +611,7 @@ func (s *TimeOnlyShape) Base() *BaseShape {
 
 func (s *TimeOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -623,7 +623,7 @@ func (s *TimeOnlyShape) Check() error {
 	return nil
 }
 
-func (s *TimeOnlyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -637,7 +637,7 @@ func (s *AnyShape) Base() *BaseShape {
 
 func (s *AnyShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -649,7 +649,7 @@ func (s *AnyShape) Check() error {
 	return nil
 }
 
-func (s *AnyShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -663,7 +663,7 @@ func (s *NilShape) Base() *BaseShape {
 
 func (s *NilShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
@@ -675,6 +675,6 @@ func (s *NilShape) Check() error {
 	return nil
 }
 
-func (s *NilShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }

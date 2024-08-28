@@ -9,9 +9,9 @@ import (
 	"github.com/acronis/go-raml/rdt"
 )
 
-func ResolveShapes() error {
-	for _, shape := range GetRegistry().UnresolvedShapes {
-		if err := ResolveShape(shape); err != nil {
+func (r *RAML) resolveShapes() error {
+	for _, shape := range r.GetAllShapesPtr() {
+		if err := r.resolveShape(shape); err != nil {
 			return fmt.Errorf("resolve shape: %w", err)
 		}
 	}
@@ -19,9 +19,9 @@ func ResolveShapes() error {
 	return nil
 }
 
-func ResolveDomainExtensions() error {
-	for _, de := range GetRegistry().DomainExtensions {
-		if err := ResolveDomainExtension(de); err != nil {
+func (r *RAML) resolveDomainExtensions() error {
+	for _, de := range r.domainExtensions {
+		if err := r.resolveDomainExtension(de); err != nil {
 			return fmt.Errorf("resolve domain extension: %w", err)
 		}
 	}
@@ -29,13 +29,13 @@ func ResolveDomainExtensions() error {
 	return nil
 }
 
-func ResolveDomainExtension(de *DomainExtension) error {
+func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 	// TODO: Maybe fuse resolution and value validation stage?
 	parts := strings.Split(de.Name, ".")
 
 	var ref *Shape
 	// TODO: Probably can be done prettier. Needs refactor.
-	switch frag := GetRegistry().GetFragment(de.Location).(type) {
+	switch frag := r.GetFragment(de.Location).(type) {
 	case *Library:
 		if len(parts) == 1 {
 			ref = frag.AnnotationTypes[parts[0]]
@@ -74,79 +74,81 @@ func ResolveDomainExtension(de *DomainExtension) error {
 	return nil
 }
 
-func ResolveMultipleInheritance(target Shape) (*Shape, error) {
+func (r *RAML) resolveMultipleInheritance(target Shape) (*Shape, error) {
 	inherits := target.Base().Inherits
 	for _, inherit := range inherits {
-		if err := ResolveShape(inherit); err != nil {
+		if err := r.resolveShape(inherit); err != nil {
 			return nil, fmt.Errorf("resolve inherit: %w", err)
 		}
 	}
 	// Multiple inheritance validation to be performed in a separate validation stage
-	s, err := MakeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.makeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	return &s, nil
 }
 
-func ResolveLink(target Shape) (*Shape, error) {
+func (r *RAML) resolveLink(target Shape) (*Shape, error) {
 	link := target.Base().Link
-	if err := ResolveShape(link.Shape); err != nil {
+	if err := r.resolveShape(link.Shape); err != nil {
 		return nil, fmt.Errorf("resolve link shape: %w", err)
 	}
-	s, err := MakeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.makeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	return &s, nil
 }
 
-func ResolveObjectProperties(shape *ObjectShape) error {
+func (o *ObjectShape) resolveProperties() error {
 	// NOTE: This function is not susceptible to cyclic dependency because shape resolution returns as soon as shape is resolved.
-	for _, prop := range shape.Properties {
+	for _, prop := range o.Properties {
 		// Traverse into object sub-properties recursively
 		if s, ok := (*prop.Shape).(*ObjectShape); ok {
-			if err := ResolveObjectProperties(s); err != nil {
+			if err := s.resolveProperties(); err != nil {
 				return fmt.Errorf("resolve property shape: %w", err)
 			}
-		} else if err := ResolveShape(prop.Shape); err != nil {
+		} else if err := o.raml.resolveShape(prop.Shape); err != nil {
 			return fmt.Errorf("resolve property shape: %w", err)
 		}
 	}
 	return nil
 }
 
-// ResolveShape resolves an unknown shape in-place.
+// resolveShape resolves an unknown shape in-place.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before resolving if necessary.
-func ResolveShape(shape *Shape) error {
+func (r *RAML) resolveShape(shape *Shape) error {
 	target := *shape
+	if target.Base().resolved {
+		return nil
+	}
 	// Skip already resolved shapes
 	if _, ok := target.(*UnknownShape); !ok {
+		target.Base().resolved = true
 		return nil
 	}
 
 	link := target.Base().Link
 	if link != nil {
-		s, err := ResolveLink(target)
+		s, err := r.resolveLink(target)
 		if err != nil {
 			return fmt.Errorf("resolve link: %w", err)
 		}
 		*shape = *s
-		// TODO: Only for debugging purposes. To be removed.
-		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
+		(*shape).Base().resolved = true
 		return nil
 	}
 
 	shapeType := target.Base().Type
 	if shapeType == TypeComposite {
 		// Special case for multiple inheritance
-		s, err := ResolveMultipleInheritance(target)
+		s, err := r.resolveMultipleInheritance(target)
 		if err != nil {
 			return fmt.Errorf("resolve multiple inheritance: %w", err)
 		}
 		*shape = *s
-		// TODO: Only for debugging purposes. To be removed.
-		GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
+		(*shape).Base().resolved = true
 		return nil
 	}
 
@@ -154,7 +156,7 @@ func ResolveShape(shape *Shape) error {
 	lexer := rdt.NewrdtLexer(is)
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 	rdtParser := rdt.NewrdtParser(tokens)
-	visitor := NewRdtVisitor()
+	visitor := NewRdtVisitor(r)
 	tree := rdtParser.Entrypoint()
 
 	s, err := visitor.Visit(tree, target.(*UnknownShape))
@@ -165,16 +167,15 @@ func ResolveShape(shape *Shape) error {
 	*shape = sv
 	if ss, ok := sv.(*ObjectShape); ok && ss.Properties != nil {
 		// Unresolved object shape may contain properties that couldn't be taken into account during parsing.
-		if err := ResolveObjectProperties(ss); err != nil {
+		if err := ss.resolveProperties(); err != nil {
 			return fmt.Errorf("resolve property shape: %w", err)
 		}
 	} else if ss, ok := sv.(*ArrayShape); ok && ss.Items != nil {
 		// Unresolved array shape may contain unresolved items shape.
-		if err := ResolveShape(ss.Items); err != nil {
+		if err := r.resolveShape(ss.Items); err != nil {
 			return fmt.Errorf("resolve array items shape: %w", err)
 		}
 	}
-	// TODO: Only for debugging purposes. To be removed.
-	GetRegistry().ResolvedShapes = append(GetRegistry().ResolvedShapes, shape)
+	(*shape).Base().resolved = true
 	return nil
 }

@@ -18,6 +18,8 @@ type BaseShape struct {
 	Inherits    []*Shape
 	Default     *Node
 	Required    *bool
+	resolved    bool
+	unwrapped   bool
 
 	// To support !include of DataType fragment
 	Link *DataType
@@ -26,10 +28,39 @@ type BaseShape struct {
 	CustomShapeFacetDefinitions CustomShapeFacetDefinitions // Map of custom facet definitions
 	CustomDomainProperties      CustomDomainProperties      // Map of custom annotations
 
+	raml *RAML
+
 	Location string
 	Position
 }
 
+// IsResolved returns true if the shape is resolved.
+func (s *BaseShape) IsResolved() bool {
+	return s.resolved
+}
+
+// IsUnwrapped returns true if the shape is unwrapped.
+func (s *BaseShape) IsUnwrapped() bool {
+	return s.unwrapped
+}
+
+// String implements fmt.Stringer.
+func (s *BaseShape) String() string {
+	r := fmt.Sprintf("Type: %s: Name: %s",
+		s.Type,
+		s.Name,
+	)
+	if len(s.Inherits) > 0 {
+		r = fmt.Sprintf("%s: Inherits", r)
+		for _, i := range s.Inherits {
+			base := (*i).Base()
+			r = fmt.Sprintf("%s: %s", r, base.Name)
+		}
+	}
+	return r
+}
+
+// Examples represents a collection of examples.
 type Examples struct {
 	Id       string
 	Examples map[string]*Example
@@ -39,6 +70,8 @@ type Examples struct {
 
 	Location string
 	Position
+
+	raml *RAML
 }
 
 // ShapeBaser is the interface that represents a retriever of a base shape.
@@ -51,7 +84,7 @@ type ShapeValidator interface {
 	Validate(v interface{}) error
 }
 
-// ShapeMerger is the interface that represents an inheritor of a RAML shape.
+// ShapeInheritor is the interface that represents an inheritor of a RAML shape.
 type ShapeInheritor interface {
 	// TODO: inplace option?
 	Inherit(source Shape) (Shape, error)
@@ -67,21 +100,24 @@ type ShapeRAMLDataType interface {
 	ToRAMLDataType() interface{}
 }
 
-// YAMLNodesUnmarshaller is the interface that represents an unmarshaller of a RAML shape from YAML nodes.
-type YAMLNodesUnmarshaller interface {
-	UnmarshalYAMLNodes(v []*yaml.Node) error
+// yamlNodesUnmarshaller is the interface that represents an unmarshaller of a RAML shape from YAML nodes.
+type yamlNodesUnmarshaller interface {
+	unmarshalYAMLNodes(v []*yaml.Node) error
 }
 
 // Shape is the interface that represents a RAML shape.
 type Shape interface {
 	Clone() Shape
 	Check() error
-	// ShapeValidator
-	ShapeInheritor
+
+	// Inherit is a ShapeInheritor
+	Inherit(source Shape) (Shape, error)
 	ShapeBaser
-	YAMLNodesUnmarshaller
+	yamlNodesUnmarshaller
+	fmt.Stringer
 }
 
+// identifyShapeType identifies the type of the shape.
 func identifyShapeType(shapeFacets []*yaml.Node) string {
 	var t = TypeString
 	for i := 0; i != len(shapeFacets); i += 2 {
@@ -105,7 +141,8 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 	return t
 }
 
-func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
+// makeConcreteShape creates a new concrete shape.
+func (r *RAML) makeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
 	base.Type = shapeType
 
 	// NOTE: Shape resolution is performed in a separate stage.
@@ -146,7 +183,7 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 		shape = &JSONShape{BaseShape: *base}
 	}
 
-	if err := shape.UnmarshalYAMLNodes(shapeFacets); err != nil {
+	if err := shape.unmarshalYAMLNodes(shapeFacets); err != nil {
 		return nil, NewWrappedError("unmarshal yaml nodes", err, base.Location,
 			WithPosition(&base.Position), WithInfo("shape type", shapeType))
 	}
@@ -154,13 +191,15 @@ func MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.No
 	return shape, nil
 }
 
-func MakeBaseShape(name string, location string, position *Position) *BaseShape {
+// MakeBaseShape creates a new base shape which is a base for all shapes.
+func (r *RAML) MakeBaseShape(name string, location string, position *Position) *BaseShape {
 	return &BaseShape{
-		Id:       GenerateShapeId(),
+		Id:       generateShapeId(),
 		Name:     name,
 		Location: location,
 		Position: *position,
 
+		raml:                        r,
 		CustomDomainProperties:      make(CustomDomainProperties),
 		CustomShapeFacets:           make(CustomShapeFacets),
 		CustomShapeFacetDefinitions: make(CustomShapeFacetDefinitions),
@@ -170,16 +209,17 @@ func MakeBaseShape(name string, location string, position *Position) *BaseShape 
 // TODO: Temporary workaround
 var idCounter int = 1
 
-func GenerateShapeId() string {
+func generateShapeId() string {
 	id := "#" + fmt.Sprint(idCounter)
 	idCounter++
 	return id
 }
 
-func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
-	base := MakeBaseShape(name, location, &Position{Line: v.Line, Column: v.Column})
+// makeShape creates a new shape from the given YAML node.
+func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, error) {
+	base := r.MakeBaseShape(name, location, &Position{Line: v.Line, Column: v.Column})
 
-	shapeTypeNode, shapeFacets, err := base.Decode(v)
+	shapeTypeNode, shapeFacets, err := base.decode(v)
 	if err != nil {
 		return nil, NewWrappedError("decode", err, location, WithNodePosition(v))
 	}
@@ -201,7 +241,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				}
 			} else if shapeTypeNode.Tag == "!include" {
 				baseDir := filepath.Dir(location)
-				dt, err := ParseDataType(filepath.Join(baseDir, shapeTypeNode.Value))
+				dt, err := r.parseDataType(filepath.Join(baseDir, shapeTypeNode.Value))
 				if err != nil {
 					return nil, fmt.Errorf("parse data: %w", err)
 				}
@@ -217,7 +257,7 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 				} else if node.Tag == "!include" {
 					return nil, NewError("!include is not allowed in multiple inheritance", location, WithNodePosition(node))
 				}
-				s, err := MakeShape(node, name, location)
+				s, err := r.makeShape(node, name, location)
 				if err != nil {
 					return nil, NewWrappedError("make shape", err, location, WithNodePosition(node))
 				}
@@ -228,18 +268,16 @@ func MakeShape(v *yaml.Node, name string, location string) (*Shape, error) {
 		}
 	}
 
-	s, err := MakeConcreteShape(base, shapeType, shapeFacets)
+	s, err := r.makeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
 		return nil, NewWrappedError("make concrete shape", err, base.Location, WithPosition(&base.Position))
 	}
 	ptr := &s
-	if _, ok := s.(*UnknownShape); ok {
-		GetRegistry().AppendUnresolvedShape(ptr)
-	}
 	return ptr, nil
 }
 
-func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
+// decode decodes the shape from the YAML node.
+func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	// For inline type declaration
 	if value.Kind == yaml.ScalarNode || value.Kind == yaml.SequenceNode {
 		return value, nil, nil
@@ -256,7 +294,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
 		if IsCustomDomainExtensionNode(node.Value) {
-			name, de, err := UnmarshalCustomDomainExtension(s.Location, node, valueNode)
+			name, de, err := s.raml.unmarshalCustomDomainExtension(s.Location, node, valueNode)
 			if err != nil {
 				return nil, nil, fmt.Errorf("unmarshal custom domain extension: %w", err)
 			}
@@ -280,7 +318,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				property, err := MakeProperty(name, data, s.Location)
+				property, err := s.raml.makeProperty(name, data, s.Location)
 				if err != nil {
 					return nil, nil, NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
@@ -290,7 +328,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			if s.Examples != nil {
 				return nil, nil, fmt.Errorf("example and examples cannot be defined together")
 			}
-			example, err := MakeExample(valueNode, "", s.Location)
+			example, err := s.raml.makeExample(valueNode, "", s.Location)
 			if err != nil {
 				return nil, nil, fmt.Errorf("make example: %w", err)
 			}
@@ -301,7 +339,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			}
 			if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == "!include" {
 				baseDir := filepath.Dir(s.Location)
-				n, err := ParseNamedExample(filepath.Join(baseDir, valueNode.Value))
+				n, err := s.raml.parseNamedExample(filepath.Join(baseDir, valueNode.Value))
 				if err != nil {
 					return nil, nil, fmt.Errorf("parse named example: %w", err)
 				}
@@ -314,7 +352,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				example, err := MakeExample(data, name, s.Location)
+				example, err := s.raml.makeExample(data, name, s.Location)
 				if err != nil {
 					return nil, nil, fmt.Errorf("make examples: [%d]: %w", j, err)
 				}
@@ -322,7 +360,7 @@ func (s *BaseShape) Decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			}
 			s.Examples = &Examples{Examples: examples, Location: s.Location}
 		} else if node.Value == "default" {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return nil, nil, fmt.Errorf("make node default: %w", err)
 			}

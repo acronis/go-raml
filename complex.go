@@ -6,6 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ArrayFacets contains constraints for array shapes.
 type ArrayFacets struct {
 	Items       *Shape
 	MinItems    *uint64
@@ -13,12 +14,14 @@ type ArrayFacets struct {
 	UniqueItems bool
 }
 
+// ArrayShape represents an array shape.
 type ArrayShape struct {
 	BaseShape
 
 	ArrayFacets
 }
 
+// Base returns the base shape.
 func (s *ArrayShape) Base() *BaseShape {
 	return &s.BaseShape
 }
@@ -51,14 +54,16 @@ func (s *ArrayShape) Base() *BaseShape {
 // 	return nil
 // }
 
+// Clone returns a clone of the shape.
 func (s *ArrayShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	items := (*c.Items).Clone()
 	c.Items = &items
 	return &c
 }
 
+// Inherit merges the source shape into the target shape.
 func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*ArrayShape)
 	if !ok {
@@ -67,7 +72,7 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	if s.Items == nil {
 		s.Items = ss.Items
 	} else {
-		_, err := Inherit(*s.Items, *ss.Items)
+		_, err := s.raml.Inherit(*s.Items, *ss.Items)
 		if err != nil {
 			return nil, NewWrappedError("merge array items", err, s.Location)
 		}
@@ -95,7 +100,8 @@ func (s *ArrayShape) Check() error {
 	return nil
 }
 
-func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+// UnmarshalYAMLNodes unmarshals the array shape from YAML nodes.
+func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -110,18 +116,18 @@ func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 		} else if node.Value == "items" {
 			name := "items"
-			shape, err := MakeShape(valueNode, name, s.Location)
+			shape, err := s.raml.makeShape(valueNode, name, s.Location)
 			if err != nil {
 				return NewWrappedError("make shape", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Items = shape
-			GetRegistry().PutIntoFragment(s.Name+"#items", s.Location, s.Items)
+			s.raml.PutIntoFragment(s.Name+"#items", s.Location, s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
 				return NewWrappedError("decode uniqueItems", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -131,6 +137,7 @@ func (s *ArrayShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
+// ObjectFacets contains constraints for object shapes.
 type ObjectFacets struct {
 	Discriminator        string
 	DiscriminatorValue   any
@@ -140,6 +147,7 @@ type ObjectFacets struct {
 	MaxProperties        *uint64
 }
 
+// ObjectShape represents an object shape.
 type ObjectShape struct {
 	BaseShape
 
@@ -169,7 +177,8 @@ type ObjectShape struct {
 // 	return nil
 // }
 
-func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+// UnmarshalYAMLNodes unmarshals the object shape from YAML nodes.
+func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	s.AdditionalProperties = true // Additional properties is true by default
 
 	for i := 0; i != len(v); i += 2 {
@@ -201,15 +210,15 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				property, err := MakeProperty(name, data, s.Location)
+				property, err := s.raml.makeProperty(name, data, s.Location)
 				if err != nil {
 					return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
 				s.Properties[property.Name] = property
-				GetRegistry().PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
+				s.raml.PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 			}
 		} else {
-			n, err := MakeNode(valueNode, s.Location)
+			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -219,14 +228,16 @@ func (s *ObjectShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
+// Base returns the base shape.
 func (s *ObjectShape) Base() *BaseShape {
 	return &s.BaseShape
 }
 
+// Clone returns a clone of the object shape.
 func (s *ObjectShape) Clone() Shape {
 	// TODO: Susceptible to recursion
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	c.Properties = make(map[string]Property, len(s.Properties))
 	for k, v := range s.Properties {
 		p := (*v.Shape).Clone()
@@ -236,6 +247,7 @@ func (s *ObjectShape) Clone() Shape {
 	return &c
 }
 
+// Inherit merges the source shape into the target shape.
 func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*ObjectShape)
 	if !ok {
@@ -263,7 +275,7 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	} else {
 		for k, source := range ss.Properties {
 			if _, ok := s.Properties[k]; ok {
-				_, err := Inherit(*source.Shape, *s.Properties[k].Shape)
+				_, err := s.raml.Inherit(*source.Shape, *s.Properties[k].Shape)
 				if err != nil {
 					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*source.Shape).Base().Position), WithInfo("property", k))
 				}
@@ -279,8 +291,9 @@ func (s *ObjectShape) Check() error {
 	return nil
 }
 
-func MakeProperty(name string, v *yaml.Node, location string) (Property, error) {
-	shape, err := MakeShape(v, name, location)
+// makeProperty creates a property from a YAML node.
+func (r *RAML) makeProperty(name string, v *yaml.Node, location string) (Property, error) {
+	shape, err := r.makeShape(v, name, location)
 	if err != nil {
 		return Property{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
@@ -301,19 +314,24 @@ func MakeProperty(name string, v *yaml.Node, location string) (Property, error) 
 		Name:     propertyName,
 		Shape:    shape,
 		Required: required,
+		raml:     r,
 	}, nil
 }
 
+// Property represents a property of an object shape.
 type Property struct {
 	Name     string
 	Shape    *Shape
 	Required bool
+	raml     *RAML
 }
 
+// UnionFacets contains constraints for union shapes.
 type UnionFacets struct {
 	AnyOf []*Shape
 }
 
+// UnionShape represents a union shape.
 type UnionShape struct {
 	BaseShape
 
@@ -321,17 +339,20 @@ type UnionShape struct {
 	UnionFacets
 }
 
-func (s *UnionShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+// UnmarshalYAMLNodes unmarshals the union shape from YAML nodes.
+func (s *UnionShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
+// Base returns the base shape.
 func (s *UnionShape) Base() *BaseShape {
 	return &s.BaseShape
 }
 
+// Clone returns a clone of the union shape.
 func (s *UnionShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	c.AnyOf = make([]*Shape, len(s.AnyOf))
 	for i, item := range s.AnyOf {
 		an := (*item).Clone()
@@ -340,6 +361,7 @@ func (s *UnionShape) Clone() Shape {
 	return &c
 }
 
+// Inherit merges the source shape into the target shape.
 func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*UnionShape)
 	if !ok {
@@ -385,11 +407,11 @@ func (s *JSONShape) Base() *BaseShape {
 
 func (s *JSONShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
-func (s *JSONShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
@@ -413,11 +435,11 @@ func (s *UnknownShape) Base() *BaseShape {
 
 func (s *UnknownShape) Clone() Shape {
 	c := *s
-	c.Id = GenerateShapeId()
+	c.Id = generateShapeId()
 	return &c
 }
 
-func (s *UnknownShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *UnknownShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	s.facets = v
 	return nil
 }
@@ -436,7 +458,7 @@ func (s *UnknownShape) Check() error {
 // 	head *Shape
 // }
 
-// func (s *RecursiveShape) UnmarshalYAMLNodes(v []*yaml.Node) error {
+// func (s *RecursiveShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 // 	return nil
 // }
 
@@ -446,7 +468,7 @@ func (s *UnknownShape) Check() error {
 
 // func (s *RecursiveShape) Clone() Shape {
 // 	c := *s
-// 	c.Id = GenerateShapeId()
+// 	c.Id = generateShapeId()
 // 	return &c
 // }
 

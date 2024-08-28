@@ -130,3 +130,22 @@ types:
   UnionNullableType:
     (Annotation): Test Example
     type: string | nil
+
+  A:
+    properties:
+      a: string
+
+  B:
+    type: A
+    properties:
+      b: string
+
+  C:
+    type: B
+    properties:
+      c: string
+
+  D:
+    type: C
+    properties:
+      d: string

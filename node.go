@@ -29,14 +29,15 @@ type Node struct {
 
 	Location string
 	Position
+	raml *RAML
 }
 
 func (n *Node) String() string {
 	return fmt.Sprintf("%v", n.Value)
 }
 
-func MakeNode(node *yaml.Node, location string) (*Node, error) {
-	n := &Node{Location: location, Position: Position{node.Line, node.Column}}
+func (r *RAML) makeNode(node *yaml.Node, location string) (*Node, error) {
+	n := &Node{Location: location, Position: Position{node.Line, node.Column}, raml: r}
 
 	switch node.Kind {
 	default:

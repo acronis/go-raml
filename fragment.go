@@ -16,6 +16,14 @@ const (
 	FragmentNamedExample
 )
 
+type LocationGetter interface {
+	GetLocation() string
+}
+
+type Fragment interface {
+	LocationGetter
+}
+
 // Library is the RAML 1.0 Library
 type Library struct {
 	Id              string
@@ -29,6 +37,11 @@ type Library struct {
 	CustomDomainProperties CustomDomainProperties
 
 	Location string
+	raml     *RAML
+}
+
+func (l *Library) GetLocation() string {
+	return l.Location
 }
 
 type LibraryLink struct {
@@ -41,6 +54,7 @@ type LibraryLink struct {
 	Position
 }
 
+// UnmarshalYAML unmarshals a Library from a yaml.Node, implementing the yaml.Unmarshaler interface
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return fmt.Errorf("must be map")
@@ -51,7 +65,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
 		if IsCustomDomainExtensionNode(node.Value) {
-			name, de, err := UnmarshalCustomDomainExtension(l.Location, node, valueNode)
+			name, de, err := l.raml.unmarshalCustomDomainExtension(l.Location, node, valueNode)
 			if err != nil {
 				return NewWrappedError("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
 			}
@@ -82,12 +96,12 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				shape, err := MakeShape(data, name, l.Location)
+				shape, err := l.raml.makeShape(data, name, l.Location)
 				if err != nil {
 					return NewWrappedError("parse types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.Types[name] = shape
-				GetRegistry().PutIntoFragment(name, l.Location, shape)
+				l.raml.PutIntoFragment(name, l.Location, shape)
 			}
 		} else if node.Value == "annotationTypes" {
 			if valueNode.Tag == "!!null" {
@@ -99,12 +113,11 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				shape, err := MakeShape(data, name, l.Location)
+				shape, err := l.raml.makeShape(data, name, l.Location)
 				if err != nil {
 					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.AnnotationTypes[name] = shape
-				// GetRegistry().Put(name, l.Location, shape)
 			}
 		} else if node.Value == "usage" {
 			if err := valueNode.Decode(&l.Usage); err != nil {
@@ -116,9 +129,10 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func MakeLibrary(path string) *Library {
+func (r *RAML) MakeLibrary(path string) *Library {
 	return &Library{
 		Location: path,
+		raml:     r,
 	}
 }
 
@@ -130,6 +144,11 @@ type DataType struct {
 	Shape *Shape
 
 	Location string
+	raml     *RAML
+}
+
+func (dt *DataType) GetLocation() string {
+	return dt.Location
 }
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
@@ -165,7 +184,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 			shapeValue.Content = append(shapeValue.Content, node, valueNode)
 		}
 	}
-	shape, err := MakeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
+	shape, err := dt.raml.makeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
 	if err != nil {
 		return NewWrappedError("parse types: make shape", err, dt.Location, WithNodePosition(shapeValue))
 	}
@@ -173,14 +192,15 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func MakeDataType(path string) *DataType {
+func (r *RAML) MakeDataType(path string) *DataType {
 	return &DataType{
 		Location: path,
+		raml:     r,
 	}
 }
 
-func MakeJsonDataType(value []byte, path string) (*DataType, error) {
-	dt := MakeDataType(path)
+func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
+	dt := r.MakeDataType(path)
 	// Convert to yaml node to reuse the same data node creation interface
 	node := &yaml.Node{
 		Kind: yaml.MappingNode,
@@ -209,11 +229,17 @@ type NamedExample struct {
 	Examples map[string]*Example
 
 	Location string
+	raml     *RAML
 }
 
-func MakeNamedExample(path string) *NamedExample {
+func (ne *NamedExample) GetLocation() string {
+	return ne.Location
+}
+
+func (r *RAML) MakeNamedExample(path string) *NamedExample {
 	return &NamedExample{
 		Location: path,
+		raml:     r,
 	}
 }
 
@@ -225,7 +251,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
-		example, err := MakeExample(valueNode, node.Value, ne.Location)
+		example, err := ne.raml.makeExample(valueNode, node.Value, ne.Location)
 		if err != nil {
 			return NewWrappedError("make example", err, ne.Location, WithNodePosition(valueNode))
 		}
