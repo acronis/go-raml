@@ -95,9 +95,10 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
-	// TODO: Formats intersection
 	if s.Format == nil {
 		s.Format = ss.Format
+	} else if ss.Format != nil && SetOfIntegerFormats[*s.Format] != SetOfIntegerFormats[*ss.Format] {
+		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
 }
@@ -131,14 +132,14 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Maximum = num
 		} else if node.Value == "multipleOf" {
-			if valueNode.Tag != "!!int" {
-				return NewError("multipleOf must be integer", s.Location, WithNodePosition(valueNode))
-			}
-
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
 				return NewWrappedError("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "format" {
+			if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
+				return NewError("invalid format", s.Location, WithNodePosition(valueNode), WithInfo("allowed_formats", SetOfIntegerFormats))
+			}
+
 			if err := valueNode.Decode(&s.Format); err != nil {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -209,9 +210,10 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
-	// TODO: Formats intersection validation
 	if s.Format == nil {
 		s.Format = ss.Format
+	} else if ss.Format != nil && *s.Format != *ss.Format {
+		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
 }
@@ -233,6 +235,10 @@ func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode maximum", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "format" {
+			if _, ok := SetOfNumberFormats[valueNode.Value]; !ok {
+				return NewError("invalid format", s.Location, WithNodePosition(valueNode), WithInfo("allowed_formats", SetOfNumberFormats))
+			}
+
 			if err := valueNode.Decode(&s.Format); err != nil {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
@@ -520,9 +526,10 @@ func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 	if !ok {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
-	// TODO: Formats intersection
 	if s.Format == nil {
 		s.Format = ss.Format
+	} else if ss.Format != nil && *s.Format != *ss.Format {
+		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
 }
@@ -536,6 +543,10 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "format" {
+			if _, ok := SetOfDateTimeFormats[valueNode.Value]; !ok {
+				return NewError("invalid format", s.Location, WithNodePosition(valueNode), WithInfo("allowed_formats", SetOfNumberFormats))
+			}
+
 			if err := valueNode.Decode(&s.Format); err != nil {
 				return NewWrappedError("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
