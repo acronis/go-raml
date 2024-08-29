@@ -130,7 +130,8 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 		base.Link = nil
 	} else if unwrapInherits && len(inherits) > 0 {
 		unwrappedInherits := make([]*Shape, len(inherits))
-		// TODO: Taking the first item is probably not a good idea, but it works.
+		// TODO: Fix multiple inheritance unwrap.
+		// Multiple inheritance members must be checked for compatibility with each other before unwrapping.
 		ss, err := r.UnwrapShape(inherits[0], unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
 			return nil, NewWrappedError("parent unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
