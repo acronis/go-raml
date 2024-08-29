@@ -139,7 +139,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 // ObjectFacets contains constraints for object shapes.
 type ObjectFacets struct {
-	Discriminator        string
+	Discriminator        *string
 	DiscriminatorValue   any
 	AdditionalProperties bool
 	Properties           map[string]Property
@@ -255,10 +255,11 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 
-	// Discriminator, DiscriminatorValue, AdditionalProperties are merged unconditionally.
-	s.Discriminator = ss.Discriminator
-	s.DiscriminatorValue = ss.DiscriminatorValue
-	s.AdditionalProperties = ss.AdditionalProperties
+	// AdditionalProperties and DiscriminatorValue are not inheritable properties
+	// TODO: It is unclear how discriminator is inherited.
+	if s.Discriminator == nil {
+		s.Discriminator = ss.Discriminator
+	}
 
 	if s.MinProperties == nil {
 		s.MinProperties = ss.MinProperties
