@@ -67,7 +67,7 @@ func (s *ArrayShape) Clone() Shape {
 func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*ArrayShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.Items == nil {
 		s.Items = ss.Items
@@ -253,7 +253,7 @@ func (s *ObjectShape) Clone() Shape {
 func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*ObjectShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 
 	// Discriminator, DiscriminatorValue, AdditionalProperties are merged unconditionally.
@@ -367,7 +367,7 @@ func (s *UnionShape) Clone() Shape {
 func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*UnionShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	// TODO: Facets need merging
 	// TODO: This can be optimized
@@ -418,6 +418,10 @@ func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 func (s *JSONShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*JSONShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
@@ -447,7 +451,7 @@ func (s *UnknownShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 func (s *UnknownShape) Inherit(source Shape) (Shape, error) {
-	return s, nil
+	return nil, NewError("cannot inherit from unknown shape", s.Location, WithPosition(&s.Position))
 }
 
 func (s *UnknownShape) Check() error {
