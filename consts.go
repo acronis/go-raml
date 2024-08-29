@@ -26,6 +26,20 @@ var SetOfArrayFacets = map[string]struct{}{
 	"items": {}, "minItems": {}, "maxItems": {}, "uniqueItems": {},
 }
 
+var SetOfNumberFormats = map[string]struct{}{
+	"float": {}, "double": {},
+}
+
+var SetOfIntegerFormats = map[string]struct{}{
+	// int is an alias for int32
+	// long is an alias for int64
+	"int8": {}, "int16": {}, "int32": {}, "int": {}, "int64": {}, "long": {},
+}
+
+var SetOfDateTimeFormats = map[string]struct{}{
+	"rfc3339": {}, "rfc2616": {},
+}
+
 // Standard types according to specification
 const (
 	TypeAny          = "any"
