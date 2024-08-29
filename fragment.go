@@ -102,6 +102,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				}
 				l.Types[name] = shape
 				l.raml.PutIntoFragment(name, l.Location, shape)
+				l.raml.PutShapePtr(shape)
 			}
 		} else if node.Value == "annotationTypes" {
 			if valueNode.Tag == "!!null" {
@@ -118,6 +119,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.AnnotationTypes[name] = shape
+				l.raml.PutShapePtr(shape)
 			}
 		} else if node.Value == "usage" {
 			if err := valueNode.Decode(&l.Usage); err != nil {

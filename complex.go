@@ -122,6 +122,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Items = shape
 			s.raml.PutIntoFragment(s.Name+"#items", s.Location, s.Items)
+			s.raml.PutShapePtr(s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
 				return NewWrappedError("decode uniqueItems", err, s.Location, WithNodePosition(valueNode))
@@ -216,6 +217,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				}
 				s.Properties[property.Name] = property
 				s.raml.PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
+				s.raml.PutShapePtr(property.Shape)
 			}
 		} else {
 			n, err := s.raml.makeNode(valueNode, s.Location)

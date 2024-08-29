@@ -1,6 +1,7 @@
 package raml
 
 import (
+	"container/list"
 	"context"
 	"fmt"
 )
@@ -8,14 +9,16 @@ import (
 // RAML is a store for all fragments and shapes.
 // WARNING: Not thread-safe
 type RAML struct {
-	// TODO: Implement interface for fragments.
 	fragmentsCache map[string]Fragment // Library, NamedExample, DataType
 	fragmentShapes map[string]map[string]*Shape
+	shapes         []*Shape
 	// entryPoint is a Library, NamedExample or DataType fragment that is used as an entry point for the resolution.
 	entryPoint Fragment
 
 	// May be reused for both validation and resolution.
 	domainExtensions []*DomainExtension
+	// Temporary storage for unresolved shapes.
+	unresolvedShapes list.List
 
 	// ctx is a context of the RAML, for future use.
 	ctx context.Context
@@ -68,26 +71,22 @@ func New(ctx context.Context) *RAML {
 	}
 }
 
-// GetAllShapes returns all shapes.
-func (r *RAML) GetAllShapes() []Shape {
+// GetShapes returns all shapes.
+func (r *RAML) GetShapes() []Shape {
 	var shapes []Shape
-	for _, loc := range r.fragmentShapes {
-		for _, shape := range loc {
-			shapes = append(shapes, *shape)
-		}
+	for _, shape := range r.shapes {
+		shapes = append(shapes, *shape)
 	}
 	return shapes
 }
 
-// GetAllShapesPtr returns all shapes as pointers.
-func (r *RAML) GetAllShapesPtr() []*Shape {
-	var shapes []*Shape
-	for _, loc := range r.fragmentShapes {
-		for _, shape := range loc {
-			shapes = append(shapes, shape)
-		}
-	}
-	return shapes
+// GetShapePtrs returns all shapes as pointers.
+func (r *RAML) GetShapePtrs() []*Shape {
+	return r.shapes
+}
+
+func (r *RAML) PutShapePtr(shape *Shape) {
+	r.shapes = append(r.shapes, shape)
 }
 
 // GetFragmentShapesPtr returns fragment shapes as pointers.
