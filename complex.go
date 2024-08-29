@@ -11,7 +11,7 @@ type ArrayFacets struct {
 	Items       *Shape
 	MinItems    *uint64
 	MaxItems    *uint64
-	UniqueItems bool
+	UniqueItems *bool
 }
 
 // ArrayShape represents an array shape.
@@ -87,11 +87,10 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.MaxItems != nil && *s.MaxItems < *ss.MaxItems {
 		return nil, NewError("maxItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxItems), WithInfo("target", *s.MaxItems))
 	}
-	// If parent does not require unique items or facets are matching - apply source value
-	if !ss.UniqueItems || s.UniqueItems == ss.UniqueItems {
+	if s.UniqueItems == nil {
 		s.UniqueItems = ss.UniqueItems
-	} else {
-		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.UniqueItems), WithInfo("target", s.UniqueItems))
+	} else if ss.UniqueItems != nil && *ss.UniqueItems && !*s.UniqueItems {
+		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.UniqueItems), WithInfo("target", *s.UniqueItems))
 	}
 	return s, nil
 }
