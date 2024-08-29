@@ -18,23 +18,18 @@ func Test_main(t *testing.T) {
 	}
 	require.NoError(t, err)
 	elapsed := time.Since(start)
-	t.Logf("ParseFromPath took %d ms", elapsed.Milliseconds())
+	t.Logf("ParseFromPath took %d ms\n", elapsed.Milliseconds())
 	fmt.Printf("Library location: %s\n", rml.entryPoint.GetLocation())
 
-	shapesAll := rml.GetAllShapes()
+	shapesAll := rml.GetShapes()
 	fmt.Printf("Total shapes: %d\n", len(shapesAll))
-	//fmt.Printf("Unresolved: %d\n", len(rml.unresolvedShapes))
-	//fmt.Printf("Resolved: %d\n", len(rml.shapes))
 
-	resolved := 0
-	unresolved := 0
 	for _, shape := range shapesAll {
-		if shape.Base().resolved {
-			resolved++
-		} else {
-			unresolved++
+		s, unresolved := shape.(*UnknownShape)
+		if unresolved {
+			t.Errorf("Unknown shape found %s", s.Name)
 		}
-		fmt.Printf("Shape: %s: resolved: %v: unwrapped: %v\n", shape, shape.Base().resolved, shape.Base().unwrapped)
+		fmt.Printf("Shape: %s: resolved: %v: unwrapped: %v\n", shape, !unresolved, shape.Base().unwrapped)
 	}
 
 	fmt.Printf("Resolved: %d\n", resolved)

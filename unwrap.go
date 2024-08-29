@@ -4,7 +4,7 @@ import "fmt"
 
 // UnwrapShapes unwraps all shapes in the RAML.
 func (r *RAML) UnwrapShapes() error {
-	for _, shape := range r.GetAllShapesPtr() {
+	for _, shape := range r.GetShapePtrs() {
 		us, err := r.UnwrapShape(shape, true, true, make([]string, 0))
 		if err != nil {
 			return fmt.Errorf("unwrap shape: %w", err)
@@ -95,7 +95,7 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 }
 
 // Recursively unwraps shape in-place.
-// Note that this method removes information about links and inheritance.
+// Note that this method removes information about links.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before unwrapping if necessary.
 func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []string) (Shape, error) {
 	if s == nil {
@@ -104,7 +104,7 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 	target := *s
 
 	// Skip already unwrapped shapes
-	if target.Base().unwrapped {
+	if target.Base().IsUnwrapped() {
 		return target, nil
 	}
 
@@ -120,7 +120,6 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 	var source Shape
 	link := base.Link
 	inherits := base.Inherits
-	unwrappedInherits := make([]*Shape, 0)
 	if unwrapLinks && link != nil {
 		us, err := r.UnwrapShape(link.Shape, unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
@@ -130,22 +129,19 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 
 		base.Link = nil
 	} else if unwrapInherits && len(inherits) > 0 {
+		unwrappedInherits := make([]*Shape, len(inherits))
 		// TODO: Taking the first item is probably not a good idea, but it works.
 		ss, err := r.UnwrapShape(inherits[0], unwrapLinks, unwrapInherits, append(history, sid))
 		if err != nil {
 			return nil, NewWrappedError("parent unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
-		if ss != nil {
-			unwrappedInherits = append(unwrappedInherits, &ss)
-		}
+		unwrappedInherits[0] = &ss
 		for i := 1; i < len(inherits); i++ {
 			us, err := r.UnwrapShape(inherits[i], unwrapLinks, unwrapInherits, append(history, sid))
 			if err != nil {
 				return nil, err
 			}
-			if us != nil {
-				unwrappedInherits = append(unwrappedInherits, &us)
-			}
+			unwrappedInherits[i] = &us
 			_, err = ss.Inherit(us)
 			if err != nil {
 				return nil, NewWrappedError("multiple parents unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))

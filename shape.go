@@ -18,7 +18,6 @@ type BaseShape struct {
 	Inherits    []*Shape
 	Default     *Node
 	Required    *bool
-	resolved    bool
 	unwrapped   bool
 
 	// To support !include of DataType fragment
@@ -32,11 +31,6 @@ type BaseShape struct {
 
 	Location string
 	Position
-}
-
-// IsResolved returns true if the shape is resolved.
-func (s *BaseShape) IsResolved() bool {
-	return s.resolved
 }
 
 // IsUnwrapped returns true if the shape is unwrapped.
@@ -273,6 +267,9 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 		return nil, NewWrappedError("make concrete shape", err, base.Location, WithPosition(&base.Position))
 	}
 	ptr := &s
+	if _, ok := s.(*UnknownShape); ok {
+		r.unresolvedShapes.PushBack(ptr)
+	}
 	return ptr, nil
 }
 

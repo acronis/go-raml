@@ -10,10 +10,18 @@ import (
 )
 
 func (r *RAML) resolveShapes() error {
-	for _, shape := range r.GetAllShapesPtr() {
-		if err := r.resolveShape(shape); err != nil {
+	// NOTE: Unresolved shapes is a linked list that is populated by the YAML parser. Shape parsing occurs in two places:
+	// 1. During the RAML fragment parsing. Shapes that could not be determined during the parsing process
+	// are stored in `unresolvedShapes` as UnknownShape. UnknownShape includes YAML nodes that can be parsed later.
+	// 2. During the shape resolution. YAML parser is invoked on YAML nodes that UnknownShape has stored.
+	// This helps to avoid additional traversals of nested shapes since the traverse is already done by YAML parser and it will
+	// generate UnknownShapes and add them to `unresolvedShapes` recursively as they occur.
+	for r.unresolvedShapes.Len() > 0 {
+		v := r.unresolvedShapes.Front()
+		if err := r.resolveShape(v.Value.(*Shape)); err != nil {
 			return fmt.Errorf("resolve shape: %w", err)
 		}
+		r.unresolvedShapes.Remove(v)
 	}
 
 	return nil
@@ -101,31 +109,12 @@ func (r *RAML) resolveLink(target Shape) (*Shape, error) {
 	return &s, nil
 }
 
-func (o *ObjectShape) resolveProperties() error {
-	// NOTE: This function is not susceptible to cyclic dependency because shape resolution returns as soon as shape is resolved.
-	for _, prop := range o.Properties {
-		// Traverse into object sub-properties recursively
-		if s, ok := (*prop.Shape).(*ObjectShape); ok {
-			if err := s.resolveProperties(); err != nil {
-				return fmt.Errorf("resolve property shape: %w", err)
-			}
-		} else if err := o.raml.resolveShape(prop.Shape); err != nil {
-			return fmt.Errorf("resolve property shape: %w", err)
-		}
-	}
-	return nil
-}
-
 // resolveShape resolves an unknown shape in-place.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before resolving if necessary.
 func (r *RAML) resolveShape(shape *Shape) error {
 	target := *shape
-	if target.Base().resolved {
-		return nil
-	}
 	// Skip already resolved shapes
 	if _, ok := target.(*UnknownShape); !ok {
-		target.Base().resolved = true
 		return nil
 	}
 
@@ -136,7 +125,6 @@ func (r *RAML) resolveShape(shape *Shape) error {
 			return fmt.Errorf("resolve link: %w", err)
 		}
 		*shape = *s
-		(*shape).Base().resolved = true
 		return nil
 	}
 
@@ -148,7 +136,6 @@ func (r *RAML) resolveShape(shape *Shape) error {
 			return fmt.Errorf("resolve multiple inheritance: %w", err)
 		}
 		*shape = *s
-		(*shape).Base().resolved = true
 		return nil
 	}
 
@@ -163,19 +150,6 @@ func (r *RAML) resolveShape(shape *Shape) error {
 	if err != nil {
 		return fmt.Errorf("visit tree: %w", err)
 	}
-	sv := *s
-	*shape = sv
-	if ss, ok := sv.(*ObjectShape); ok && ss.Properties != nil {
-		// Unresolved object shape may contain properties that couldn't be taken into account during parsing.
-		if err := ss.resolveProperties(); err != nil {
-			return fmt.Errorf("resolve property shape: %w", err)
-		}
-	} else if ss, ok := sv.(*ArrayShape); ok && ss.Items != nil {
-		// Unresolved array shape may contain unresolved items shape.
-		if err := r.resolveShape(ss.Items); err != nil {
-			return fmt.Errorf("resolve array items shape: %w", err)
-		}
-	}
-	(*shape).Base().resolved = true
+	*shape = *s
 	return nil
 }
