@@ -87,8 +87,8 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.MaxItems != nil && *s.MaxItems < *ss.MaxItems {
 		return nil, NewError("maxItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxItems), WithInfo("target", *s.MaxItems))
 	}
-	// If target does not require unique items or facets are matching - apply source value
-	if !s.UniqueItems || s.UniqueItems == ss.UniqueItems {
+	// If parent does not require unique items or facets are matching - apply source value
+	if !ss.UniqueItems || s.UniqueItems == ss.UniqueItems {
 		s.UniqueItems = ss.UniqueItems
 	} else {
 		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.UniqueItems), WithInfo("target", s.UniqueItems))
