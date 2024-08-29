@@ -275,14 +275,17 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	if s.Properties == nil {
 		s.Properties = ss.Properties
 	} else {
-		for k, source := range ss.Properties {
-			if _, ok := s.Properties[k]; ok {
-				_, err := s.raml.Inherit(*source.Shape, *s.Properties[k].Shape)
+		for k, sourceProp := range ss.Properties {
+			if targetProp, ok := s.Properties[k]; ok {
+				if sourceProp.Required && !targetProp.Required {
+					return nil, NewError("cannot make required property optional", s.Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k), WithInfo("source", sourceProp.Required), WithInfo("target", targetProp.Required))
+				}
+				_, err := s.raml.Inherit(*sourceProp.Shape, *s.Properties[k].Shape)
 				if err != nil {
-					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*source.Shape).Base().Position), WithInfo("property", k))
+					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
 				}
 			} else {
-				s.Properties[k] = source
+				s.Properties[k] = sourceProp
 			}
 		}
 	}
