@@ -11,7 +11,7 @@ type ArrayFacets struct {
 	Items       *Shape
 	MinItems    *uint64
 	MaxItems    *uint64
-	UniqueItems bool
+	UniqueItems *bool
 }
 
 // ArrayShape represents an array shape.
@@ -87,11 +87,10 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.MaxItems != nil && *s.MaxItems < *ss.MaxItems {
 		return nil, NewError("maxItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxItems), WithInfo("target", *s.MaxItems))
 	}
-	// If target does not require unique items or facets are matching - apply source value
-	if !s.UniqueItems || s.UniqueItems == ss.UniqueItems {
+	if s.UniqueItems == nil {
 		s.UniqueItems = ss.UniqueItems
-	} else {
-		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.UniqueItems), WithInfo("target", s.UniqueItems))
+	} else if ss.UniqueItems != nil && *ss.UniqueItems && !*s.UniqueItems {
+		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.UniqueItems), WithInfo("target", *s.UniqueItems))
 	}
 	return s, nil
 }
@@ -275,14 +274,17 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	if s.Properties == nil {
 		s.Properties = ss.Properties
 	} else {
-		for k, source := range ss.Properties {
-			if _, ok := s.Properties[k]; ok {
-				_, err := s.raml.Inherit(*source.Shape, *s.Properties[k].Shape)
+		for k, sourceProp := range ss.Properties {
+			if targetProp, ok := s.Properties[k]; ok {
+				if sourceProp.Required && !targetProp.Required {
+					return nil, NewError("cannot make required property optional", s.Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k), WithInfo("source", sourceProp.Required), WithInfo("target", targetProp.Required))
+				}
+				_, err := s.raml.Inherit(*sourceProp.Shape, *s.Properties[k].Shape)
 				if err != nil {
-					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*source.Shape).Base().Position), WithInfo("property", k))
+					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
 				}
 			} else {
-				s.Properties[k] = source
+				s.Properties[k] = sourceProp
 			}
 		}
 	}
