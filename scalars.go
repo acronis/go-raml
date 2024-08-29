@@ -97,7 +97,7 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Format == nil {
 		s.Format = ss.Format
-	} else if ss.Format != nil && *s.Format != *ss.Format {
+	} else if ss.Format != nil && SetOfIntegerFormats[*s.Format] != SetOfIntegerFormats[*ss.Format] {
 		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
@@ -137,7 +137,7 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 		} else if node.Value == "format" {
 			if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
-				return NewError("invalid format", s.Location, WithNodePosition(valueNode), WithInfo("allowed_formats", SetOfNumberFormats))
+				return NewError("invalid format", s.Location, WithNodePosition(valueNode), WithInfo("allowed_formats", SetOfIntegerFormats))
 			}
 
 			if err := valueNode.Decode(&s.Format); err != nil {

@@ -30,10 +30,10 @@ var SetOfNumberFormats = map[string]struct{}{
 	"float": {}, "double": {},
 }
 
-var SetOfIntegerFormats = map[string]struct{}{
+var SetOfIntegerFormats = map[string]int8{
 	// int is an alias for int32
 	// long is an alias for int64
-	"int8": {}, "int16": {}, "int32": {}, "int": {}, "int64": {}, "long": {},
+	"int8": 0, "int16": 1, "int32": 2, "int": 2, "int64": 3, "long": 3,
 }
 
 var SetOfDateTimeFormats = map[string]struct{}{
