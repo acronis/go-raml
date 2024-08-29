@@ -73,7 +73,7 @@ func (s *IntegerShape) Clone() Shape {
 func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*IntegerShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.Minimum == nil {
 		s.Minimum = ss.Minimum
@@ -187,7 +187,7 @@ func (s *NumberShape) Clone() Shape {
 func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*NumberShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.Minimum == nil {
 		s.Minimum = ss.Minimum
@@ -287,7 +287,7 @@ func (s *StringShape) Clone() Shape {
 func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*StringShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.MinLength == nil {
 		s.MinLength = ss.MinLength
@@ -379,7 +379,7 @@ func (s *FileShape) Clone() Shape {
 func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*FileShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.MinLength == nil {
 		s.MinLength = ss.MinLength
@@ -391,9 +391,10 @@ func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.MaxLength != nil && *s.MaxLength > *ss.MaxLength {
 		return nil, NewError("maxLength constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.MaxLength), WithInfo("target", *s.MaxLength))
 	}
-	// TODO: FileTypes intersection validation
 	if s.FileTypes == nil {
 		s.FileTypes = ss.FileTypes
+	} else if ss.FileTypes != nil && !IsCompatibleEnum(ss.FileTypes, s.FileTypes) {
+		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.FileTypes.String()), WithInfo("target", s.FileTypes.String()))
 	}
 	return s, nil
 }
@@ -461,7 +462,7 @@ func (s *BooleanShape) Clone() Shape {
 func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*BooleanShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
@@ -517,7 +518,7 @@ func (s *DateTimeShape) Clone() Shape {
 func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*DateTimeShape)
 	if !ok {
-		return nil, NewError("merge shape type mismatch", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	// TODO: Formats intersection
 	if s.Format == nil {
@@ -564,6 +565,10 @@ func (s *DateTimeOnlyShape) Clone() Shape {
 }
 
 func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*DateTimeShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
@@ -590,6 +595,10 @@ func (s *DateOnlyShape) Clone() Shape {
 }
 
 func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*DateOnlyShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
@@ -616,6 +625,10 @@ func (s *TimeOnlyShape) Clone() Shape {
 }
 
 func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*TimeOnlyShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
@@ -642,6 +655,10 @@ func (s *AnyShape) Clone() Shape {
 }
 
 func (s *AnyShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*AnyShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
@@ -668,6 +685,10 @@ func (s *NilShape) Clone() Shape {
 }
 
 func (s *NilShape) Inherit(source Shape) (Shape, error) {
+	_, ok := source.(*NilShape)
+	if !ok {
+		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
+	}
 	return s, nil
 }
 
