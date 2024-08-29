@@ -33,7 +33,7 @@ type FormatFacets struct {
 type IntegerFacets struct {
 	Minimum    *big.Int
 	Maximum    *big.Int
-	MultipleOf *int64
+	MultipleOf *float64
 }
 
 type IntegerShape struct {
