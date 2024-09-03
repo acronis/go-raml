@@ -56,11 +56,23 @@ func (s *ArrayShape) Base() *BaseShape {
 
 // Clone returns a clone of the shape.
 func (s *ArrayShape) Clone() Shape {
+	return s.clone(make([]Shape, 0))
+}
+
+func (s *ArrayShape) clone(history []Shape) Shape {
+	for _, item := range history {
+		if item.Base().Id == s.Id {
+			return item
+		}
+	}
 	c := *s
-	c.Id = generateShapeId()
-	items := (*c.Items).Clone()
-	c.Items = &items
-	return &c
+	ptr := &c
+	history = append(history, ptr)
+	if c.Items != nil {
+		items := (*c.Items).clone(history)
+		c.Items = &items
+	}
+	return ptr
 }
 
 // Inherit merges the source shape into the target shape.
@@ -71,7 +83,7 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Items == nil {
 		s.Items = ss.Items
-	} else {
+	} else if ss.Items != nil {
 		_, err := s.raml.Inherit(*s.Items, *ss.Items)
 		if err != nil {
 			return nil, NewWrappedError("merge array items", err, s.Location)
@@ -93,6 +105,24 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("uniqueItems constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.UniqueItems), WithInfo("target", *s.UniqueItems))
 	}
 	return s, nil
+}
+
+func (s *ArrayShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		ID:       s.Id,
+		Type:     "array",
+		MinItems: s.MinItems,
+		MaxItems: s.MaxItems,
+		Extras:   make(map[string]interface{}),
+	}
+	if s.UniqueItems != nil {
+		schema.UniqueItems = *s.UniqueItems
+	}
+	if s.Items != nil {
+		schema.Items = (*s.Items).ToJSONSchema()
+	}
+	schema.WithRamlData(s.Base())
+	return schema
 }
 
 func (s *ArrayShape) Check() error {
@@ -120,7 +150,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("make shape", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Items = shape
-			s.raml.PutIntoFragment(s.Name+"#items", s.Location, s.Items)
+			//s.raml.PutTypeIntoFragment(s.Name+"#items", s.Location, s.Items)
 			s.raml.PutShapePtr(s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
@@ -141,7 +171,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 type ObjectFacets struct {
 	Discriminator        *string
 	DiscriminatorValue   any
-	AdditionalProperties bool
+	AdditionalProperties *bool
 	Properties           map[string]Property
 	MinProperties        *uint64
 	MaxProperties        *uint64
@@ -179,8 +209,6 @@ type ObjectShape struct {
 
 // UnmarshalYAMLNodes unmarshals the object shape from YAML nodes.
 func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
-	s.AdditionalProperties = true // Additional properties is true by default
-
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -215,7 +243,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 					return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
 				s.Properties[property.Name] = property
-				s.raml.PutIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
+				// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 				s.raml.PutShapePtr(property.Shape)
 			}
 		} else {
@@ -236,16 +264,27 @@ func (s *ObjectShape) Base() *BaseShape {
 
 // Clone returns a clone of the object shape.
 func (s *ObjectShape) Clone() Shape {
-	// TODO: Susceptible to recursion
-	c := *s
-	c.Id = generateShapeId()
-	c.Properties = make(map[string]Property, len(s.Properties))
-	for k, v := range s.Properties {
-		p := (*v.Shape).Clone()
-		v.Shape = &p
-		c.Properties[k] = v
+	return s.clone(make([]Shape, 0))
+}
+
+func (s *ObjectShape) clone(history []Shape) Shape {
+	for _, item := range history {
+		if item.Base().Id == s.Id {
+			return item
+		}
 	}
-	return &c
+	c := *s
+	ptr := &c
+	history = append(history, ptr)
+	if c.Properties != nil {
+		c.Properties = make(map[string]Property, len(s.Properties))
+		for k, v := range s.Properties {
+			p := (*v.Shape).clone(history)
+			v.Shape = &p
+			c.Properties[k] = v
+		}
+	}
+	return ptr
 }
 
 // Inherit merges the source shape into the target shape.
@@ -255,8 +294,10 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 
-	// AdditionalProperties and DiscriminatorValue are not inheritable properties
-	// TODO: It is unclear how discriminator is inherited.
+	// Discriminator and AdditionalProperties are inherited as is
+	if s.AdditionalProperties == nil {
+		s.AdditionalProperties = ss.AdditionalProperties
+	}
 	if s.Discriminator == nil {
 		s.Discriminator = ss.Discriminator
 	}
@@ -274,7 +315,7 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 
 	if s.Properties == nil {
 		s.Properties = ss.Properties
-	} else {
+	} else if ss.Properties != nil {
 		for k, sourceProp := range ss.Properties {
 			if targetProp, ok := s.Properties[k]; ok {
 				if sourceProp.Required && !targetProp.Required {
@@ -292,6 +333,36 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
+func (s *ObjectShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		ID:            s.Id,
+		Type:          "object",
+		MinProperties: s.MinProperties,
+		MaxProperties: s.MaxProperties,
+		Extras:        make(map[string]interface{}),
+	}
+	if s.AdditionalProperties != nil && !*s.AdditionalProperties {
+		schema.AdditionalProperties = s.AdditionalProperties
+	}
+	if s.Properties != nil {
+		schema.PatternProperties = make(map[string]*JSONSchema, len(s.Properties))
+		schema.Properties = make(map[string]*JSONSchema, len(s.Properties))
+		for k, v := range s.Properties {
+			if k[0] == '/' && k[len(k)-1] == '/' {
+				k = k[1 : len(k)-1]
+				schema.PatternProperties[k] = (*v.Shape).ToJSONSchema()
+			} else {
+				schema.Properties[k] = (*v.Shape).ToJSONSchema()
+			}
+			if v.Required {
+				schema.Required = append(schema.Required, k)
+			}
+		}
+	}
+	schema.WithRamlData(s.Base())
+	return schema
+}
+
 func (s *ObjectShape) Check() error {
 	return nil
 }
@@ -303,17 +374,22 @@ func (r *RAML) makeProperty(name string, v *yaml.Node, location string) (Propert
 		return Property{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
 	propertyName := name
-	shapeRequired := (*shape).Base().Required
 	var required bool
-	if shapeRequired == nil {
-		if strings.HasSuffix(propertyName, "?") {
-			required = false
-			propertyName = propertyName[:len(propertyName)-1]
-		} else {
-			required = true
-		}
+	// Pattern properties are always optional
+	if propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
+		required = false
 	} else {
-		required = *shapeRequired
+		shapeRequired := (*shape).Base().Required
+		if shapeRequired == nil {
+			if strings.HasSuffix(propertyName, "?") {
+				required = false
+				propertyName = propertyName[:len(propertyName)-1]
+			} else {
+				required = true
+			}
+		} else {
+			required = *shapeRequired
+		}
 	}
 	return Property{
 		Name:     propertyName,
@@ -356,14 +432,24 @@ func (s *UnionShape) Base() *BaseShape {
 
 // Clone returns a clone of the union shape.
 func (s *UnionShape) Clone() Shape {
+	return s.clone(make([]Shape, 0))
+}
+
+func (s *UnionShape) clone(history []Shape) Shape {
+	for _, item := range history {
+		if item.Base().Id == s.Id {
+			return item
+		}
+	}
 	c := *s
-	c.Id = generateShapeId()
+	ptr := &c
+	history = append(history, ptr)
 	c.AnyOf = make([]*Shape, len(s.AnyOf))
 	for i, item := range s.AnyOf {
-		an := (*item).Clone()
+		an := (*item).clone(history)
 		c.AnyOf[i] = &an
 	}
-	return &c
+	return ptr
 }
 
 // Inherit merges the source shape into the target shape.
@@ -381,7 +467,10 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 		for _, targetMember := range s.AnyOf {
 			if (*sourceMember).Base().Type == (*targetMember).Base().Type {
 				// Clone is required to avoid modifying the original target member shape.
-				ms, err := (*targetMember).Clone().Inherit(*sourceMember)
+				cs := (*targetMember).Clone()
+				// TODO: Probably all copied shapes must change IDs since these are actually new shapes.
+				cs.Base().Id = generateShapeId()
+				ms, err := cs.Inherit(*sourceMember)
 				if err != nil {
 					return nil, NewWrappedError("merge union member", err, s.Location)
 				}
@@ -398,6 +487,19 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
+func (s *UnionShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		ID:     s.Id,
+		AnyOf:  make([]*JSONSchema, len(s.AnyOf)),
+		Extras: make(map[string]interface{}),
+	}
+	for i, item := range s.AnyOf {
+		schema.AnyOf[i] = (*item).ToJSONSchema()
+	}
+	schema.WithRamlData(s.Base())
+	return schema
+}
+
 func (s *UnionShape) Check() error {
 	return nil
 }
@@ -412,8 +514,11 @@ func (s *JSONShape) Base() *BaseShape {
 
 func (s *JSONShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *JSONShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
@@ -426,6 +531,10 @@ func (s *JSONShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *JSONShape) ToJSONSchema() *JSONSchema {
+	return nil
 }
 
 func (s *JSONShape) Check() error {
@@ -444,8 +553,11 @@ func (s *UnknownShape) Base() *BaseShape {
 
 func (s *UnknownShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *UnknownShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *UnknownShape) unmarshalYAMLNodes(v []*yaml.Node) error {
@@ -457,34 +569,49 @@ func (s *UnknownShape) Inherit(source Shape) (Shape, error) {
 	return nil, NewError("cannot inherit from unknown shape", s.Location, WithPosition(&s.Position))
 }
 
+func (s *UnknownShape) ToJSONSchema() *JSONSchema {
+	return nil
+}
+
 func (s *UnknownShape) Check() error {
 	return nil
 }
 
-// type RecursiveShape struct {
-// 	BaseShape
+type RecursiveShape struct {
+	BaseShape
 
-// 	head *Shape
-// }
+	Head *Shape
+}
 
-// func (s *RecursiveShape) unmarshalYAMLNodes(v []*yaml.Node) error {
-// 	return nil
-// }
+func (s *RecursiveShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	return nil
+}
 
-// func (s *RecursiveShape) Base() *BaseShape {
-// 	return &s.BaseShape
-// }
+func (s *RecursiveShape) Base() *BaseShape {
+	return &s.BaseShape
+}
 
-// func (s *RecursiveShape) Clone() Shape {
-// 	c := *s
-// 	c.Id = generateShapeId()
-// 	return &c
-// }
+func (s *RecursiveShape) Clone() Shape {
+	// TODO: How to clone recursive shape?
+	c := *s
+	return &c
+}
 
-// func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
-// 	return s, nil
-// }
+func (s *RecursiveShape) clone(history []Shape) Shape {
+	return s.Clone()
+}
 
-// func (s *RecursiveShape) Check() error {
-// 	return nil
-// }
+func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
+	return nil, NewError("cannot inherit from recursive shape", s.Location, WithPosition(&s.Position))
+}
+
+func (s *RecursiveShape) ToJSONSchema() *JSONSchema {
+	// TODO: Conversion of recursive schema doesn't make much sense as atomic operation.
+	return &JSONSchema{
+		Ref: (*s.Head).Base().Id,
+	}
+}
+
+func (s *RecursiveShape) Check() error {
+	return nil
+}

@@ -1,8 +1,10 @@
 package raml
 
 import (
+	"encoding/json"
 	"math/big"
 	"regexp"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -50,8 +52,11 @@ func (s *IntegerShape) Base() *BaseShape {
 
 func (s *IntegerShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *IntegerShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 // func (s *IntegerShape) Validate(v interface{}) error {
@@ -101,6 +106,31 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
+}
+
+func (s *IntegerShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:   "integer",
+		Extras: make(map[string]interface{}),
+	}
+	if s.Minimum != nil {
+		schema.Minimum = json.Number(s.Minimum.String())
+	}
+	if s.Maximum != nil {
+		schema.Maximum = json.Number(s.Maximum.String())
+	}
+	if s.MultipleOf != nil {
+		schema.MultipleOf = json.Number(strconv.FormatFloat(*s.MultipleOf, 'f', -1, 64))
+	}
+	if s.Enum != nil {
+		schema.Enum = make([]interface{}, len(s.Enum))
+		for i, v := range s.Enum {
+			schema.Enum[i] = v.Value
+		}
+	}
+	schema.WithRamlData(s.Base())
+	// TODO: JSON Schema does not have a format for numbers
+	return schema
 }
 
 func (s *IntegerShape) Check() error {
@@ -181,8 +211,11 @@ func (s *NumberShape) Base() *BaseShape {
 
 func (s *NumberShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *NumberShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *NumberShape) Inherit(source Shape) (Shape, error) {
@@ -216,6 +249,31 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
+}
+
+func (s *NumberShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:   "number",
+		Extras: make(map[string]interface{}),
+	}
+	if s.Minimum != nil {
+		schema.Minimum = json.Number(strconv.FormatFloat(*s.Minimum, 'f', -1, 64))
+	}
+	if s.Maximum != nil {
+		schema.Maximum = json.Number(strconv.FormatFloat(*s.Maximum, 'f', -1, 64))
+	}
+	if s.MultipleOf != nil {
+		schema.MultipleOf = json.Number(strconv.FormatFloat(*s.MultipleOf, 'f', -1, 64))
+	}
+	if s.Enum != nil {
+		schema.Enum = make([]interface{}, len(s.Enum))
+		for i, v := range s.Enum {
+			schema.Enum[i] = v.Value
+		}
+	}
+	schema.WithRamlData(s.Base())
+	// TODO: JSON Schema does not have a format for numbers
+	return schema
 }
 
 func (s *NumberShape) Check() error {
@@ -286,8 +344,11 @@ func (s *StringShape) Base() *BaseShape {
 
 func (s *StringShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *StringShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *StringShape) Inherit(source Shape) (Shape, error) {
@@ -315,6 +376,26 @@ func (s *StringShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
+}
+
+func (s *StringShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:      "string",
+		MinLength: s.MinLength,
+		MaxLength: s.MaxLength,
+		Extras:    make(map[string]interface{}),
+	}
+	if s.Pattern != nil {
+		schema.Pattern = s.Pattern.String()
+	}
+	if s.Enum != nil {
+		schema.Enum = make([]interface{}, len(s.Enum))
+		for i, v := range s.Enum {
+			schema.Enum[i] = v.Value
+		}
+	}
+	schema.WithRamlData(s.Base())
+	return schema
 }
 
 func (s *StringShape) Check() error {
@@ -378,8 +459,11 @@ func (s *FileShape) Base() *BaseShape {
 
 func (s *FileShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *FileShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *FileShape) Inherit(source Shape) (Shape, error) {
@@ -403,6 +487,22 @@ func (s *FileShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.FileTypes.String()), WithInfo("target", s.FileTypes.String()))
 	}
 	return s, nil
+}
+
+func (s *FileShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:            "string",
+		MinLength:       s.MinLength,
+		MaxLength:       s.MaxLength,
+		ContentEncoding: "base64",
+		Extras:          make(map[string]interface{}),
+	}
+	// TODO: JSON Schema allows for only one content media type
+	if s.FileTypes != nil {
+		schema.ContentMediaType = s.FileTypes[0].Value.(string)
+	}
+	schema.WithRamlData(s.Base())
+	return schema
 }
 
 func (s *FileShape) Check() error {
@@ -461,8 +561,11 @@ func (s *BooleanShape) Base() *BaseShape {
 
 func (s *BooleanShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *BooleanShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
@@ -476,6 +579,21 @@ func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
+}
+
+func (s *BooleanShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:   "boolean",
+		Extras: make(map[string]interface{}),
+	}
+	if s.Enum != nil {
+		schema.Enum = make([]interface{}, len(s.Enum))
+		for i, v := range s.Enum {
+			schema.Enum[i] = v.Value
+		}
+	}
+	schema.WithRamlData(s.Base())
+	return schema
 }
 
 func (s *BooleanShape) Check() error {
@@ -517,8 +635,11 @@ func (s *DateTimeShape) Base() *BaseShape {
 
 func (s *DateTimeShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *DateTimeShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
@@ -532,6 +653,23 @@ func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
+}
+
+func (s *DateTimeShape) ToJSONSchema() *JSONSchema {
+	schema := &JSONSchema{
+		Type:   "string",
+		Extras: make(map[string]interface{}),
+	}
+	if s.Format != nil {
+		switch *s.Format {
+		case "rfc3339":
+			schema.Format = "date-time"
+		case "rfc2616":
+			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4}) ([01][0-9]|2[0-3])(:[0-5][0-9]){2} GMT$"
+		}
+	}
+	schema.WithRamlData(s.Base())
+	return schema
 }
 
 func (s *DateTimeShape) Check() error {
@@ -571,16 +709,27 @@ func (s *DateTimeOnlyShape) Base() *BaseShape {
 
 func (s *DateTimeOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
 }
 
+func (s *DateTimeOnlyShape) clone(history []Shape) Shape {
+	return s.Clone()
+}
+
 func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
-	_, ok := source.(*DateTimeShape)
+	_, ok := source.(*DateTimeOnlyShape)
 	if !ok {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *DateTimeOnlyShape) ToJSONSchema() *JSONSchema {
+	return &JSONSchema{
+		Type:   "string",
+		Extras: make(map[string]interface{}),
+		// TODO: DateTimeOnly format is non-standard
+	}
 }
 
 func (s *DateTimeOnlyShape) Check() error {
@@ -601,8 +750,11 @@ func (s *DateOnlyShape) Base() *BaseShape {
 
 func (s *DateOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *DateOnlyShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
@@ -611,6 +763,14 @@ func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *DateOnlyShape) ToJSONSchema() *JSONSchema {
+	return &JSONSchema{
+		Type:   "string",
+		Format: "date",
+		Extras: make(map[string]interface{}),
+	}
 }
 
 func (s *DateOnlyShape) Check() error {
@@ -631,8 +791,11 @@ func (s *TimeOnlyShape) Base() *BaseShape {
 
 func (s *TimeOnlyShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *TimeOnlyShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
@@ -641,6 +804,14 @@ func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *TimeOnlyShape) ToJSONSchema() *JSONSchema {
+	return &JSONSchema{
+		Type:   "string",
+		Format: "time",
+		Extras: make(map[string]interface{}),
+	}
 }
 
 func (s *TimeOnlyShape) Check() error {
@@ -661,8 +832,11 @@ func (s *AnyShape) Base() *BaseShape {
 
 func (s *AnyShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *AnyShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *AnyShape) Inherit(source Shape) (Shape, error) {
@@ -671,6 +845,12 @@ func (s *AnyShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *AnyShape) ToJSONSchema() *JSONSchema {
+	return &JSONSchema{
+		Extras: make(map[string]interface{}),
+	}
 }
 
 func (s *AnyShape) Check() error {
@@ -691,8 +871,11 @@ func (s *NilShape) Base() *BaseShape {
 
 func (s *NilShape) Clone() Shape {
 	c := *s
-	c.Id = generateShapeId()
 	return &c
+}
+
+func (s *NilShape) clone(history []Shape) Shape {
+	return s.Clone()
 }
 
 func (s *NilShape) Inherit(source Shape) (Shape, error) {
@@ -701,6 +884,13 @@ func (s *NilShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
 	return s, nil
+}
+
+func (s *NilShape) ToJSONSchema() *JSONSchema {
+	return &JSONSchema{
+		Type:   "null",
+		Extras: make(map[string]interface{}),
+	}
 }
 
 func (s *NilShape) Check() error {

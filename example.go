@@ -15,7 +15,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 	}
 	return &Example{
 		Name:     name,
-		Value:    n,
+		Data:     n,
 		Location: location,
 		Position: Position{Line: value.Line, Column: value.Column},
 		raml:     r,
@@ -28,7 +28,7 @@ type Example struct {
 	Name        string
 	DisplayName string
 	Description string
-	Value       *Node
+	Data        *Node
 
 	CustomDomainProperties CustomDomainProperties
 
