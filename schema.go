@@ -2,6 +2,8 @@ package raml
 
 import "encoding/json"
 
+// Adapted from https://github.com/invopop/jsonschema/blob/main/schema.go
+
 // Version is the JSON Schema version.
 var Version = "http://json-schema.org/draft-07/schema"
 
