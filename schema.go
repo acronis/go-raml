@@ -5,14 +5,14 @@ import "encoding/json"
 // Adapted from https://github.com/invopop/jsonschema/blob/main/schema.go
 
 // Version is the JSON Schema version.
-var Version = "http://json-schema.org/draft-07/schema"
+const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 
 // Schema represents a JSON Schema object type.
 //
 // https://json-schema.org/draft-07/draft-handrews-json-schema-00.pdf
 type JSONSchema struct {
 	Version     string      `json:"$schema,omitempty"`
-	ID          string      `json:"$id,omitempty"`
+	Id          string      `json:"$id,omitempty"`
 	Anchor      string      `json:"$anchor,omitempty"`
 	Ref         string      `json:"$ref,omitempty"`
 	Definitions Definitions `json:"definitions,omitempty"`
@@ -45,7 +45,7 @@ type JSONSchema struct {
 	Pattern          string      `json:"pattern,omitempty"`
 	MaxItems         *uint64     `json:"maxItems,omitempty"`
 	MinItems         *uint64     `json:"minItems,omitempty"`
-	UniqueItems      bool        `json:"uniqueItems,omitempty"`
+	UniqueItems      *bool       `json:"uniqueItems,omitempty"`
 	MaxContains      *uint64     `json:"maxContains,omitempty"`
 	MinContains      *uint64     `json:"minContains,omitempty"`
 	MaxProperties    *uint64     `json:"maxProperties,omitempty"`
@@ -79,38 +79,3 @@ var (
 // http://json-schema.org/latest/json-schema-validation.html#rfc.section.5.26
 // RFC draft-wright-json-schema-validation-00, section 5.26
 type Definitions map[string]*JSONSchema
-
-func (schema *JSONSchema) WithRamlData(base *BaseShape) {
-	if base.DisplayName != nil {
-		schema.Title = *base.DisplayName
-	}
-	if base.Description != nil {
-		schema.Description = *base.Description
-	}
-	if base.Default != nil {
-		schema.Default = base.Default.Value
-	}
-	if base.Examples != nil {
-		for _, ex := range base.Examples.Map {
-			schema.Examples = append(schema.Examples, ex.Data.Value)
-		}
-	}
-	if base.Example != nil {
-		schema.Examples = []any{base.Example.Data.Value}
-	}
-	for k, v := range base.CustomDomainProperties {
-		schema.Extras["x-domainExt-"+k] = v.Extension.Value
-	}
-	for k, v := range base.CustomShapeFacetDefinitions {
-		m := schema.Extras["x-shapeExt-definitions"]
-		if m == nil {
-			m = make(map[string]interface{})
-			schema.Extras["x-shapeExt-definitions"] = m
-		}
-		shapeExtDefs := m.(map[string]interface{})
-		shapeExtDefs[k] = (*v.Shape).ToJSONSchema()
-	}
-	for k, v := range base.CustomShapeFacets {
-		schema.Extras["x-shapeExt-data-"+k] = v.Value
-	}
-}

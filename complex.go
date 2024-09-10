@@ -1,6 +1,9 @@
 package raml
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -26,34 +29,6 @@ func (s *ArrayShape) Base() *BaseShape {
 	return &s.BaseShape
 }
 
-// func (s *ArrayShape) Validate(v interface{}) error {
-// 	a, ok := v.([]interface{})
-// 	if !ok {
-// 		return NewError("value is not an array", s.Location)
-// 	}
-// 	if s.MinItems > uint64(len(a)) {
-// 		return NewError("minItems constraint violation", s.Location)
-// 	}
-// 	if s.MaxItems < uint64(len(a)) {
-// 		return NewError("maxItems constraint violation", s.Location)
-// 	}
-// 	if s.UniqueItems {
-// 		seen := make(map[interface{}]struct{})
-// 		for _, item := range a {
-// 			if _, ok := seen[item]; ok {
-// 				return NewError("uniqueItems constraint violation", s.Location)
-// 			}
-// 			seen[item] = struct{}{}
-// 		}
-// 	}
-// 	for _, item := range a {
-// 		if err := (*s.Items).Validate(item); err != nil {
-// 			return NewWrappedError("validate item", err, s.Location)
-// 		}
-// 	}
-// 	return nil
-// }
-
 // Clone returns a clone of the shape.
 func (s *ArrayShape) Clone() Shape {
 	return s.clone(make([]Shape, 0))
@@ -73,6 +48,39 @@ func (s *ArrayShape) clone(history []Shape) Shape {
 		c.Items = &items
 	}
 	return ptr
+}
+
+func (s *ArrayShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.([]interface{})
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected []interface{}", v)
+	}
+
+	arrayLen := uint64(len(i))
+	if s.MinItems != nil && arrayLen < *s.MinItems {
+		return fmt.Errorf("array must have at least %d items", *s.MinItems)
+	}
+	if s.MaxItems != nil && arrayLen > *s.MaxItems {
+		return fmt.Errorf("array must have not more than %d items", *s.MaxItems)
+	}
+	validateUniqueItems := s.UniqueItems != nil && *s.UniqueItems
+	uniqueItems := make(map[interface{}]struct{})
+	for ii, item := range i {
+		ctxPath := ctxPath + "[" + strconv.Itoa(ii) + "]"
+		if s.Items != nil {
+			if err := (*s.Items).Validate(item, ctxPath); err != nil {
+				return fmt.Errorf("validate array item %s: %w", ctxPath, err)
+			}
+		}
+		if validateUniqueItems {
+			uniqueItems[item] = struct{}{}
+		}
+	}
+	if validateUniqueItems && len(uniqueItems) != len(i) {
+		return fmt.Errorf("array contains duplicate items")
+	}
+
+	return nil
 }
 
 // Inherit merges the source shape into the target shape.
@@ -107,25 +115,15 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *ArrayShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		ID:       s.Id,
-		Type:     "array",
-		MinItems: s.MinItems,
-		MaxItems: s.MaxItems,
-		Extras:   make(map[string]interface{}),
-	}
-	if s.UniqueItems != nil {
-		schema.UniqueItems = *s.UniqueItems
+func (s *ArrayShape) Check() error {
+	if s.MinItems != nil && s.MaxItems != nil && *s.MinItems > *s.MaxItems {
+		return NewError("minItems must be less than or equal to maxItems", s.Location, WithPosition(&s.Position))
 	}
 	if s.Items != nil {
-		schema.Items = (*s.Items).ToJSONSchema()
+		if err := (*s.Items).Check(); err != nil {
+			return NewWrappedError("check items", err, s.Location, WithPosition(&(*s.Items).Base().Position))
+		}
 	}
-	schema.WithRamlData(s.Base())
-	return schema
-}
-
-func (s *ArrayShape) Check() error {
 	return nil
 }
 
@@ -173,6 +171,7 @@ type ObjectFacets struct {
 	DiscriminatorValue   any
 	AdditionalProperties *bool
 	Properties           map[string]Property
+	PatternProperties    map[string]PatternProperty
 	MinProperties        *uint64
 	MaxProperties        *uint64
 }
@@ -183,29 +182,6 @@ type ObjectShape struct {
 
 	ObjectFacets
 }
-
-// func (s *ObjectShape) Validate(v interface{}) error {
-// 	m, ok := v.(map[string]interface{})
-// 	if !ok {
-// 		return NewError("value is not a map", s.Location)
-// 	}
-// 	if s.MinProperties > uint64(len(m)) {
-// 		return NewError("minProperties constraint violation", s.Location)
-// 	}
-// 	if s.MaxProperties < uint64(len(m)) {
-// 		return NewError("maxProperties constraint violation", s.Location)
-// 	}
-// 	for k, v := range m {
-// 		if p, ok := s.Properties[k]; ok {
-// 			if err := (*p.Shape).Validate(v); err != nil {
-// 				return NewWrappedError("validate property", err, s.Location)
-// 			}
-// 		} else if !s.AdditionalProperties {
-// 			return NewError("additionalProperties constraint violation", s.Location)
-// 		}
-// 	}
-// 	return nil
-// }
 
 // UnmarshalYAMLNodes unmarshals the object shape from YAML nodes.
 func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
@@ -234,17 +210,32 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("decode maxProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "properties" {
-			s.Properties = make(map[string]Property, len(valueNode.Content)/2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				property, err := s.raml.makeProperty(name, data, s.Location)
-				if err != nil {
-					return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
+				if name != "" && name[0] == '/' && name[len(name)-1] == '/' {
+					if s.PatternProperties == nil {
+						s.PatternProperties = make(map[string]PatternProperty)
+					}
+					property, err := s.raml.makePatternProperty(name, data, s.Location)
+					if err != nil {
+						return NewWrappedError("make pattern property", err, s.Location, WithNodePosition(data))
+					}
+					s.PatternProperties[name] = property
+					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
+					s.raml.PutShapePtr(property.Shape)
+				} else {
+					if s.Properties == nil {
+						s.Properties = make(map[string]Property)
+					}
+					property, err := s.raml.makeProperty(name, data, s.Location)
+					if err != nil {
+						return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
+					}
+					s.Properties[property.Name] = property
+					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
+					s.raml.PutShapePtr(property.Shape)
 				}
-				s.Properties[property.Name] = property
-				// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
-				s.raml.PutShapePtr(property.Shape)
 			}
 		} else {
 			n, err := s.raml.makeNode(valueNode, s.Location)
@@ -284,7 +275,68 @@ func (s *ObjectShape) clone(history []Shape) Shape {
 			c.Properties[k] = v
 		}
 	}
+	if c.PatternProperties != nil {
+		c.PatternProperties = make(map[string]PatternProperty, len(s.PatternProperties))
+		for k, v := range s.PatternProperties {
+			p := (*v.Shape).clone(history)
+			v.Shape = &p
+			c.PatternProperties[k] = v
+		}
+	}
 	return ptr
+}
+
+func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected map[string]interface{}", v)
+	}
+
+	mapLen := uint64(len(i))
+	if s.MinProperties != nil && mapLen < *s.MinProperties {
+		return fmt.Errorf("object must have at least %d properties", *s.MinProperties)
+	}
+	if s.MaxProperties != nil && mapLen > *s.MaxProperties {
+		return fmt.Errorf("object must have not more than %d properties", *s.MaxProperties)
+	}
+	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
+	for k, item := range i {
+		// Explicitly defined properties have priority over pattern properties.
+		if s.Properties != nil {
+			ctxPath := ctxPath + "." + k
+			if p, ok := s.Properties[k]; ok {
+				ps := *p.Shape
+				if err := ps.Validate(item, ctxPath); err != nil {
+					return fmt.Errorf("validate property %s: %w", ctxPath, err)
+				}
+			} else if restrictedAdditionalProperties {
+				// Will never happen if PatternProperties are present because additional properties false is not allowed together with pattern properties.
+				return fmt.Errorf("unexpected additional property \"%s\"", k)
+			}
+		} else if s.PatternProperties != nil {
+			ctxPath := ctxPath + "." + k
+			validated := false
+			// TODO: Collect errors
+			for _, pp := range s.PatternProperties {
+				if pp.Pattern.MatchString(k) {
+					ps := *pp.Shape
+					// TODO: The first pattern to validate prevails. However, since pattern properties is a map, the validation can be random.
+					if err := ps.Validate(item, ctxPath); err == nil {
+						validated = true
+						break
+					}
+				}
+			}
+			if !validated {
+				return fmt.Errorf("property \"%s\" failed to match or validate against any pattern property", k)
+			}
+		} else if restrictedAdditionalProperties {
+			// Special case when an object doesn't define any properties but specify additional properties false
+			return fmt.Errorf("unexpected additional property \"%s\"", k)
+		}
+	}
+
+	return nil
 }
 
 // Inherit merges the source shape into the target shape.
@@ -323,48 +375,88 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 				}
 				_, err := s.raml.Inherit(*sourceProp.Shape, *s.Properties[k].Shape)
 				if err != nil {
-					return nil, NewWrappedError("merge object property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
+					return nil, NewWrappedError("inherit property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
 				}
 			} else {
 				s.Properties[k] = sourceProp
 			}
 		}
 	}
-	return s, nil
-}
-
-func (s *ObjectShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		ID:            s.Id,
-		Type:          "object",
-		MinProperties: s.MinProperties,
-		MaxProperties: s.MaxProperties,
-		Extras:        make(map[string]interface{}),
-	}
-	if s.AdditionalProperties != nil && !*s.AdditionalProperties {
-		schema.AdditionalProperties = s.AdditionalProperties
-	}
-	if s.Properties != nil {
-		schema.PatternProperties = make(map[string]*JSONSchema, len(s.Properties))
-		schema.Properties = make(map[string]*JSONSchema, len(s.Properties))
-		for k, v := range s.Properties {
-			if k[0] == '/' && k[len(k)-1] == '/' {
-				k = k[1 : len(k)-1]
-				schema.PatternProperties[k] = (*v.Shape).ToJSONSchema()
+	if s.PatternProperties == nil {
+		s.PatternProperties = ss.PatternProperties
+	} else if ss.PatternProperties != nil {
+		for k, sourceProp := range ss.PatternProperties {
+			if targetProp, ok := s.PatternProperties[k]; ok {
+				_, err := s.raml.Inherit(*sourceProp.Shape, *s.PatternProperties[k].Shape)
+				if err != nil {
+					return nil, NewWrappedError("inherit pattern property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
+				}
 			} else {
-				schema.Properties[k] = (*v.Shape).ToJSONSchema()
-			}
-			if v.Required {
-				schema.Required = append(schema.Required, k)
+				s.PatternProperties[k] = sourceProp
 			}
 		}
 	}
-	schema.WithRamlData(s.Base())
-	return schema
+	return s, nil
 }
 
 func (s *ObjectShape) Check() error {
+	if s.MinProperties != nil && s.MaxProperties != nil && *s.MinProperties > *s.MaxProperties {
+		return NewError("minProperties must be less than or equal to maxProperties", s.Location, WithPosition(&s.Position))
+	}
+	if s.PatternProperties != nil {
+		if s.AdditionalProperties != nil && !*s.AdditionalProperties {
+			return NewError("pattern properties are not allowed with additionalProperties false", s.Location, WithPosition(&s.Position))
+		}
+		for _, prop := range s.PatternProperties {
+			if err := (*prop.Shape).Check(); err != nil {
+				return NewWrappedError("check pattern property", err, s.Location, WithPosition(&(*prop.Shape).Base().Position), WithInfo("property", prop.Pattern.String()))
+			}
+		}
+	}
+	if s.Properties != nil {
+		for _, prop := range s.Properties {
+			if err := (*prop.Shape).Check(); err != nil {
+				return NewWrappedError("check property", err, s.Location, WithPosition(&(*prop.Shape).Base().Position), WithInfo("property", prop.Name))
+			}
+		}
+		// FIXME: Need to validate on which level the discriminator is applied to avoid potential false positives.
+		// Inline definitions with discriminator are not allowed.
+		// TODO: Setting discriminator should be allowed only on scalar shapes.
+		if s.Discriminator != nil {
+			prop, ok := s.Properties[*s.Discriminator]
+			if !ok {
+				return NewError("discriminator property not found", s.Location, WithPosition(&s.Position), WithInfo("discriminator", *s.Discriminator))
+			}
+			discriminatorValue := s.DiscriminatorValue
+			if discriminatorValue == nil {
+				discriminatorValue = s.Base().Name
+			}
+			ps := *prop.Shape
+			if err := ps.Validate(discriminatorValue, "$"); err != nil {
+				return NewWrappedError("validate discriminator value", err, s.Location, WithPosition(&s.Base().Position), WithInfo("discriminator", *s.Discriminator))
+			}
+		}
+	} else if s.Discriminator != nil {
+		return NewError("discriminator without properties", s.Location, WithPosition(&s.Position))
+	}
 	return nil
+}
+
+// makeProperty creates a pattern property from a YAML node.
+func (r *RAML) makePatternProperty(name string, v *yaml.Node, location string) (PatternProperty, error) {
+	shape, err := r.makeShape(v, name, location)
+	if err != nil {
+		return PatternProperty{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
+	}
+	re, err := regexp.Compile(name[1 : len(name)-1])
+	if err != nil {
+		return PatternProperty{}, NewWrappedError("compile pattern", err, location, WithNodePosition(v))
+	}
+	return PatternProperty{
+		Pattern: re,
+		Shape:   shape,
+		raml:    r,
+	}, nil
 }
 
 // makeProperty creates a property from a YAML node.
@@ -375,21 +467,16 @@ func (r *RAML) makeProperty(name string, v *yaml.Node, location string) (Propert
 	}
 	propertyName := name
 	var required bool
-	// Pattern properties are always optional
-	if propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
-		required = false
-	} else {
-		shapeRequired := (*shape).Base().Required
-		if shapeRequired == nil {
-			if strings.HasSuffix(propertyName, "?") {
-				required = false
-				propertyName = propertyName[:len(propertyName)-1]
-			} else {
-				required = true
-			}
+	shapeRequired := (*shape).Base().Required
+	if shapeRequired == nil {
+		if strings.HasSuffix(propertyName, "?") {
+			required = false
+			propertyName = propertyName[:len(propertyName)-1]
 		} else {
-			required = *shapeRequired
+			required = true
 		}
+	} else {
+		required = *shapeRequired
 	}
 	return Property{
 		Name:     propertyName,
@@ -405,6 +492,14 @@ type Property struct {
 	Shape    *Shape
 	Required bool
 	raml     *RAML
+}
+
+// Property represents a pattern property of an object shape.
+type PatternProperty struct {
+	Pattern *regexp.Regexp
+	Shape   *Shape
+	// Pattern properties are always optional.
+	raml *RAML
 }
 
 // UnionFacets contains constraints for union shapes.
@@ -452,15 +547,29 @@ func (s *UnionShape) clone(history []Shape) Shape {
 	return ptr
 }
 
+func (s *UnionShape) Validate(v interface{}, ctxPath string) error {
+	// TODO: Collect errors
+	for _, item := range s.AnyOf {
+		if err := (*item).Validate(v, ctxPath); err == nil {
+			return nil
+		}
+	}
+	return NewError("value does not match any type", s.Location, WithPosition(&s.Position))
+}
+
 // Inherit merges the source shape into the target shape.
 func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*UnionShape)
 	if !ok {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
+	if len(s.AnyOf) == 0 {
+		s.AnyOf = ss.AnyOf
+		return s, nil
+	}
 	// TODO: Facets need merging
 	// TODO: This can be optimized
-	var sourceUnionTypes map[string]struct{} = make(map[string]struct{})
+	sourceUnionTypes := make(map[string]struct{})
 	var filtered []*Shape
 	for _, sourceMember := range ss.AnyOf {
 		sourceUnionTypes[(*sourceMember).Base().Type] = struct{}{}
@@ -487,20 +596,13 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *UnionShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		ID:     s.Id,
-		AnyOf:  make([]*JSONSchema, len(s.AnyOf)),
-		Extras: make(map[string]interface{}),
-	}
-	for i, item := range s.AnyOf {
-		schema.AnyOf[i] = (*item).ToJSONSchema()
-	}
-	schema.WithRamlData(s.Base())
-	return schema
-}
-
 func (s *UnionShape) Check() error {
+	for _, item := range s.AnyOf {
+		if err := (*item).Check(); err != nil {
+			return NewWrappedError("check union member", err, s.Location, WithPosition(&(*item).Base().Position))
+		}
+	}
+	// TODO: Unions may have enum facets
 	return nil
 }
 
@@ -521,6 +623,11 @@ func (s *JSONShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *JSONShape) Validate(v interface{}, ctxPath string) error {
+	// TODO: Implement validation with JSON Schema
+	return nil
+}
+
 func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
@@ -533,11 +640,8 @@ func (s *JSONShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *JSONShape) ToJSONSchema() *JSONSchema {
-	return nil
-}
-
 func (s *JSONShape) Check() error {
+	// TODO: JSON Schema check
 	return nil
 }
 
@@ -560,6 +664,10 @@ func (s *UnknownShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *UnknownShape) Validate(v interface{}, ctxPath string) error {
+	return fmt.Errorf("cannot validate against unknown shape")
+}
+
 func (s *UnknownShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	s.facets = v
 	return nil
@@ -569,12 +677,8 @@ func (s *UnknownShape) Inherit(source Shape) (Shape, error) {
 	return nil, NewError("cannot inherit from unknown shape", s.Location, WithPosition(&s.Position))
 }
 
-func (s *UnknownShape) ToJSONSchema() *JSONSchema {
-	return nil
-}
-
 func (s *UnknownShape) Check() error {
-	return nil
+	return NewError("cannot check unknown shape", s.Location, WithPosition(&s.Position))
 }
 
 type RecursiveShape struct {
@@ -592,7 +696,7 @@ func (s *RecursiveShape) Base() *BaseShape {
 }
 
 func (s *RecursiveShape) Clone() Shape {
-	// TODO: How to clone recursive shape?
+	// TODO: Should it also copy ref?
 	c := *s
 	return &c
 }
@@ -601,15 +705,15 @@ func (s *RecursiveShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
-	return nil, NewError("cannot inherit from recursive shape", s.Location, WithPosition(&s.Position))
+func (s *RecursiveShape) Validate(v interface{}, ctxPath string) error {
+	if err := (*s.Head).Validate(v, ctxPath); err != nil {
+		return fmt.Errorf("validate recursive shape: %w", err)
+	}
+	return nil
 }
 
-func (s *RecursiveShape) ToJSONSchema() *JSONSchema {
-	// TODO: Conversion of recursive schema doesn't make much sense as atomic operation.
-	return &JSONSchema{
-		Ref: (*s.Head).Base().Id,
-	}
+func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
+	return nil, NewError("cannot inherit from recursive shape", s.Location, WithPosition(&s.Position))
 }
 
 func (s *RecursiveShape) Check() error {

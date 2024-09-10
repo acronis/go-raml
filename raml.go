@@ -100,7 +100,7 @@ func (r *RAML) GetFragmentTypePtrs(location string) map[string]*Shape {
 // GetFragmentShapes returns fragment shapes.
 func (r *RAML) GetFragmentShapes(location string) map[string]Shape {
 	shapes := r.fragmentTypes[location]
-	res := make(map[string]Shape)
+	res := make(map[string]Shape, len(shapes))
 	for k, v := range shapes {
 		res[k] = *v
 	}

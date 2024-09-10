@@ -1,7 +1,6 @@
 package raml
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
@@ -57,7 +56,7 @@ type LibraryLink struct {
 // UnmarshalYAML unmarshals a Library from a yaml.Node, implementing the yaml.Unmarshaler interface
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("must be map")
+		return NewError("must be map", l.Location, WithNodePosition(value))
 	}
 	l.CustomDomainProperties = make(CustomDomainProperties)
 
@@ -156,7 +155,7 @@ func (dt *DataType) GetLocation() string {
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("value kind must be map")
+		return NewError("must be map", dt.Location, WithNodePosition(value))
 	}
 
 	shapeValue := &yaml.Node{
@@ -248,7 +247,7 @@ func (r *RAML) MakeNamedExample(path string) *NamedExample {
 
 func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return fmt.Errorf("must be map")
+		return NewError("must be map", ne.Location, WithNodePosition(value))
 	}
 	examples := make(map[string]*Example, len(value.Content)/2)
 	for i := 0; i != len(value.Content); i += 2 {

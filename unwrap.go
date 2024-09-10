@@ -1,5 +1,9 @@
 package raml
 
+import (
+	"fmt"
+)
+
 /*
 UnwrapShapes unwraps all shapes in the RAML.
 
@@ -18,9 +22,9 @@ func (r *RAML) UnwrapShapes() error {
 		switch f := frag.(type) {
 		case *Library:
 			for k, shape := range f.AnnotationTypes {
-				us, err := r.UnwrapShape(shape, true, true, make([]Shape, 0))
+				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					return fmt.Errorf("unwrap shape: %w", err)
+					return NewWrappedError("unwrap shape", err, f.Location)
 				}
 				ptr := &us
 				f.AnnotationTypes[k] = ptr
@@ -28,9 +32,9 @@ func (r *RAML) UnwrapShapes() error {
 				r.PutShapePtr(ptr)
 			}
 			for k, shape := range f.Types {
-				us, err := r.UnwrapShape(shape, true, true, make([]Shape, 0))
+				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					return fmt.Errorf("unwrap shape: %w", err)
+					return NewWrappedError("unwrap shape", err, f.Location)
 				}
 				ptr := &us
 				f.Types[k] = ptr
@@ -38,9 +42,9 @@ func (r *RAML) UnwrapShapes() error {
 				r.PutShapePtr(ptr)
 			}
 		case *DataType:
-			us, err := r.UnwrapShape(f.Shape, true, true, make([]Shape, 0))
+			us, err := r.UnwrapShape(f.Shape, make([]Shape, 0))
 			if err != nil {
-				return fmt.Errorf("unwrap shape: %w", err)
+				return NewWrappedError("unwrap shape", err, f.Location)
 			}
 			ptr := &us
 			f.Shape = ptr
@@ -53,7 +57,7 @@ func (r *RAML) UnwrapShapes() error {
 		db := *item.DefinedBy
 		ptr, err := r.GetAnnotationTypeFromFragmentPtr(db.Base().Location, db.Base().Name)
 		if err != nil {
-			return fmt.Errorf("get from fragment: %w", err)
+			return NewWrappedError("get annotation from fragment", err, db.Base().Location, WithPosition(&db.Base().Position))
 		}
 		item.DefinedBy = ptr
 	}
@@ -152,7 +156,7 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 
 // Recursively copies and unwraps a shape.
 // Note that this method removes information about links.
-func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, history []Shape) (Shape, error) {
+func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	if s == nil {
 		return nil, fmt.Errorf("shape is nil")
 	}
@@ -174,27 +178,35 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 	history = append(history, target)
 
 	var source Shape
-	link := base.Link
-	inherits := base.Inherits
-	if unwrapLinks && link != nil {
-		us, err := r.UnwrapShape(link.Shape, unwrapLinks, unwrapInherits, history)
+	if base.Alias != nil {
+		us, err := r.UnwrapShape(base.Alias, history)
+		if err != nil {
+			return nil, NewWrappedError("alias unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
+		}
+		// Alias simply points to another shape, so we just change the name and return it as is.
+		us.Base().Name = base.Name
+		return us, nil
+	} else if base.Link != nil {
+		// r.inheritBase((*link.Shape).Base(), target.Base())
+		us, err := r.UnwrapShape(base.Link.Shape, history)
 		if err != nil {
 			return nil, NewWrappedError("link unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 		source = us
 
 		base.Link = nil
-	} else if unwrapInherits && len(inherits) > 0 {
+	} else if len(base.Inherits) > 0 {
+		inherits := base.Inherits
 		unwrappedInherits := make([]*Shape, len(inherits))
 		// TODO: Fix multiple inheritance unwrap.
 		// Multiple inheritance members must be checked for compatibility with each other before unwrapping.
-		ss, err := r.UnwrapShape(inherits[0], unwrapLinks, unwrapInherits, history)
+		ss, err := r.UnwrapShape(inherits[0], history)
 		if err != nil {
 			return nil, NewWrappedError("parent unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 		unwrappedInherits[0] = &ss
 		for i := 1; i < len(inherits); i++ {
-			us, err := r.UnwrapShape(inherits[i], unwrapLinks, unwrapInherits, history)
+			us, err := r.UnwrapShape(inherits[i], history)
 			if err != nil {
 				return nil, err
 			}
@@ -210,22 +222,33 @@ func (r *RAML) UnwrapShape(s *Shape, unwrapLinks bool, unwrapInherits bool, hist
 	}
 
 	if t, ok := target.(*ArrayShape); ok && t.Items != nil {
-		us, err := r.UnwrapShape(t.Items, unwrapLinks, unwrapInherits, history)
+		us, err := r.UnwrapShape(t.Items, history)
 		if err != nil {
 			return nil, NewWrappedError("array item unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 		*t.Items = us
-	} else if t, ok := target.(*ObjectShape); ok && t.Properties != nil {
-		for _, prop := range t.Properties {
-			us, err := r.UnwrapShape(prop.Shape, unwrapLinks, unwrapInherits, history)
-			if err != nil {
-				return nil, NewWrappedError("object property unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
+	} else if t, ok := target.(*ObjectShape); ok {
+		if t.Properties != nil {
+			for _, prop := range t.Properties {
+				us, err := r.UnwrapShape(prop.Shape, history)
+				if err != nil {
+					return nil, NewWrappedError("object property unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
+				}
+				*prop.Shape = us
 			}
-			*prop.Shape = us
+		}
+		if t.PatternProperties != nil {
+			for _, prop := range t.PatternProperties {
+				us, err := r.UnwrapShape(prop.Shape, history)
+				if err != nil {
+					return nil, NewWrappedError("object pattern property unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
+				}
+				*prop.Shape = us
+			}
 		}
 	} else if t, ok := target.(*UnionShape); ok {
 		for _, item := range t.AnyOf {
-			us, err := r.UnwrapShape(item, unwrapLinks, unwrapInherits, history)
+			us, err := r.UnwrapShape(item, history)
 			if err != nil {
 				return nil, NewWrappedError("union unwrap", err, target.Base().Location, WithPosition(&target.Base().Position))
 			}

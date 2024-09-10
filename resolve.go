@@ -25,8 +25,9 @@ generate UnknownShapes and add them to `unresolvedShapes` recursively as they oc
 func (r *RAML) resolveShapes() error {
 	for r.unresolvedShapes.Len() > 0 {
 		v := r.unresolvedShapes.Front()
-		if err := r.resolveShape(v.Value.(*Shape)); err != nil {
-			return fmt.Errorf("resolve shape: %w", err)
+		s := v.Value.(*Shape)
+		if err := r.resolveShape(s); err != nil {
+			return NewWrappedError("resolve shape", err, (*s).Base().Location, WithPosition(&(*s).Base().Position))
 		}
 		r.unresolvedShapes.Remove(v)
 	}
@@ -37,7 +38,7 @@ func (r *RAML) resolveShapes() error {
 func (r *RAML) resolveDomainExtensions() error {
 	for _, de := range r.domainExtensions {
 		if err := r.resolveDomainExtension(de); err != nil {
-			return fmt.Errorf("resolve domain extension: %w", err)
+			return NewWrappedError("resolve domain extension", err, de.Location, WithPosition(&de.Position))
 		}
 	}
 
@@ -55,16 +56,16 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 		if len(parts) == 1 {
 			ref = frag.AnnotationTypes[parts[0]]
 			if ref == nil {
-				return fmt.Errorf("reference %s not found", parts[0])
+				return fmt.Errorf("reference \"%s\" not found", parts[0])
 			}
 		} else if len(parts) == 2 {
 			lib := frag.Uses[parts[0]]
 			if lib == nil {
-				return fmt.Errorf("library %s not found", parts[0])
+				return fmt.Errorf("library \"%s\" not found", parts[0])
 			}
 			ref = lib.Link.AnnotationTypes[parts[1]]
 			if ref == nil {
-				return fmt.Errorf("reference %s not found", parts[1])
+				return fmt.Errorf("reference \"%s\" not found", parts[1])
 			}
 		} else {
 			return fmt.Errorf("invalid reference %s", de.Name)
@@ -74,11 +75,11 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 		if len(parts) == 2 {
 			lib := frag.Uses[parts[0]]
 			if lib == nil {
-				return fmt.Errorf("library %s not found", parts[0])
+				return fmt.Errorf("library \"%s\" not found", parts[0])
 			}
 			ref = lib.Link.AnnotationTypes[parts[1]]
 			if ref == nil {
-				return fmt.Errorf("reference %s not found", parts[1])
+				return fmt.Errorf("reference \"%s\" not found", parts[1])
 			}
 		} else {
 			return fmt.Errorf("invalid reference %s", de.Name)
@@ -129,7 +130,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 	if link != nil {
 		s, err := r.resolveLink(target)
 		if err != nil {
-			return fmt.Errorf("resolve link: %w", err)
+			return NewWrappedError("resolve link", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -140,7 +141,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 		// Special case for multiple inheritance
 		s, err := r.resolveMultipleInheritance(target)
 		if err != nil {
-			return fmt.Errorf("resolve multiple inheritance: %w", err)
+			return NewWrappedError("resolve multiple inheritance", err, target.Base().Location, WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -155,7 +156,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 
 	s, err := visitor.Visit(tree, target.(*UnknownShape))
 	if err != nil {
-		return fmt.Errorf("visit tree: %w", err)
+		return NewWrappedError("visit type expression", err, target.Base().Location, WithPosition(&target.Base().Position))
 	}
 	*shape = *s
 	return nil
