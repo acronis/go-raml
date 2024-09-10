@@ -1,14 +1,15 @@
 package raml
 
-import "fmt"
+/*
+UnwrapShapes unwraps all shapes in the RAML.
 
-// UnwrapShapes unwraps all shapes in the RAML.
+NOTE: With unwrap, we replace pointers to definitions instead of values by pointers to keep original parents unchanged.
+Otherwise, parents will be also modified and unwrap may produce unpredictable results.
+
+Unfortunately, this is required to properly support recursive shapes.
+A more sophisticated approach is required to save memory and avoid copies.
+*/
 func (r *RAML) UnwrapShapes() error {
-	// NOTE: With unwrap, we replace pointers to definitions instead of values by pointers to keep original parents unchanged.
-	// Otherwise, parents will be also modified and unwrap may produce unpredictable results.
-	// Unfortunately, this is required to properly support recursive shapes.
-	// A more sophisticated approach is required to save memory and avoid copies.
-
 	// We need to invalidate old cache and re-populate it because references will no longer be valid after unwrapping.
 	r.fragmentTypes = make(map[string]map[string]*Shape)
 	r.fragmentAnnotationTypes = make(map[string]map[string]*Shape)
