@@ -56,8 +56,8 @@ func (s *BaseShape) String() string {
 
 // Examples represents a collection of examples.
 type Examples struct {
-	Id       string
-	Examples map[string]*Example
+	Id  string
+	Map map[string]*Example
 
 	// To support !include of NamedExample fragment
 	Link *NamedExample
@@ -84,9 +84,10 @@ type ShapeInheritor interface {
 	Inherit(source Shape) (Shape, error)
 }
 
-// ShapeJsonSchema is the interface that represents a maker of JSON schema from a RAML shape.
-type ShapeJsonSchema interface {
-	ToJSONSchema() interface{}
+// ShapeJSONSchema is the interface that represents a maker of JSON schema from a RAML shape.
+type ShapeJSONSchema interface {
+	// TODO: Behavior may depend on whether the shape is wrapped or unwrapped.
+	ToJSONSchema() *JSONSchema
 }
 
 // ShapeRAMLDataType is the interface that represents a maker of RAML data type from a RAML shape.
@@ -101,12 +102,16 @@ type yamlNodesUnmarshaller interface {
 
 // Shape is the interface that represents a RAML shape.
 type Shape interface {
+	// TODO: Need to figure out how to properly handle cloned shape identifiers.
 	Clone() Shape
+	// NOTE: Private clone performs a deep copy where applicable. Public method calls private method to simplify public interface.
+	clone(history []Shape) Shape
 	Check() error
 
 	// Inherit is a ShapeInheritor
 	Inherit(source Shape) (Shape, error)
 	ShapeBaser
+	ShapeJSONSchema
 	yamlNodesUnmarshaller
 	fmt.Stringer
 }
@@ -355,7 +360,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				}
 				examples[name] = example
 			}
-			s.Examples = &Examples{Examples: examples, Location: s.Location}
+			s.Examples = &Examples{Map: examples, Location: s.Location}
 		} else if node.Value == "default" {
 			n, err := s.raml.makeNode(valueNode, s.Location)
 			if err != nil {

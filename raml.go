@@ -9,11 +9,13 @@ import (
 // RAML is a store for all fragments and shapes.
 // WARNING: Not thread-safe
 type RAML struct {
-	fragmentsCache map[string]Fragment // Library, NamedExample, DataType
-	fragmentShapes map[string]map[string]*Shape
-	shapes         []*Shape
+	fragmentsCache          map[string]Fragment // Library, NamedExample, DataType
+	fragmentTypes           map[string]map[string]*Shape
+	fragmentAnnotationTypes map[string]map[string]*Shape
+	shapes                  []*Shape
 	// entryPoint is a Library, NamedExample or DataType fragment that is used as an entry point for the resolution.
 	entryPoint Fragment
+	// basePath   string
 
 	// May be reused for both validation and resolution.
 	domainExtensions []*DomainExtension
@@ -64,10 +66,11 @@ func (r *RAML) GetAllAnnotations() []DomainExtension {
 // New creates a new RAML.
 func New(ctx context.Context) *RAML {
 	return &RAML{
-		fragmentShapes:   make(map[string]map[string]*Shape),
-		fragmentsCache:   make(map[string]Fragment),
-		domainExtensions: make([]*DomainExtension, 0),
-		ctx:              ctx,
+		fragmentTypes:           make(map[string]map[string]*Shape),
+		fragmentAnnotationTypes: make(map[string]map[string]*Shape),
+		fragmentsCache:          make(map[string]Fragment),
+		domainExtensions:        make([]*DomainExtension, 0),
+		ctx:                     ctx,
 	}
 }
 
@@ -89,14 +92,14 @@ func (r *RAML) PutShapePtr(shape *Shape) {
 	r.shapes = append(r.shapes, shape)
 }
 
-// GetFragmentShapesPtr returns fragment shapes as pointers.
-func (r *RAML) GetFragmentShapesPtr(location string) map[string]*Shape {
-	return r.fragmentShapes[location]
+// GetFragmentTypePtrs returns fragment shapes as pointers.
+func (r *RAML) GetFragmentTypePtrs(location string) map[string]*Shape {
+	return r.fragmentTypes[location]
 }
 
 // GetFragmentShapes returns fragment shapes.
 func (r *RAML) GetFragmentShapes(location string) map[string]Shape {
-	shapes := r.fragmentShapes[location]
+	shapes := r.fragmentTypes[location]
 	res := make(map[string]Shape)
 	for k, v := range shapes {
 		res[k] = *v
@@ -104,30 +107,58 @@ func (r *RAML) GetFragmentShapes(location string) map[string]Shape {
 	return res
 }
 
-// GetFromFragmentPtr returns a shape from a fragment as a pointer.
-func (r *RAML) GetFromFragmentPtr(location string, typeName string) (*Shape, error) {
-	loc, ok := r.fragmentShapes[location]
+// GetTypeFromFragmentPtr returns a shape from a fragment as a pointer.
+func (r *RAML) GetTypeFromFragmentPtr(location string, typeName string) (*Shape, error) {
+	loc, ok := r.fragmentTypes[location]
 	if !ok {
 		return nil, fmt.Errorf("location %s not found", location)
 	}
 	return loc[typeName], nil
 }
 
-// GetFromFragment returns a shape from a fragment.
-func (r *RAML) GetFromFragment(location string, typeName string) (Shape, error) {
-	loc, ok := r.fragmentShapes[location]
+// GetTypeFromFragment returns a shape from a fragment.
+func (r *RAML) GetTypeFromFragment(location string, typeName string) (Shape, error) {
+	loc, ok := r.fragmentTypes[location]
 	if !ok {
 		return nil, fmt.Errorf("location %s not found", location)
 	}
 	return *loc[typeName], nil
 }
 
-// PutIntoFragment puts a shape into a fragment.
-func (r *RAML) PutIntoFragment(name string, location string, shape *Shape) {
-	loc, ok := r.fragmentShapes[location]
+// PutTypeIntoFragment puts a shape into a fragment.
+func (r *RAML) PutTypeIntoFragment(name string, location string, shape *Shape) {
+	loc, ok := r.fragmentTypes[location]
 	if !ok {
 		loc = make(map[string]*Shape)
-		r.fragmentShapes[location] = loc
+		r.fragmentTypes[location] = loc
+	}
+	loc[name] = shape
+}
+
+// GetTypeFromFragmentPtr returns a shape from a fragment.
+func (r *RAML) GetAnnotationTypeFromFragmentPtr(location string, typeName string) (*Shape, error) {
+	loc, ok := r.fragmentAnnotationTypes[location]
+	if !ok {
+		return nil, fmt.Errorf("location %s not found", location)
+	}
+	return loc[typeName], nil
+}
+
+// GetTypeFromFragment returns a shape from a fragment.
+func (r *RAML) GetAnnotationTypeFromFragment(location string, typeName string) (Shape, error) {
+	loc, ok := r.fragmentAnnotationTypes[location]
+	if !ok {
+		return nil, fmt.Errorf("location %s not found", location)
+	}
+	return *loc[typeName], nil
+}
+
+// PutTypeIntoFragment puts a shape into a fragment.
+func (r *RAML) PutAnnotationTypeIntoFragment(name string, location string, shape *Shape) {
+	loc, ok := r.fragmentAnnotationTypes[location]
+	if !ok {
+		loc = make(map[string]*Shape)
+		r.fragmentAnnotationTypes[location] = loc
 	}
 	loc[name] = shape
 }

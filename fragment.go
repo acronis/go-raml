@@ -101,7 +101,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 					return NewWrappedError("parse types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.Types[name] = shape
-				l.raml.PutIntoFragment(name, l.Location, shape)
+				l.raml.PutTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
 		} else if node.Value == "annotationTypes" {
@@ -119,6 +119,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 				}
 				l.AnnotationTypes[name] = shape
+				l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
 		} else if node.Value == "usage" {
@@ -227,8 +228,8 @@ func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
 
 // NamedExample is the RAML 1.0 NamedExample
 type NamedExample struct {
-	Id       string
-	Examples map[string]*Example
+	Id  string
+	Map map[string]*Example
 
 	Location string
 	raml     *RAML
@@ -259,7 +260,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 		}
 		examples[node.Value] = example
 	}
-	ne.Examples = examples
+	ne.Map = examples
 
 	return nil
 }

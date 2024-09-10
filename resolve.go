@@ -9,13 +9,20 @@ import (
 	"github.com/acronis/go-raml/rdt"
 )
 
+/*
+Resolve resolves all unresolved (UnknownShape) shapes in the RAML.
+
+NOTE: Unresolved shapes is a linked list that is populated by the YAML parser. Shape parsing occurs in two places:
+
+1. During the RAML fragment parsing. Shapes that could not be determined during the parsing process
+are stored in `unresolvedShapes` as UnknownShape. UnknownShape includes YAML nodes that can be parsed later.
+
+2. During the shape resolution. YAML parser is invoked on YAML nodes that UnknownShape has stored.
+
+This helps to avoid additional traversals of nested shapes since the traverse is already done by YAML parser and it will
+generate UnknownShapes and add them to `unresolvedShapes` recursively as they occur.
+*/
 func (r *RAML) resolveShapes() error {
-	// NOTE: Unresolved shapes is a linked list that is populated by the YAML parser. Shape parsing occurs in two places:
-	// 1. During the RAML fragment parsing. Shapes that could not be determined during the parsing process
-	// are stored in `unresolvedShapes` as UnknownShape. UnknownShape includes YAML nodes that can be parsed later.
-	// 2. During the shape resolution. YAML parser is invoked on YAML nodes that UnknownShape has stored.
-	// This helps to avoid additional traversals of nested shapes since the traverse is already done by YAML parser and it will
-	// generate UnknownShapes and add them to `unresolvedShapes` recursively as they occur.
 	for r.unresolvedShapes.Len() > 0 {
 		v := r.unresolvedShapes.Front()
 		if err := r.resolveShape(v.Value.(*Shape)); err != nil {

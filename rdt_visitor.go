@@ -165,6 +165,9 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	} else {
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
 	}
+	if (*ref).Base().Id == target.Id {
+		return nil, fmt.Errorf("self recursion %s", shapeType)
+	}
 	if err := visitor.raml.resolveShape(ref); err != nil {
 		return nil, fmt.Errorf("resolve: %w", err)
 	}
