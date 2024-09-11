@@ -345,7 +345,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				if err != nil {
 					return nil, nil, NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
-				s.CustomShapeFacetDefinitions[name] = property
+				s.CustomShapeFacetDefinitions[property.Name] = property
 			}
 		} else if node.Value == "example" {
 			if s.Examples != nil {
