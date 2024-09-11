@@ -337,9 +337,11 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 		} else if node.Value == "facets" {
 			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions, len(valueNode.Content)/2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
-				name := valueNode.Content[j].Value
+				nodeName := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				property, err := s.raml.makeProperty(name, data, s.Location)
+
+				propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
+				property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 				if err != nil {
 					return nil, nil, NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}

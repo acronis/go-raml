@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -211,24 +210,26 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 		} else if node.Value == "properties" {
 			for j := 0; j != len(valueNode.Content); j += 2 {
-				name := valueNode.Content[j].Value
+				nodeName := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
-				if name != "" && name[0] == '/' && name[len(name)-1] == '/' {
+
+				propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
+				if len(propertyName) > 1 && propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
 					if s.PatternProperties == nil {
 						s.PatternProperties = make(map[string]PatternProperty)
 					}
-					property, err := s.raml.makePatternProperty(name, data, s.Location)
+					property, err := s.raml.makePatternProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
 						return NewWrappedError("make pattern property", err, s.Location, WithNodePosition(data))
 					}
-					s.PatternProperties[name] = property
+					s.PatternProperties[propertyName] = property
 					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 					s.raml.PutShapePtr(property.Shape)
 				} else {
 					if s.Properties == nil {
 						s.Properties = make(map[string]Property)
 					}
-					property, err := s.raml.makeProperty(name, data, s.Location)
+					property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
 						return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 					}
@@ -302,36 +303,36 @@ func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
 	for k, item := range i {
 		// Explicitly defined properties have priority over pattern properties.
+		ctxPath := ctxPath + "." + k
 		if s.Properties != nil {
-			ctxPath := ctxPath + "." + k
 			if p, ok := s.Properties[k]; ok {
 				ps := *p.Shape
 				if err := ps.Validate(item, ctxPath); err != nil {
 					return fmt.Errorf("validate property %s: %w", ctxPath, err)
 				}
-			} else if restrictedAdditionalProperties {
-				// Will never happen if PatternProperties are present because additional properties false is not allowed together with pattern properties.
-				return fmt.Errorf("unexpected additional property \"%s\"", k)
+				continue
 			}
-		} else if s.PatternProperties != nil {
-			ctxPath := ctxPath + "." + k
-			validated := false
-			// TODO: Collect errors
+		}
+		if s.PatternProperties != nil {
+			found := false
 			for _, pp := range s.PatternProperties {
+				// NOTE: We validate only those keys that match the pattern.
+				// The keys that do not match are considered as additional properties and are not validated.
 				if pp.Pattern.MatchString(k) {
 					ps := *pp.Shape
 					// TODO: The first pattern to validate prevails. However, since pattern properties is a map, the validation can be random.
 					if err := ps.Validate(item, ctxPath); err == nil {
-						validated = true
+						found = true
 						break
 					}
 				}
 			}
-			if !validated {
-				return fmt.Errorf("property \"%s\" failed to match or validate against any pattern property", k)
+			if found {
+				continue
 			}
-		} else if restrictedAdditionalProperties {
-			// Special case when an object doesn't define any properties but specify additional properties false
+		}
+		// Will never happen if pattern properties are present.
+		if restrictedAdditionalProperties {
 			return fmt.Errorf("unexpected additional property \"%s\"", k)
 		}
 	}
@@ -405,7 +406,10 @@ func (s *ObjectShape) Check() error {
 	}
 	if s.PatternProperties != nil {
 		if s.AdditionalProperties != nil && !*s.AdditionalProperties {
-			return NewError("pattern properties are not allowed with additionalProperties false", s.Location, WithPosition(&s.Position))
+			// TODO: We actually can allow pattern properties with "additionalProperties: false" for stricter validation.
+			// This will contradict RAML 1.0 spec, but JSON Schema allows that.
+			// https://json-schema.org/understanding-json-schema/reference/object#additionalproperties
+			return NewError("pattern properties are not allowed with \"additionalProperties: false\"", s.Location, WithPosition(&s.Position))
 		}
 		for _, prop := range s.PatternProperties {
 			if err := (*prop.Shape).Check(); err != nil {
@@ -443,12 +447,16 @@ func (s *ObjectShape) Check() error {
 }
 
 // makeProperty creates a pattern property from a YAML node.
-func (r *RAML) makePatternProperty(name string, v *yaml.Node, location string) (PatternProperty, error) {
-	shape, err := r.makeShape(v, name, location)
+func (r *RAML) makePatternProperty(nodeName string, propertyName string, v *yaml.Node, location string, hasImplicitOptional bool) (PatternProperty, error) {
+	shape, err := r.makeShape(v, nodeName, location)
 	if err != nil {
 		return PatternProperty{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
-	re, err := regexp.Compile(name[1 : len(name)-1])
+	// Pattern properties cannot be required
+	if (*shape).Base().Required != nil || hasImplicitOptional {
+		return PatternProperty{}, NewError("'required' facet is not supported on pattern property", location, WithNodePosition(v))
+	}
+	re, err := regexp.Compile(propertyName[1 : len(propertyName)-1])
 	if err != nil {
 		return PatternProperty{}, NewWrappedError("compile pattern", err, location, WithNodePosition(v))
 	}
@@ -459,27 +467,36 @@ func (r *RAML) makePatternProperty(name string, v *yaml.Node, location string) (
 	}, nil
 }
 
+func (r *RAML) chompImplicitOptional(nodeName string) (string, bool) {
+	nameLen := len(nodeName)
+	if nodeName != "" && nodeName[nameLen-1] == '?' {
+		return nodeName[:nameLen-1], true
+	}
+	return nodeName, false
+}
+
 // makeProperty creates a property from a YAML node.
-func (r *RAML) makeProperty(name string, v *yaml.Node, location string) (Property, error) {
-	shape, err := r.makeShape(v, name, location)
+func (r *RAML) makeProperty(nodeName string, propertyName string, v *yaml.Node, location string, hasImplicitOptional bool) (Property, error) {
+	shape, err := r.makeShape(v, nodeName, location)
 	if err != nil {
 		return Property{}, NewWrappedError("make shape", err, location, WithNodePosition(v))
 	}
-	propertyName := name
+	finalName := propertyName
 	var required bool
 	shapeRequired := (*shape).Base().Required
 	if shapeRequired == nil {
-		if strings.HasSuffix(propertyName, "?") {
-			required = false
-			propertyName = propertyName[:len(propertyName)-1]
-		} else {
-			required = true
-		}
+		// If shape has no "required" facet, requirement depends only on whether "?"" was used in node name.
+		required = !hasImplicitOptional
 	} else {
+		// If shape explicitly defines "required" facet combined with "?" in node name - explicit definition prevails and property name keeps the node name.
+		// Otherwise, keep propertyName that has the last "?" chomped.
+		if hasImplicitOptional {
+			finalName = nodeName
+		}
 		required = *shapeRequired
 	}
 	return Property{
-		Name:     propertyName,
+		Name:     finalName,
 		Shape:    shape,
 		Required: required,
 		raml:     r,
