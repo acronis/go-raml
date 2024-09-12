@@ -159,8 +159,8 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 	return t
 }
 
-// makeConcreteShape creates a new concrete shape.
-func (r *RAML) makeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
+// MakeConcreteShape creates a new concrete shape.
+func (r *RAML) MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
 	base.Type = shapeType
 
 	// NOTE: Shape resolution is performed in a separate stage.
@@ -286,7 +286,7 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 		}
 	}
 
-	s, err := r.makeConcreteShape(base, shapeType, shapeFacets)
+	s, err := r.MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
 		return nil, NewWrappedError("make concrete shape", err, base.Location, WithPosition(&base.Position))
 	}

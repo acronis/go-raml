@@ -98,7 +98,7 @@ func (r *RAML) resolveMultipleInheritance(target Shape) (*Shape, error) {
 		}
 	}
 	// Multiple inheritance validation to be performed in a separate validation stage
-	s, err := r.makeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.MakeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
@@ -110,7 +110,7 @@ func (r *RAML) resolveLink(target Shape) (*Shape, error) {
 	if err := r.resolveShape(link.Shape); err != nil {
 		return nil, fmt.Errorf("resolve link shape: %w", err)
 	}
-	s, err := r.makeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.MakeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}

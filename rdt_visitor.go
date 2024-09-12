@@ -75,7 +75,7 @@ func (visitor *RdtVisitor) VisitType(ctx *rdt.TypeContext, target *UnknownShape)
 }
 
 func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *UnknownShape) (*Shape, error) {
-	s, err := visitor.raml.makeConcreteShape(target.Base(), ctx.GetText(), nil)
+	s, err := visitor.raml.MakeConcreteShape(target.Base(), ctx.GetText(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
@@ -91,7 +91,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	base := target.Base()
 	base.Type = TypeUnion
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
-	nilShape, _ := visitor.raml.makeConcreteShape(visitor.raml.MakeBaseShape("", base.Location, &base.Position), "nil", nil)
+	nilShape, _ := visitor.raml.MakeConcreteShape(visitor.raml.MakeBaseShape("", base.Location, &base.Position), "nil", nil)
 	var unionShape Shape = &UnionShape{
 		BaseShape: *base,
 		UnionFacets: UnionFacets{
@@ -170,7 +170,7 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	if err := visitor.raml.resolveShape(ref); err != nil {
 		return nil, fmt.Errorf("resolve: %w", err)
 	}
-	s, err := visitor.raml.makeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
+	s, err := visitor.raml.MakeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
