@@ -11,7 +11,7 @@ func (r *RAML) ValidateShapes() error {
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
 					if err != nil {
-						return NewWrappedError("unwrap shape", err, f.Location)
+						return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 					}
 					s = us
 					unwrapCache[s.Base().Id] = s
@@ -28,7 +28,7 @@ func (r *RAML) ValidateShapes() error {
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
 					if err != nil {
-						return NewWrappedError("unwrap shape", err, f.Location)
+						return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 					}
 					s = us
 					unwrapCache[s.Base().Id] = s
@@ -45,7 +45,7 @@ func (r *RAML) ValidateShapes() error {
 			if !s.Base().unwrapped {
 				us, err := r.UnwrapShape(f.Shape, make([]Shape, 0))
 				if err != nil {
-					return NewWrappedError("unwrap shape", err, f.Location)
+					return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 				}
 				s = us
 				unwrapCache[s.Base().Id] = s
