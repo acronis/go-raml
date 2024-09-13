@@ -1,12 +1,21 @@
 package raml
 
 func (r *RAML) ValidateShapes() error {
-	// TODO: Shapes must be unwrapped before validation.
+	unwrapCache := make(map[string]Shape)
+
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
 			for _, shape := range f.AnnotationTypes {
 				s := *shape
+				if !s.Base().unwrapped {
+					us, err := r.UnwrapShape(shape, make([]Shape, 0))
+					if err != nil {
+						return NewWrappedError("unwrap shape", err, f.Location)
+					}
+					s = us
+					unwrapCache[s.Base().Id] = s
+				}
 				if err := s.Check(); err != nil {
 					return NewWrappedError("check annotation type", err, s.Base().Location, WithPosition(&s.Base().Position))
 				}
@@ -16,6 +25,14 @@ func (r *RAML) ValidateShapes() error {
 			}
 			for _, shape := range f.Types {
 				s := *shape
+				if !s.Base().unwrapped {
+					us, err := r.UnwrapShape(shape, make([]Shape, 0))
+					if err != nil {
+						return NewWrappedError("unwrap shape", err, f.Location)
+					}
+					s = us
+					unwrapCache[s.Base().Id] = s
+				}
 				if err := s.Check(); err != nil {
 					return NewWrappedError("check type", err, s.Base().Location, WithPosition(&s.Base().Position))
 				}
@@ -25,6 +42,14 @@ func (r *RAML) ValidateShapes() error {
 			}
 		case *DataType:
 			s := *f.Shape
+			if !s.Base().unwrapped {
+				us, err := r.UnwrapShape(f.Shape, make([]Shape, 0))
+				if err != nil {
+					return NewWrappedError("unwrap shape", err, f.Location)
+				}
+				s = us
+				unwrapCache[s.Base().Id] = s
+			}
 			if err := s.Check(); err != nil {
 				return NewWrappedError("check data type", err, s.Base().Location, WithPosition(&s.Base().Position))
 			}
@@ -34,7 +59,15 @@ func (r *RAML) ValidateShapes() error {
 		}
 	}
 	for _, item := range r.domainExtensions {
-		if err := (*item.DefinedBy).Validate(item.Extension.Value, "$"); err != nil {
+		db := *item.DefinedBy
+		if !db.Base().unwrapped {
+			us, ok := unwrapCache[db.Base().Id]
+			if !ok {
+				return NewError("unwrapped shape not found", db.Base().Location, WithPosition(&db.Base().Position))
+			}
+			db = us
+		}
+		if err := db.Validate(item.Extension.Value, "$"); err != nil {
 			return NewWrappedError("check domain extension", err, item.Extension.Location, WithPosition(&item.Extension.Position))
 		}
 	}

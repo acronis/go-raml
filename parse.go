@@ -350,6 +350,9 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 		if err != nil {
 			return fmt.Errorf("unwrap shapes: %w", err)
 		}
+	}
+
+	if pOpts.withValidateOpt {
 		err = r.ValidateShapes()
 		if err != nil {
 			return fmt.Errorf("validate shapes: %w", err)
@@ -390,7 +393,8 @@ func ParseFromString(content string, fileName string, baseDir string, opts ...Pa
 }
 
 type parserOptions struct {
-	withUnwrapOpt bool
+	withUnwrapOpt   bool
+	withValidateOpt bool
 }
 
 type ParseOpt interface {
@@ -405,4 +409,14 @@ func (parseOptWithUnwrap) Apply(opt *parserOptions) {
 
 func OptWithUnwrap() ParseOpt {
 	return parseOptWithUnwrap{}
+}
+
+type parseOptWithValidate struct{}
+
+func (parseOptWithValidate) Apply(opt *parserOptions) {
+	opt.withValidateOpt = true
+}
+
+func OptWithValidate() ParseOpt {
+	return parseOptWithValidate{}
 }
