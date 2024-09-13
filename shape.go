@@ -32,6 +32,7 @@ type BaseShape struct {
 	DisplayName *string
 	Description *string
 	Type        string
+	TypeLabel   string // Used to store the label either the link or type value
 	Example     *Example
 	Examples    *Examples
 	Inherits    []*Shape
@@ -263,6 +264,7 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 				if err != nil {
 					return nil, NewWrappedError("parse data", err, location, WithNodePosition(shapeTypeNode))
 				}
+				base.TypeLabel = shapeTypeNode.Value
 				base.Link = dt
 			} else {
 				return nil, NewError("type must be string", location, WithNodePosition(shapeTypeNode))

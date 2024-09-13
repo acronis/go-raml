@@ -175,6 +175,7 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
 	// If target.facets is nil (makeShape returned nil instead of empty array) then reference is an alias.
+	s.Base().TypeLabel = shapeType
 	if target.facets == nil {
 		s.Base().Alias = ref
 	} else {
