@@ -160,6 +160,11 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 	return t
 }
 
+func (r *RAML) MakeJSONShape(base *BaseShape, schema string) Shape {
+	base.Type = "json"
+	return &JSONShape{BaseShape: *base, Raw: schema}
+}
+
 // MakeConcreteShape creates a new concrete shape.
 func (r *RAML) MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
 	base.Type = shapeType
@@ -256,7 +261,8 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 				if shapeType == "" {
 					shapeType = identifyShapeType(shapeFacets)
 				} else if shapeType[0] == '{' {
-					shapeType = TypeJSON
+					s := r.MakeJSONShape(base, shapeType)
+					return &s, nil
 				}
 			} else if shapeTypeNode.Tag == "!include" {
 				baseDir := filepath.Dir(location)

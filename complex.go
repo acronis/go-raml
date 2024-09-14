@@ -625,6 +625,8 @@ func (s *UnionShape) Check() error {
 
 type JSONShape struct {
 	BaseShape
+
+	Raw string
 }
 
 func (s *JSONShape) Base() *BaseShape {
