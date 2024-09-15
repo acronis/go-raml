@@ -13,7 +13,6 @@ const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 type JSONSchema struct {
 	Version     string      `json:"$schema,omitempty"`
 	Id          string      `json:"$id,omitempty"`
-	Anchor      string      `json:"$anchor,omitempty"`
 	Ref         string      `json:"$ref,omitempty"`
 	Definitions Definitions `json:"definitions,omitempty"`
 	Comment     string      `json:"$comment,omitempty"`
