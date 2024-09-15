@@ -1,6 +1,7 @@
 package raml
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -160,9 +161,16 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 	return t
 }
 
-func (r *RAML) MakeJSONShape(base *BaseShape, schema string) Shape {
+func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (Shape, error) {
 	base.Type = "json"
-	return &JSONShape{BaseShape: *base, Raw: schema}
+
+	var schema *JSONSchema
+	err := json.Unmarshal([]byte(rawSchema), &schema)
+	if err != nil {
+		return nil, NewWrappedError("unmarshal json", err, base.Location, WithPosition(&base.Position))
+	}
+
+	return &JSONShape{BaseShape: *base, Raw: rawSchema, Schema: schema}, nil
 }
 
 // MakeConcreteShape creates a new concrete shape.
@@ -261,7 +269,10 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 				if shapeType == "" {
 					shapeType = identifyShapeType(shapeFacets)
 				} else if shapeType[0] == '{' {
-					s := r.MakeJSONShape(base, shapeType)
+					s, err := r.MakeJSONShape(base, shapeType)
+					if err != nil {
+						return nil, NewWrappedError("make json shape", err, location, WithNodePosition(shapeTypeNode))
+					}
 					return &s, nil
 				}
 			} else if shapeTypeNode.Tag == "!include" {

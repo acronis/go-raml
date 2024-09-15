@@ -626,7 +626,8 @@ func (s *UnionShape) Check() error {
 type JSONShape struct {
 	BaseShape
 
-	Raw string
+	Schema *JSONSchema
+	Raw    string
 }
 
 func (s *JSONShape) Base() *BaseShape {
@@ -652,10 +653,15 @@ func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 func (s *JSONShape) Inherit(source Shape) (Shape, error) {
-	_, ok := source.(*JSONShape)
+	ss, ok := source.(*JSONShape)
 	if !ok {
 		return nil, NewError("cannot inherit from different type", s.Location, WithPosition(&s.Position), WithInfo("source", source.Base().Type), WithInfo("target", s.Base().Type))
 	}
+	if s.Schema != nil && ss.Schema != nil {
+		return nil, NewError("cannot inherit from different schema", s.Location, WithPosition(&s.Position))
+	}
+	s.Schema = ss.Schema
+	s.Raw = ss.Raw
 	return s, nil
 }
 

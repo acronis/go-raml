@@ -314,9 +314,34 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 }
 
 func (c *JSONSchemaConverter) VisitJSONShape(s *JSONShape) *JSONSchema {
-	// TODO: JSON Schema need to be supported
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	return schema
+	return c.overrideSchema(schema, s.Schema)
+}
+
+func (c *JSONSchemaConverter) overrideSchema(parent *JSONSchema, child *JSONSchema) *JSONSchema {
+	cs := *child
+	if parent.Title != "" {
+		cs.Title = parent.Title
+	}
+	if parent.Description == "" {
+		cs.Description = parent.Description
+	}
+	if parent.Default != nil {
+		cs.Default = parent.Default
+	}
+	if parent.Examples != nil {
+		cs.Examples = parent.Examples
+	}
+	if parent.Extras != nil {
+		if cs.Extras == nil {
+			cs.Extras = parent.Extras
+		} else {
+			for k, v := range parent.Extras {
+				cs.Extras[k] = v
+			}
+		}
+	}
+	return &cs
 }
 
 func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSchema {
