@@ -1,6 +1,8 @@
 package raml
 
 func (r *RAML) ValidateShapes() error {
+	// Unwrap cache stores the mapping of original IDs to unwrapped shapes
+	// to ensure the original references (aliases and links) match.
 	unwrapCache := make(map[string]Shape)
 
 	for _, frag := range r.fragmentsCache {
@@ -13,8 +15,8 @@ func (r *RAML) ValidateShapes() error {
 					if err != nil {
 						return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 					}
-					s = us
 					unwrapCache[s.Base().Id] = s
+					s = us
 				}
 				if err := s.Check(); err != nil {
 					return NewWrappedError("check annotation type", err, s.Base().Location, WithPosition(&s.Base().Position))
@@ -30,8 +32,8 @@ func (r *RAML) ValidateShapes() error {
 					if err != nil {
 						return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 					}
-					s = us
 					unwrapCache[s.Base().Id] = s
+					s = us
 				}
 				if err := s.Check(); err != nil {
 					return NewWrappedError("check type", err, s.Base().Location, WithPosition(&s.Base().Position))
@@ -47,8 +49,8 @@ func (r *RAML) ValidateShapes() error {
 				if err != nil {
 					return NewWrappedError("unwrap shape", err, s.Base().Location, WithPosition(&s.Base().Position))
 				}
-				s = us
 				unwrapCache[s.Base().Id] = s
+				s = us
 			}
 			if err := s.Check(); err != nil {
 				return NewWrappedError("check data type", err, s.Base().Location, WithPosition(&s.Base().Position))
