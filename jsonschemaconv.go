@@ -315,7 +315,9 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 
 func (c *JSONSchemaConverter) VisitJSONShape(s *JSONShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	return c.overrideSchema(schema, s.Schema)
+	schema = c.overrideSchema(schema, s.Schema)
+	schema.Version = ""
+	return schema
 }
 
 func (c *JSONSchemaConverter) overrideSchema(parent *JSONSchema, child *JSONSchema) *JSONSchema {
