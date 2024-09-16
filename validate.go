@@ -8,7 +8,8 @@ func (r *RAML) ValidateShapes() error {
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
-			for _, shape := range f.AnnotationTypes {
+			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
+				shape := pair.Value
 				s := *shape
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
@@ -25,7 +26,8 @@ func (r *RAML) ValidateShapes() error {
 					return NewWrappedError("validate shape commons", err, s.Base().Location, WithPosition(&s.Base().Position))
 				}
 			}
-			for _, shape := range f.Types {
+			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
+				shape := pair.Value
 				s := *shape
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
@@ -87,13 +89,15 @@ func (r *RAML) validateShapeCommons(s Shape) error {
 	switch s := s.(type) {
 	case *ObjectShape:
 		if s.Properties != nil {
-			for k, prop := range s.Properties {
+			for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+				k, prop := pair.Key, pair.Value
 				s := *prop.Shape
 				if err := r.validateShapeCommons(s); err != nil {
 					return NewWrappedError("validate property", err, s.Base().Location, WithPosition(&s.Base().Position), WithInfo("property", k))
 				}
 			}
-			for k, prop := range s.PatternProperties {
+			for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+				k, prop := pair.Key, pair.Value
 				s := *prop.Shape
 				if err := r.validateShapeCommons(s); err != nil {
 					return NewWrappedError("validate pattern property", err, s.Base().Location, WithPosition(&s.Base().Position), WithInfo("property", k))
@@ -124,7 +128,8 @@ func (r *RAML) validateExamples(s Shape) error {
 		}
 	}
 	if base.Examples != nil {
-		for _, ex := range base.Examples.Map {
+		for pair := base.Examples.Map.Oldest(); pair != nil; pair = pair.Next() {
+			ex := pair.Value
 			if err := s.Validate(ex.Data.Value, "$"); err != nil {
 				return NewWrappedError("validate example", err, ex.Location, WithPosition(&ex.Position))
 			}
@@ -149,8 +154,9 @@ func (r *RAML) validateShapeFacets(s Shape) error {
 			break
 		}
 		parent := *inherits[0]
-		for _, f := range parent.Base().CustomShapeFacetDefinitions {
-			if _, ok := shapeFacetDefs[f.Name]; ok {
+		for pair := parent.Base().CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+			f := pair.Value
+			if _, ok := shapeFacetDefs.Get(f.Name); ok {
 				base := (*f.Shape).Base()
 				return NewError("duplicate custom facet", base.Location, WithPosition(&base.Position), WithInfo("facet", f.Name))
 			}
@@ -161,7 +167,7 @@ func (r *RAML) validateShapeFacets(s Shape) error {
 
 	shapeFacets := base.CustomShapeFacets
 	for k, facetDef := range validationFacetDefs {
-		f, ok := shapeFacets[k]
+		f, ok := shapeFacets.Get(k)
 		if !ok {
 			if facetDef.Required {
 				return NewError("required custom facet is missing", base.Location, WithPosition(&base.Position), WithInfo("facet", k))
@@ -173,7 +179,8 @@ func (r *RAML) validateShapeFacets(s Shape) error {
 		}
 	}
 
-	for k, f := range shapeFacets {
+	for pair := shapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+		k, f := pair.Key, pair.Value
 		if _, ok := validationFacetDefs[k]; !ok {
 			return NewError("unknown facet", f.Location, WithPosition(&f.Position), WithInfo("facet", k))
 		}

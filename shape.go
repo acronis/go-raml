@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,9 +46,9 @@ type BaseShape struct {
 	// To support !include of DataType fragment
 	Link *DataType
 
-	CustomShapeFacets           CustomShapeFacets           // Map of custom facets with values
-	CustomShapeFacetDefinitions CustomShapeFacetDefinitions // Map of custom facet definitions
-	CustomDomainProperties      CustomDomainProperties      // Map of custom annotations
+	CustomShapeFacets           *orderedmap.OrderedMap[string, *Node]            // Map of custom facets with values
+	CustomShapeFacetDefinitions *orderedmap.OrderedMap[string, Property]         // Object properties share the same syntax with custom shape facets.
+	CustomDomainProperties      *orderedmap.OrderedMap[string, *DomainExtension] // Map of custom annotations
 
 	raml *RAML
 
@@ -79,7 +80,7 @@ func (s *BaseShape) String() string {
 // Examples represents a collection of examples.
 type Examples struct {
 	Id  string
-	Map map[string]*Example
+	Map *orderedmap.OrderedMap[string, *Example]
 
 	// To support !include of NamedExample fragment
 	Link *NamedExample
@@ -232,9 +233,9 @@ func (r *RAML) MakeBaseShape(name string, location string, position *Position) *
 		Position: *position,
 
 		raml:                        r,
-		CustomDomainProperties:      make(CustomDomainProperties),
-		CustomShapeFacets:           make(CustomShapeFacets),
-		CustomShapeFacetDefinitions: make(CustomShapeFacetDefinitions),
+		CustomDomainProperties:      orderedmap.New[string, *DomainExtension](0),
+		CustomShapeFacets:           orderedmap.New[string, *Node](0),
+		CustomShapeFacetDefinitions: orderedmap.New[string, Property](0),
 	}
 }
 
@@ -340,7 +341,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			if err != nil {
 				return nil, nil, NewWrappedError("unmarshal custom domain extension", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomDomainProperties[name] = de
+			s.CustomDomainProperties.Set(name, de)
 		} else if node.Value == "type" {
 			shapeTypeNode = valueNode
 		} else if node.Value == "displayName" {
@@ -356,7 +357,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				return nil, nil, NewWrappedError("decode required", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "facets" {
-			s.CustomShapeFacetDefinitions = make(CustomShapeFacetDefinitions, len(valueNode.Content)/2)
+			s.CustomShapeFacetDefinitions = orderedmap.New[string, Property](len(valueNode.Content) / 2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				nodeName := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
@@ -366,7 +367,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				if err != nil {
 					return nil, nil, NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 				}
-				s.CustomShapeFacetDefinitions[property.Name] = property
+				s.CustomShapeFacetDefinitions.Set(property.Name, property)
 			}
 		} else if node.Value == "example" {
 			if s.Examples != nil {
@@ -392,7 +393,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			} else if valueNode.Kind != yaml.MappingNode {
 				return nil, nil, NewError("examples must be map", s.Location, WithNodePosition(valueNode))
 			}
-			examples := make(map[string]*Example, len(valueNode.Content)/2)
+			examples := orderedmap.New[string, *Example](len(valueNode.Content) / 2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
@@ -400,7 +401,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				if err != nil {
 					return nil, nil, NewWrappedError(fmt.Sprintf("make examples: [%d]", j), err, s.Location, WithNodePosition(data))
 				}
-				examples[name] = example
+				examples.Set(name, example)
 			}
 			s.Examples = &Examples{Map: examples, Location: s.Location}
 		} else if node.Value == "default" {

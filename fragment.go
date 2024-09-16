@@ -3,6 +3,7 @@ package raml
 import (
 	"path/filepath"
 
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,13 +28,13 @@ type Fragment interface {
 type Library struct {
 	Id              string
 	Usage           string
-	AnnotationTypes map[string]*Shape
+	AnnotationTypes *orderedmap.OrderedMap[string, *Shape]
 	// TODO: Specific to API fragments. Not supported yet.
 	// ResourceTypes   map[string]interface{} `yaml:"resourceTypes"`
-	Types map[string]*Shape
-	Uses  map[string]*LibraryLink
+	Types *orderedmap.OrderedMap[string, *Shape]
+	Uses  *orderedmap.OrderedMap[string, *LibraryLink]
 
-	CustomDomainProperties CustomDomainProperties
+	CustomDomainProperties *orderedmap.OrderedMap[string, *DomainExtension]
 
 	Location string
 	raml     *RAML
@@ -58,7 +59,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return NewError("must be map", l.Location, WithNodePosition(value))
 	}
-	l.CustomDomainProperties = make(CustomDomainProperties)
+	l.CustomDomainProperties = orderedmap.New[string, *DomainExtension](0)
 
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
@@ -68,29 +69,29 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
 			}
-			l.CustomDomainProperties[name] = de
+			l.CustomDomainProperties.Set(name, de)
 		} else if node.Value == "uses" {
 			if valueNode.Tag == "!!null" {
 				continue
 			}
 
-			l.Uses = make(map[string]*LibraryLink, len(valueNode.Content)/2)
+			l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				path := valueNode.Content[j+1]
-				l.Uses[name] = &LibraryLink{
+				l.Uses.Set(name, &LibraryLink{
 					Value:    path.Value,
 					Location: l.Location,
 					Position: Position{path.Line, path.Column},
-				}
+				})
 			}
 		} else if node.Value == "types" {
 			if valueNode.Tag == "!!null" {
 				continue
 			}
 
-			l.Types = make(map[string]*Shape, len(valueNode.Content)/2)
+			l.Types = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
@@ -99,7 +100,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				if err != nil {
 					return NewWrappedError("parse types: make shape", err, l.Location, WithNodePosition(data))
 				}
-				l.Types[name] = shape
+				l.Types.Set(name, shape)
 				l.raml.PutTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
@@ -108,7 +109,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				continue
 			}
 
-			l.AnnotationTypes = make(map[string]*Shape, len(valueNode.Content)/2)
+			l.AnnotationTypes = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
@@ -117,7 +118,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				if err != nil {
 					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 				}
-				l.AnnotationTypes[name] = shape
+				l.AnnotationTypes.Set(name, shape)
 				l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
@@ -142,7 +143,7 @@ func (r *RAML) MakeLibrary(path string) *Library {
 type DataType struct {
 	Id    string
 	Usage string
-	Uses  map[string]*LibraryLink
+	Uses  *orderedmap.OrderedMap[string, *LibraryLink]
 	Shape *Shape
 
 	Location string
@@ -171,16 +172,16 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 				continue
 			}
 
-			dt.Uses = make(map[string]*LibraryLink, len(valueNode.Content)/2)
+			dt.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
 			// Map nodes come in pairs in order [key, value]
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				name := valueNode.Content[j].Value
 				path := valueNode.Content[j+1]
-				dt.Uses[name] = &LibraryLink{
+				dt.Uses.Set(name, &LibraryLink{
 					Value:    path.Value,
 					Location: dt.Location,
 					Position: Position{path.Line, path.Column},
-				}
+				})
 			}
 		} else {
 			shapeValue.Content = append(shapeValue.Content, node, valueNode)
@@ -228,7 +229,7 @@ func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
 // NamedExample is the RAML 1.0 NamedExample
 type NamedExample struct {
 	Id  string
-	Map map[string]*Example
+	Map *orderedmap.OrderedMap[string, *Example]
 
 	Location string
 	raml     *RAML
@@ -249,7 +250,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return NewError("must be map", ne.Location, WithNodePosition(value))
 	}
-	examples := make(map[string]*Example, len(value.Content)/2)
+	examples := orderedmap.New[string, *Example](len(value.Content) / 2)
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
@@ -257,7 +258,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make example", err, ne.Location, WithNodePosition(valueNode))
 		}
-		examples[node.Value] = example
+		examples.Set(node.Value, example)
 	}
 	ne.Map = examples
 

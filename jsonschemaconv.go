@@ -3,6 +3,8 @@ package raml
 import (
 	"encoding/json"
 	"strconv"
+
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 type JSONSchemaConverterOpt interface {
@@ -123,19 +125,21 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 	schema.AdditionalProperties = s.AdditionalProperties
 
 	if s.Properties != nil {
-		schema.Properties = make(map[string]*JSONSchema, len(s.Properties))
-		for k, v := range s.Properties {
-			schema.Properties[k] = c.Visit(*v.Shape)
+		schema.Properties = orderedmap.New[string, *JSONSchema](s.Properties.Len())
+		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+			k, v := pair.Key, pair.Value
+			schema.Properties.Set(k, c.Visit(*v.Shape))
 			if v.Required {
 				schema.Required = append(schema.Required, k)
 			}
 		}
 	}
 	if s.PatternProperties != nil {
-		schema.PatternProperties = make(map[string]*JSONSchema, len(s.PatternProperties))
-		for k, v := range s.PatternProperties {
+		schema.PatternProperties = orderedmap.New[string, *JSONSchema](s.PatternProperties.Len())
+		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			k, v := pair.Key, pair.Value
 			k = k[1 : len(k)-1]
-			schema.PatternProperties[k] = c.Visit(*v.Shape)
+			schema.PatternProperties.Set(k, c.Visit(*v.Shape))
 		}
 	}
 	return schema
@@ -360,17 +364,20 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 		schema.Default = base.Default.Value
 	}
 	if base.Examples != nil {
-		for _, ex := range base.Examples.Map {
+		for pair := base.Examples.Map.Oldest(); pair != nil; pair = pair.Next() {
+			ex := pair.Value
 			schema.Examples = append(schema.Examples, ex.Data.Value)
 		}
 	}
 	if base.Example != nil {
 		schema.Examples = []any{base.Example.Data.Value}
 	}
-	for k, v := range base.CustomDomainProperties {
+	for pair := base.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
+		k, v := pair.Key, pair.Value
 		schema.Extras["x-domainExt-"+k] = v.Extension.Value
 	}
-	for k, v := range base.CustomShapeFacetDefinitions {
+	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		k, v := pair.Key, pair.Value
 		m := schema.Extras["x-shapeExt-definitions"]
 		if m == nil {
 			m = make(map[string]interface{})
@@ -379,7 +386,8 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 		shapeExtDefs := m.(map[string]interface{})
 		shapeExtDefs[k] = c.Visit(*v.Shape)
 	}
-	for k, v := range base.CustomShapeFacets {
+	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+		k, v := pair.Key, pair.Value
 		schema.Extras["x-shapeExt-data-"+k] = v.Value
 	}
 	return schema

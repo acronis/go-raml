@@ -1,6 +1,7 @@
 package raml
 
 import (
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -11,7 +12,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 		Strict:                 true,
 		Location:               location,
 		Position:               Position{Line: value.Line, Column: value.Column},
-		CustomDomainProperties: make(CustomDomainProperties),
+		CustomDomainProperties: orderedmap.New[string, *DomainExtension](0),
 		raml:                   r,
 	}
 	// Example can be represented as map in two cases:
@@ -38,7 +39,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 					if err != nil {
 						return nil, NewWrappedError("unmarshal custom domain extension", err, location, WithNodePosition(valueNode))
 					}
-					ex.CustomDomainProperties[name] = de
+					ex.CustomDomainProperties.Set(name, de)
 				} else if node.Value == "strict" {
 					if err := valueNode.Decode(&ex.Strict); err != nil {
 						return nil, NewWrappedError("decode strict", err, location, WithNodePosition(valueNode))
@@ -79,7 +80,7 @@ type Example struct {
 	Data        *Node
 
 	Strict                 bool
-	CustomDomainProperties CustomDomainProperties
+	CustomDomainProperties *orderedmap.OrderedMap[string, *DomainExtension]
 
 	Location string
 	Position

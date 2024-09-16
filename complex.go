@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -147,7 +148,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return NewWrappedError("make shape", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Items = shape
-			//s.raml.PutTypeIntoFragment(s.Name+"#items", s.Location, s.Items)
+			// s.raml.PutTypeIntoFragment(s.Name+"#items", s.Location, s.Items)
 			s.raml.PutShapePtr(s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
@@ -158,7 +159,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -169,8 +170,8 @@ type ObjectFacets struct {
 	Discriminator        *string
 	DiscriminatorValue   any
 	AdditionalProperties *bool
-	Properties           map[string]Property
-	PatternProperties    map[string]PatternProperty
+	Properties           *orderedmap.OrderedMap[string, Property]
+	PatternProperties    *orderedmap.OrderedMap[string, PatternProperty]
 	MinProperties        *uint64
 	MaxProperties        *uint64
 }
@@ -216,24 +217,24 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
 				if len(propertyName) > 1 && propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
 					if s.PatternProperties == nil {
-						s.PatternProperties = make(map[string]PatternProperty)
+						s.PatternProperties = orderedmap.New[string, PatternProperty]()
 					}
 					property, err := s.raml.makePatternProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
 						return NewWrappedError("make pattern property", err, s.Location, WithNodePosition(data))
 					}
-					s.PatternProperties[propertyName] = property
+					s.PatternProperties.Set(propertyName, property)
 					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 					s.raml.PutShapePtr(property.Shape)
 				} else {
 					if s.Properties == nil {
-						s.Properties = make(map[string]Property)
+						s.Properties = orderedmap.New[string, Property]()
 					}
 					property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
 						return NewWrappedError("make property", err, s.Location, WithNodePosition(data))
 					}
-					s.Properties[property.Name] = property
+					s.Properties.Set(property.Name, property)
 					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
 					s.raml.PutShapePtr(property.Shape)
 				}
@@ -243,7 +244,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -269,19 +270,21 @@ func (s *ObjectShape) clone(history []Shape) Shape {
 	ptr := &c
 	history = append(history, ptr)
 	if c.Properties != nil {
-		c.Properties = make(map[string]Property, len(s.Properties))
-		for k, v := range s.Properties {
-			p := (*v.Shape).clone(history)
-			v.Shape = &p
-			c.Properties[k] = v
+		c.Properties = orderedmap.New[string, Property](s.Properties.Len())
+		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+			k, prop := pair.Key, pair.Value
+			ps := (*prop.Shape).clone(history)
+			prop.Shape = &ps
+			c.Properties.Set(k, prop)
 		}
 	}
 	if c.PatternProperties != nil {
-		c.PatternProperties = make(map[string]PatternProperty, len(s.PatternProperties))
-		for k, v := range s.PatternProperties {
-			p := (*v.Shape).clone(history)
-			v.Shape = &p
-			c.PatternProperties[k] = v
+		c.PatternProperties = orderedmap.New[string, PatternProperty](s.PatternProperties.Len())
+		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			k, prop := pair.Key, pair.Value
+			ps := (*prop.Shape).clone(history)
+			prop.Shape = &ps
+			c.PatternProperties.Set(k, prop)
 		}
 	}
 	return ptr
@@ -305,7 +308,7 @@ func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
 		// Explicitly defined properties have priority over pattern properties.
 		ctxPath := ctxPath + "." + k
 		if s.Properties != nil {
-			if p, ok := s.Properties[k]; ok {
+			if p, ok := s.Properties.Get(k); ok {
 				ps := *p.Shape
 				if err := ps.Validate(item, ctxPath); err != nil {
 					return fmt.Errorf("validate property %s: %w", ctxPath, err)
@@ -315,12 +318,13 @@ func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
 		}
 		if s.PatternProperties != nil {
 			found := false
-			for _, pp := range s.PatternProperties {
+			for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+				pp := pair.Value
 				// NOTE: We validate only those keys that match the pattern.
 				// The keys that do not match are considered as additional properties and are not validated.
 				if pp.Pattern.MatchString(k) {
 					ps := *pp.Shape
-					// TODO: The first pattern to validate prevails. However, since pattern properties is a map, the validation can be random.
+					// NOTE: The first defined pattern property to validate prevails.
 					if err := ps.Validate(item, ctxPath); err == nil {
 						found = true
 						break
@@ -369,31 +373,33 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 	if s.Properties == nil {
 		s.Properties = ss.Properties
 	} else if ss.Properties != nil {
-		for k, sourceProp := range ss.Properties {
-			if targetProp, ok := s.Properties[k]; ok {
+		for pair := ss.Properties.Oldest(); pair != nil; pair = pair.Next() {
+			k, sourceProp := pair.Key, pair.Value
+			if targetProp, ok := s.Properties.Get(k); ok {
 				if sourceProp.Required && !targetProp.Required {
 					return nil, NewError("cannot make required property optional", s.Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k), WithInfo("source", sourceProp.Required), WithInfo("target", targetProp.Required))
 				}
-				_, err := s.raml.Inherit(*sourceProp.Shape, *s.Properties[k].Shape)
+				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
 				if err != nil {
 					return nil, NewWrappedError("inherit property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
 				}
 			} else {
-				s.Properties[k] = sourceProp
+				s.Properties.Set(k, sourceProp)
 			}
 		}
 	}
 	if s.PatternProperties == nil {
 		s.PatternProperties = ss.PatternProperties
 	} else if ss.PatternProperties != nil {
-		for k, sourceProp := range ss.PatternProperties {
-			if targetProp, ok := s.PatternProperties[k]; ok {
-				_, err := s.raml.Inherit(*sourceProp.Shape, *s.PatternProperties[k].Shape)
+		for pair := ss.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			k, sourceProp := pair.Key, pair.Value
+			if targetProp, ok := s.PatternProperties.Get(k); ok {
+				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
 				if err != nil {
 					return nil, NewWrappedError("inherit pattern property", err, s.Base().Location, WithPosition(&(*targetProp.Shape).Base().Position), WithInfo("property", k))
 				}
 			} else {
-				s.PatternProperties[k] = sourceProp
+				s.PatternProperties.Set(k, sourceProp)
 			}
 		}
 	}
@@ -411,14 +417,16 @@ func (s *ObjectShape) Check() error {
 			// https://json-schema.org/understanding-json-schema/reference/object#additionalproperties
 			return NewError("pattern properties are not allowed with \"additionalProperties: false\"", s.Location, WithPosition(&s.Position))
 		}
-		for _, prop := range s.PatternProperties {
+		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			prop := pair.Value
 			if err := (*prop.Shape).Check(); err != nil {
 				return NewWrappedError("check pattern property", err, s.Location, WithPosition(&(*prop.Shape).Base().Position), WithInfo("property", prop.Pattern.String()))
 			}
 		}
 	}
 	if s.Properties != nil {
-		for _, prop := range s.Properties {
+		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+			prop := pair.Value
 			if err := (*prop.Shape).Check(); err != nil {
 				return NewWrappedError("check property", err, s.Location, WithPosition(&(*prop.Shape).Base().Position), WithInfo("property", prop.Name))
 			}
@@ -427,7 +435,7 @@ func (s *ObjectShape) Check() error {
 		// Inline definitions with discriminator are not allowed.
 		// TODO: Setting discriminator should be allowed only on scalar shapes.
 		if s.Discriminator != nil {
-			prop, ok := s.Properties[*s.Discriminator]
+			prop, ok := s.Properties.Get(*s.Discriminator)
 			if !ok {
 				return NewError("discriminator property not found", s.Location, WithPosition(&s.Position), WithInfo("discriminator", *s.Discriminator))
 			}
