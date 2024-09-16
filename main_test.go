@@ -28,7 +28,8 @@ func Test_main(t *testing.T) {
 	for _, frag := range rml.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
-			for _, shape := range f.AnnotationTypes {
+			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
+				shape := pair.Value
 				s := *shape
 				conv.Convert(s)
 				// b, err := json.MarshalIndent(schema, "", "  ")
@@ -38,7 +39,8 @@ func Test_main(t *testing.T) {
 				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
 				//fmt.Println(string(b))
 			}
-			for _, shape := range f.Types {
+			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
+				shape := pair.Value
 				s := *shape
 				conv.Convert(s)
 				// b, err := json.MarshalIndent(schema, "", "  ")
