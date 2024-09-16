@@ -1,12 +1,18 @@
 package raml
 
 import (
-	"encoding/json"
+	"fmt"
 	"math/big"
 	"regexp"
-	"strconv"
+	"time"
 
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	RFC2616 = "Mon, 02 Jan 2006 15:04:05 GMT"
+	// NOTE: time.DateTime uses "2006-01-02 15:04:05" format which is different from date-time defined in RAML spec.
+	DateTime = "2006-01-02T15:04:05"
 )
 
 type EnumFacets struct {
@@ -17,7 +23,7 @@ func (r *RAML) MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 	if v.Kind != yaml.SequenceNode {
 		return nil, NewError("enum must be sequence node", location, WithNodePosition(v))
 	}
-	var enums Nodes = make(Nodes, len(v.Content))
+	enums := make(Nodes, len(v.Content))
 	for i, v := range v.Content {
 		n, err := r.makeNode(v, location)
 		if err != nil {
@@ -26,6 +32,23 @@ func (r *RAML) MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 		enums[i] = n
 	}
 	return enums, nil
+}
+
+func isCompatibleEnum(source Nodes, target Nodes) bool {
+	// Target enum must be a subset of source enum
+	for _, v := range target {
+		found := false
+		for _, e := range source {
+			if v.Value == e.Value {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 type FormatFacets struct {
@@ -59,21 +82,50 @@ func (s *IntegerShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
-// func (s *IntegerShape) Validate(v interface{}) error {
-// 	i, ok := v.(int64)
-// 	if !ok {
-// 		return fmt.Errorf("invalid value")
-// 	}
+func (s *IntegerShape) Validate(v interface{}, ctxPath string) error {
+	var val big.Int
+	switch v := v.(type) {
+	case int:
+		val.SetInt64(int64(v))
+	case uint:
+		val.SetUint64(uint64(v))
+	// json unmarshals numbers as float64
+	case float64:
+		val.SetInt64(int64(v))
+	default:
+		return fmt.Errorf("invalid type, got %T, expected int, uint or float64", v)
+	}
 
-// 	if s.Minimum != nil && *s.Minimum < i {
-// 		return fmt.Errorf("value must be in range")
-// 	}
-// 	if s.Maximum != nil && i > *s.Maximum {
-// 		return fmt.Errorf("value must be in range")
-// 	}
+	if s.Minimum != nil && val.Cmp(s.Minimum) < 0 {
+		return fmt.Errorf("value must be less than %s", s.Minimum.String())
+	}
+	if s.Maximum != nil && val.Cmp(s.Maximum) > 0 {
+		return fmt.Errorf("value must be greater than %s", s.Maximum.String())
+	}
+	// TODO: Implement multipleOf validation
+	// TODO: Implement format validation
+	if s.Enum != nil {
+		// TODO: Probably enum values should be stored as big.Int to simplify validation
+		var num any
+		if val.IsInt64() {
+			num = int(val.Int64())
+		} else if val.IsUint64() {
+			num = uint(val.Uint64())
+		}
+		found := false
+		for _, e := range s.Enum {
+			if e.Value == num {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("value must be one of (%s)", s.Enum.String())
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*IntegerShape)
@@ -97,7 +149,7 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	if s.Format == nil {
@@ -108,32 +160,19 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *IntegerShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:   "integer",
-		Extras: make(map[string]interface{}),
-	}
-	if s.Minimum != nil {
-		schema.Minimum = json.Number(s.Minimum.String())
-	}
-	if s.Maximum != nil {
-		schema.Maximum = json.Number(s.Maximum.String())
-	}
-	if s.MultipleOf != nil {
-		schema.MultipleOf = json.Number(strconv.FormatFloat(*s.MultipleOf, 'f', -1, 64))
+func (s *IntegerShape) Check() error {
+	if s.Minimum != nil && s.Maximum != nil && s.Minimum.Cmp(s.Maximum) > 0 {
+		return NewError("minimum must be less than or equal to maximum", s.Location, WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
-		schema.Enum = make([]interface{}, len(s.Enum))
-		for i, v := range s.Enum {
-			schema.Enum[i] = v.Value
+		for _, e := range s.Enum {
+			switch e.Value.(type) {
+			case int, uint:
+			default:
+				return NewError("enum value must be int or uint", s.Location, WithPosition(&e.Position))
+			}
 		}
 	}
-	schema.WithRamlData(s.Base())
-	// TODO: JSON Schema does not have a format for numbers
-	return schema
-}
-
-func (s *IntegerShape) Check() error {
 	return nil
 }
 
@@ -218,6 +257,44 @@ func (s *NumberShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *NumberShape) Validate(v interface{}, ctxPath string) error {
+	var val float64
+	switch v := v.(type) {
+	// go-yaml unmarshals integers as int
+	case int:
+		val = float64(v)
+	case uint:
+		val = float64(v)
+	case float64:
+		val = v
+	default:
+		return fmt.Errorf("invalid type, got %T, expected int, uint, float64", v)
+	}
+
+	if s.Minimum != nil && val < *s.Minimum {
+		return fmt.Errorf("value must be less than %f", *s.Minimum)
+	}
+	if s.Maximum != nil && val > *s.Maximum {
+		return fmt.Errorf("value must be greater than %f", *s.Maximum)
+	}
+	// TODO: Implement multipleOf validation
+	// TODO: Implement format validation
+	if s.Enum != nil {
+		found := false
+		for _, e := range s.Enum {
+			if e.Value == val {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("value must be one of (%s)", s.Enum.String())
+		}
+	}
+
+	return nil
+}
+
 func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*NumberShape)
 	if !ok {
@@ -240,7 +317,7 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	if s.Format == nil {
@@ -251,32 +328,19 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *NumberShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:   "number",
-		Extras: make(map[string]interface{}),
-	}
-	if s.Minimum != nil {
-		schema.Minimum = json.Number(strconv.FormatFloat(*s.Minimum, 'f', -1, 64))
-	}
-	if s.Maximum != nil {
-		schema.Maximum = json.Number(strconv.FormatFloat(*s.Maximum, 'f', -1, 64))
-	}
-	if s.MultipleOf != nil {
-		schema.MultipleOf = json.Number(strconv.FormatFloat(*s.MultipleOf, 'f', -1, 64))
+func (s *NumberShape) Check() error {
+	if s.Minimum != nil && s.Maximum != nil && *s.Minimum > *s.Maximum {
+		return NewError("minimum must be less than or equal to maximum", s.Location, WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
-		schema.Enum = make([]interface{}, len(s.Enum))
-		for i, v := range s.Enum {
-			schema.Enum[i] = v.Value
+		for _, e := range s.Enum {
+			switch e.Value.(type) {
+			case int, uint, float64:
+			default:
+				return NewError("enum value must be int, uint, float64", s.Location, WithPosition(&e.Position))
+			}
 		}
 	}
-	schema.WithRamlData(s.Base())
-	// TODO: JSON Schema does not have a format for numbers
-	return schema
-}
-
-func (s *NumberShape) Check() error {
 	return nil
 }
 
@@ -351,6 +415,38 @@ func (s *StringShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *StringShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	strLen := uint64(len(i))
+	if s.MinLength != nil && strLen < *s.MinLength {
+		return fmt.Errorf("length must be less than %d", *s.MinLength)
+	}
+	if s.MaxLength != nil && strLen > *s.MaxLength {
+		return fmt.Errorf("length must be greater than %d", *s.MaxLength)
+	}
+	if s.Pattern != nil && !s.Pattern.MatchString(i) {
+		return fmt.Errorf("must match pattern %s", s.Pattern.String())
+	}
+	if s.Enum != nil {
+		found := false
+		for _, e := range s.Enum {
+			if e.Value == i {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("value must be one of (%s)", s.Enum.String())
+		}
+	}
+
+	return nil
+}
+
 func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*StringShape)
 	if !ok {
@@ -372,33 +468,23 @@ func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
 }
 
-func (s *StringShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:      "string",
-		MinLength: s.MinLength,
-		MaxLength: s.MaxLength,
-		Extras:    make(map[string]interface{}),
-	}
-	if s.Pattern != nil {
-		schema.Pattern = s.Pattern.String()
+func (s *StringShape) Check() error {
+	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
+		return NewError("minLength must be less than or equal to maxLength", s.Location, WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
-		schema.Enum = make([]interface{}, len(s.Enum))
-		for i, v := range s.Enum {
-			schema.Enum[i] = v.Value
+		for _, e := range s.Enum {
+			if _, ok := e.Value.(string); !ok {
+				return NewError("enum value must be string", s.Location, WithPosition(&e.Position))
+			}
 		}
 	}
-	schema.WithRamlData(s.Base())
-	return schema
-}
-
-func (s *StringShape) Check() error {
 	return nil
 }
 
@@ -466,6 +552,25 @@ func (s *FileShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *FileShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	// TODO: What is compared, byte size or base64 string size?
+	strLen := uint64(len(i))
+	if s.MinLength != nil && strLen < *s.MinLength {
+		return fmt.Errorf("length must be less than %d", *s.MinLength)
+	}
+	if s.MaxLength != nil && strLen > *s.MaxLength {
+		return fmt.Errorf("length must be greater than %d", *s.MaxLength)
+	}
+	// TODO: Validation against file types
+
+	return nil
+}
+
 func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*FileShape)
 	if !ok {
@@ -483,29 +588,23 @@ func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.FileTypes == nil {
 		s.FileTypes = ss.FileTypes
-	} else if ss.FileTypes != nil && !IsCompatibleEnum(ss.FileTypes, s.FileTypes) {
+	} else if ss.FileTypes != nil && !isCompatibleEnum(ss.FileTypes, s.FileTypes) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.FileTypes.String()), WithInfo("target", s.FileTypes.String()))
 	}
 	return s, nil
 }
 
-func (s *FileShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:            "string",
-		MinLength:       s.MinLength,
-		MaxLength:       s.MaxLength,
-		ContentEncoding: "base64",
-		Extras:          make(map[string]interface{}),
-	}
-	// TODO: JSON Schema allows for only one content media type
-	if s.FileTypes != nil {
-		schema.ContentMediaType = s.FileTypes[0].Value.(string)
-	}
-	schema.WithRamlData(s.Base())
-	return schema
-}
-
 func (s *FileShape) Check() error {
+	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
+		return NewError("minLength must be less than or equal to maxLength", s.Location, WithPosition(&s.Position))
+	}
+	if s.FileTypes != nil {
+		for _, e := range s.FileTypes {
+			if _, ok := e.Value.(string); !ok {
+				return NewError("file type must be string", s.Location, WithPosition(&s.Position))
+			}
+		}
+	}
 	return nil
 }
 
@@ -526,7 +625,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if valueNode.Kind != yaml.SequenceNode {
 				return NewError("fileTypes must be sequence node", s.Location, WithNodePosition(valueNode))
 			}
-			var fileTypes Nodes = make(Nodes, len(valueNode.Content))
+			fileTypes := make(Nodes, len(valueNode.Content))
 			for i, v := range valueNode.Content {
 				if v.Tag != "!!str" {
 					return NewError("member of fileTypes must be string", s.Location, WithNodePosition(v))
@@ -568,6 +667,28 @@ func (s *BooleanShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *BooleanShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(bool)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected bool", v)
+	}
+
+	if s.Enum != nil {
+		found := false
+		for _, e := range s.Enum {
+			if e.Value == i {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("value must be one of (%s)", s.Enum.String())
+		}
+	}
+
+	return nil
+}
+
 func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*BooleanShape)
 	if !ok {
@@ -575,28 +696,20 @@ func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 	}
 	if s.Enum == nil {
 		s.Enum = ss.Enum
-	} else if ss.Enum != nil && !IsCompatibleEnum(ss.Enum, s.Enum) {
+	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
 		return nil, NewError("enum constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", ss.Enum.String()), WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
 }
 
-func (s *BooleanShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:   "boolean",
-		Extras: make(map[string]interface{}),
-	}
+func (s *BooleanShape) Check() error {
 	if s.Enum != nil {
-		schema.Enum = make([]interface{}, len(s.Enum))
-		for i, v := range s.Enum {
-			schema.Enum[i] = v.Value
+		for _, e := range s.Enum {
+			if _, ok := e.Value.(bool); !ok {
+				return NewError("enum value must be boolean", s.Location, WithPosition(&e.Position))
+			}
 		}
 	}
-	schema.WithRamlData(s.Base())
-	return schema
-}
-
-func (s *BooleanShape) Check() error {
 	return nil
 }
 
@@ -642,6 +755,33 @@ func (s *DateTimeShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *DateTimeShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	if s.Format == nil {
+		if _, err := time.Parse(time.RFC3339, i); err != nil {
+			return fmt.Errorf("value must match format %s", time.RFC3339)
+		}
+	} else {
+		switch *s.Format {
+		case "rfc3339":
+			if _, err := time.Parse(time.RFC3339, i); err != nil {
+				return fmt.Errorf("value must match format %s", time.RFC3339)
+			}
+		// TODO: https://www.rfc-editor.org/rfc/rfc7231#section-7.1.1.1
+		case "rfc2616":
+			if _, err := time.Parse(RFC2616, i); err != nil {
+				return fmt.Errorf("value must match format %s", RFC2616)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*DateTimeShape)
 	if !ok {
@@ -653,23 +793,6 @@ func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 		return nil, NewError("format constraint violation", s.Location, WithPosition(&s.Position), WithInfo("source", *ss.Format), WithInfo("target", *s.Format))
 	}
 	return s, nil
-}
-
-func (s *DateTimeShape) ToJSONSchema() *JSONSchema {
-	schema := &JSONSchema{
-		Type:   "string",
-		Extras: make(map[string]interface{}),
-	}
-	if s.Format != nil {
-		switch *s.Format {
-		case "rfc3339":
-			schema.Format = "date-time"
-		case "rfc2616":
-			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4}) ([01][0-9]|2[0-3])(:[0-5][0-9]){2} GMT$"
-		}
-	}
-	schema.WithRamlData(s.Base())
-	return schema
 }
 
 func (s *DateTimeShape) Check() error {
@@ -716,6 +839,19 @@ func (s *DateTimeOnlyShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *DateTimeOnlyShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	if _, err := time.Parse(DateTime, i); err != nil {
+		return fmt.Errorf("value must match format %s", DateTime)
+	}
+
+	return nil
+}
+
 func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	_, ok := source.(*DateTimeOnlyShape)
 	if !ok {
@@ -724,19 +860,21 @@ func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *DateTimeOnlyShape) ToJSONSchema() *JSONSchema {
-	return &JSONSchema{
-		Type:   "string",
-		Extras: make(map[string]interface{}),
-		// TODO: DateTimeOnly format is non-standard
-	}
-}
-
 func (s *DateTimeOnlyShape) Check() error {
 	return nil
 }
 
 func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	for i := 0; i != len(v); i += 2 {
+		node := v[i]
+		valueNode := v[i+1]
+
+		n, err := s.raml.makeNode(valueNode, s.Location)
+		if err != nil {
+			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets[node.Value] = n
+	}
 	return nil
 }
 
@@ -757,6 +895,19 @@ func (s *DateOnlyShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *DateOnlyShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	if _, err := time.Parse(time.DateOnly, i); err != nil {
+		return fmt.Errorf("value must match format %s", time.DateOnly)
+	}
+
+	return nil
+}
+
 func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
 	_, ok := source.(*DateOnlyShape)
 	if !ok {
@@ -765,19 +916,21 @@ func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *DateOnlyShape) ToJSONSchema() *JSONSchema {
-	return &JSONSchema{
-		Type:   "string",
-		Format: "date",
-		Extras: make(map[string]interface{}),
-	}
-}
-
 func (s *DateOnlyShape) Check() error {
 	return nil
 }
 
 func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	for i := 0; i != len(v); i += 2 {
+		node := v[i]
+		valueNode := v[i+1]
+
+		n, err := s.raml.makeNode(valueNode, s.Location)
+		if err != nil {
+			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets[node.Value] = n
+	}
 	return nil
 }
 
@@ -798,6 +951,19 @@ func (s *TimeOnlyShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *TimeOnlyShape) Validate(v interface{}, ctxPath string) error {
+	i, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected string", v)
+	}
+
+	if _, err := time.Parse(time.TimeOnly, i); err != nil {
+		return fmt.Errorf("value must match format %s", time.TimeOnly)
+	}
+
+	return nil
+}
+
 func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	_, ok := source.(*TimeOnlyShape)
 	if !ok {
@@ -806,19 +972,21 @@ func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *TimeOnlyShape) ToJSONSchema() *JSONSchema {
-	return &JSONSchema{
-		Type:   "string",
-		Format: "time",
-		Extras: make(map[string]interface{}),
-	}
-}
-
 func (s *TimeOnlyShape) Check() error {
 	return nil
 }
 
 func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	for i := 0; i != len(v); i += 2 {
+		node := v[i]
+		valueNode := v[i+1]
+
+		n, err := s.raml.makeNode(valueNode, s.Location)
+		if err != nil {
+			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets[node.Value] = n
+	}
 	return nil
 }
 
@@ -839,6 +1007,10 @@ func (s *AnyShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *AnyShape) Validate(v interface{}, ctxPath string) error {
+	return nil
+}
+
 func (s *AnyShape) Inherit(source Shape) (Shape, error) {
 	_, ok := source.(*AnyShape)
 	if !ok {
@@ -847,17 +1019,21 @@ func (s *AnyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *AnyShape) ToJSONSchema() *JSONSchema {
-	return &JSONSchema{
-		Extras: make(map[string]interface{}),
-	}
-}
-
 func (s *AnyShape) Check() error {
 	return nil
 }
 
 func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	for i := 0; i != len(v); i += 2 {
+		node := v[i]
+		valueNode := v[i+1]
+
+		n, err := s.raml.makeNode(valueNode, s.Location)
+		if err != nil {
+			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets[node.Value] = n
+	}
 	return nil
 }
 
@@ -878,6 +1054,13 @@ func (s *NilShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+func (s *NilShape) Validate(v interface{}, ctxPath string) error {
+	if v != nil {
+		return fmt.Errorf("invalid type, got %T, expected nil", v)
+	}
+	return nil
+}
+
 func (s *NilShape) Inherit(source Shape) (Shape, error) {
 	_, ok := source.(*NilShape)
 	if !ok {
@@ -886,17 +1069,20 @@ func (s *NilShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *NilShape) ToJSONSchema() *JSONSchema {
-	return &JSONSchema{
-		Type:   "null",
-		Extras: make(map[string]interface{}),
-	}
-}
-
 func (s *NilShape) Check() error {
 	return nil
 }
 
 func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	for i := 0; i != len(v); i += 2 {
+		node := v[i]
+		valueNode := v[i+1]
+
+		n, err := s.raml.makeNode(valueNode, s.Location)
+		if err != nil {
+			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets[node.Value] = n
+	}
 	return nil
 }

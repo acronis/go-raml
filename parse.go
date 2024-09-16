@@ -15,7 +15,7 @@ import (
 )
 
 // ReadHead reads, reset file and returns the trimmed first line of a file.
-func ReadHead(f *os.File) (string, error) {
+func ReadHead(f io.ReadSeeker) (string, error) {
 	r := bufio.NewReader(f)
 	head, err := r.ReadString('\n')
 	if err != nil {
@@ -27,49 +27,35 @@ func ReadHead(f *os.File) (string, error) {
 		return "", fmt.Errorf("seek to start: %w", err)
 	}
 
-	r.Reset(f)
-
 	head = strings.TrimRight(head, "\r\n ")
 	return head, nil
 }
 
 // IdentifyFragment returns the kind of the fragment by its head.
 func IdentifyFragment(head string) (FragmentKind, error) {
-	if head == "#%RAML 1.0 Library" {
+	switch head {
+	case "#%RAML 1.0 Library":
 		return FragmentLibrary, nil
-	} else if head == "#%RAML 1.0 DataType" {
+	case "#%RAML 1.0 DataType":
 		return FragmentDataType, nil
-	} else if head == "#%RAML 1.0 NamedExample" {
+	case "#%RAML 1.0 NamedExample":
 		return FragmentNamedExample, nil
-	} else {
+	default:
 		return FragmentUnknown, fmt.Errorf("unknown fragment kind: head: %s", head)
 	}
 }
 
 // ReadRawFile reads a file
 func ReadRawFile(path string) (io.ReadCloser, error) {
-	// Library paths must be normalized to simplify dependent libraries resolution.
-	// Convert rel to abs relative to current workdir if necessary.
-	// TODO: Add support for URI
-	if !filepath.IsAbs(path) {
-		workdir, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("get workdir: %w", err)
-		}
-		path = filepath.Join(workdir, path)
-	}
-
-	f, err := os.OpenFile(path, os.O_RDONLY, os.ModePerm)
+	f, err := openFragmentFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
+		return nil, fmt.Errorf("open fragment file: %w", err)
 	}
 
 	return f, nil
 }
 
-func (r *RAML) decodeDataType(f *os.File) (*DataType, error) {
-	path := f.Name()
-
+func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 	// TODO: This is a temporary workaround for JSON data types.
 	if strings.HasSuffix(path, ".json") {
 		data, err := io.ReadAll(f)
@@ -86,12 +72,12 @@ func (r *RAML) decodeDataType(f *os.File) (*DataType, error) {
 
 	decoder := yaml.NewDecoder(f)
 
-	dt := r.MakeDataType(f.Name())
+	dt := r.MakeDataType(path)
 	if err := decoder.Decode(&dt); err != nil {
 		return nil, fmt.Errorf("decode fragment: %w", err)
 	}
 
-	r.PutFragment(f.Name(), dt)
+	r.PutFragment(path, dt)
 
 	baseDir := filepath.Dir(dt.Location)
 	for _, include := range dt.Uses {
@@ -106,11 +92,9 @@ func (r *RAML) decodeDataType(f *os.File) (*DataType, error) {
 }
 
 func CheckFragmentKind(f *os.File, kind FragmentKind) error {
-	if kind == FragmentDataType {
-		// Allow JSON data types.
-		if strings.HasSuffix(f.Name(), ".json") {
-			return nil
-		}
+	// Allow JSON data types.
+	if kind == FragmentDataType && strings.HasSuffix(f.Name(), ".json") {
+		return nil
 	}
 	head, err := ReadHead(f)
 	if err != nil {
@@ -153,7 +137,7 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
-	dt, err := r.decodeDataType(f)
+	dt, err := r.decodeDataType(f, path)
 	if err != nil {
 		return nil, fmt.Errorf("decode data type: %w", err)
 	}
@@ -162,6 +146,8 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 }
 
 func openFragmentFile(path string) (*os.File, error) {
+	// TODO: Maybe fragments should be loaded against specified base URI.
+	// If base URI is not specified, use current workdir.
 	if !filepath.IsAbs(path) {
 		workdir, err := os.Getwd()
 		if err != nil {
@@ -176,15 +162,15 @@ func openFragmentFile(path string) (*os.File, error) {
 	return f, nil
 }
 
-func (r *RAML) decodeLibrary(f *os.File) (*Library, error) {
+func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 	decoder := yaml.NewDecoder(f)
 
-	lib := r.MakeLibrary(f.Name())
+	lib := r.MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
 		return nil, fmt.Errorf("decode fragment: %w", err)
 	}
 
-	r.PutFragment(f.Name(), lib)
+	r.PutFragment(path, lib)
 
 	// Resolve included libraries in a separate stage.
 	baseDir := filepath.Dir(lib.Location)
@@ -229,7 +215,7 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
-	lib, err := r.decodeLibrary(f)
+	lib, err := r.decodeLibrary(f, path)
 	if err != nil {
 		return nil, fmt.Errorf("decode library: %w", err)
 	}
@@ -237,8 +223,7 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 	return lib, nil
 }
 
-func (r *RAML) decodeNamedExample(f *os.File) (*NamedExample, error) {
-	path := f.Name()
+func (r *RAML) decodeNamedExample(f io.Reader, path string) (*NamedExample, error) {
 	decoder := yaml.NewDecoder(f)
 
 	ne := r.MakeNamedExample(path)
@@ -276,7 +261,7 @@ func (r *RAML) parseNamedExample(path string) (*NamedExample, error) {
 		return nil, fmt.Errorf("check fragment kind: %w", err)
 	}
 
-	ne, err := r.decodeNamedExample(f)
+	ne, err := r.decodeNamedExample(f, path)
 	if err != nil {
 		return nil, fmt.Errorf("decode named example: %w", err)
 	}
@@ -305,6 +290,21 @@ func (r *RAML) ParseFromPath(path string, opts ...ParseOpt) error {
 		}
 	}(f)
 
+	return r.parseFragment(f, f.Name(), pOpts)
+}
+
+func (r *RAML) ParseFromString(content string, fileName string, baseDir string, opts ...ParseOpt) error {
+	pOpts := &parserOptions{}
+	for _, opt := range opts {
+		opt.Apply(pOpts)
+	}
+
+	f := strings.NewReader(content)
+
+	return r.parseFragment(f, filepath.Join(baseDir, fileName), pOpts)
+}
+
+func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parserOptions) error {
 	head, err := ReadHead(f)
 	if err != nil {
 		return fmt.Errorf("read head: %w", err)
@@ -315,19 +315,19 @@ func (r *RAML) ParseFromPath(path string, opts ...ParseOpt) error {
 	}
 	switch frag {
 	case FragmentLibrary:
-		lib, err := r.decodeLibrary(f)
+		lib, err := r.decodeLibrary(f, fragmentPath)
 		if err != nil {
 			return fmt.Errorf("parse library: %w", err)
 		}
 		r.SetEntryPoint(lib)
 	case FragmentDataType:
-		dt, err := r.decodeDataType(f)
+		dt, err := r.decodeDataType(f, fragmentPath)
 		if err != nil {
 			return fmt.Errorf("parse data type: %w", err)
 		}
 		r.SetEntryPoint(dt)
 	case FragmentNamedExample:
-		ne, err := r.decodeNamedExample(f)
+		ne, err := r.decodeNamedExample(f, fragmentPath)
 		if err != nil {
 			return fmt.Errorf("parse named example: %w", err)
 		}
@@ -352,6 +352,13 @@ func (r *RAML) ParseFromPath(path string, opts ...ParseOpt) error {
 		}
 	}
 
+	if pOpts.withValidateOpt {
+		err = r.ValidateShapes()
+		if err != nil {
+			return fmt.Errorf("validate shapes: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -368,8 +375,26 @@ func ParseFromPath(path string, opts ...ParseOpt) (*RAML, error) {
 	return ParseFromPathCtx(context.Background(), path, opts...)
 }
 
+func ParseFromStringCtx(ctx context.Context, content string, fileName string, baseDir string, opts ...ParseOpt) (*RAML, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("context is nil")
+	}
+	rml := New(ctx)
+	err := rml.ParseFromString(content, fileName, baseDir, opts...)
+	return rml, err
+}
+
+func ParseFromString(content string, fileName string, baseDir string, opts ...ParseOpt) (*RAML, error) {
+	// TODO: Probably needs to be a bit more flexible. Maybe baseDir must be defined as parser option?
+	if !filepath.IsAbs(baseDir) {
+		return nil, fmt.Errorf("baseDir must be an absolute path")
+	}
+	return ParseFromStringCtx(context.Background(), content, fileName, baseDir, opts...)
+}
+
 type parserOptions struct {
-	withUnwrapOpt bool
+	withUnwrapOpt   bool
+	withValidateOpt bool
 }
 
 type ParseOpt interface {
@@ -384,4 +409,14 @@ func (parseOptWithUnwrap) Apply(opt *parserOptions) {
 
 func OptWithUnwrap() ParseOpt {
 	return parseOptWithUnwrap{}
+}
+
+type parseOptWithValidate struct{}
+
+func (parseOptWithValidate) Apply(opt *parserOptions) {
+	opt.withValidateOpt = true
+}
+
+func OptWithValidate() ParseOpt {
+	return parseOptWithValidate{}
 }

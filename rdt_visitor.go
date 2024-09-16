@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/antlr4-go/antlr/v4"
-	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-raml/rdt"
 )
@@ -53,7 +52,7 @@ func (visitor *RdtVisitor) VisitChildren(node antlr.RuleNode, target *UnknownSha
 		if _, ok := n.(*antlr.TerminalNodeImpl); ok {
 			continue
 		}
-		implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
+		implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 		s, err := visitor.Visit(n.(antlr.ParseTree), implicitAnonShape)
 		if err != nil {
 			return nil, fmt.Errorf("visit children: %w", err)
@@ -76,7 +75,7 @@ func (visitor *RdtVisitor) VisitType(ctx *rdt.TypeContext, target *UnknownShape)
 }
 
 func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *UnknownShape) (*Shape, error) {
-	s, err := visitor.raml.makeConcreteShape(target.Base(), ctx.GetText(), make([]*yaml.Node, 0))
+	s, err := visitor.raml.MakeConcreteShape(target.Base(), ctx.GetText(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
@@ -84,7 +83,7 @@ func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *Unk
 }
 
 func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
+	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -92,7 +91,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	base := target.Base()
 	base.Type = TypeUnion
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
-	nilShape, _ := visitor.raml.makeConcreteShape(&BaseShape{Location: base.Location}, "nil", make([]*yaml.Node, 0))
+	nilShape, _ := visitor.raml.MakeConcreteShape(visitor.raml.MakeBaseShape("", base.Location, &base.Position), "nil", nil)
 	var unionShape Shape = &UnionShape{
 		BaseShape: *base,
 		UnionFacets: UnionFacets{
@@ -103,7 +102,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 }
 
 func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &Position{})}
+	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -151,16 +150,16 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	if len(parts) == 1 {
 		ref = frag.Types[parts[0]]
 		if ref == nil {
-			return nil, fmt.Errorf("reference %s not found", parts[0])
+			return nil, fmt.Errorf("reference \"%s\" not found", parts[0])
 		}
 	} else if len(parts) == 2 {
 		lib := frag.Uses[parts[0]]
 		if lib == nil {
-			return nil, fmt.Errorf("library %s not found", parts[0])
+			return nil, fmt.Errorf("library \"%s\" not found", parts[0])
 		}
 		ref = lib.Link.Types[parts[1]]
 		if ref == nil {
-			return nil, fmt.Errorf("reference %s not found", parts[1])
+			return nil, fmt.Errorf("reference \"%s\" not found", parts[1])
 		}
 	} else {
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
@@ -171,10 +170,16 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	if err := visitor.raml.resolveShape(ref); err != nil {
 		return nil, fmt.Errorf("resolve: %w", err)
 	}
-	s, err := visitor.raml.makeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
+	s, err := visitor.raml.MakeConcreteShape(target.Base(), (*ref).Base().Type, target.facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
-	s.Base().Inherits = append(target.Base().Inherits, ref)
+	// If target.facets is nil (makeShape returned nil instead of empty array) then reference is an alias.
+	s.Base().TypeLabel = shapeType
+	if target.facets == nil {
+		s.Base().Alias = ref
+	} else {
+		s.Base().Inherits = append(s.Base().Inherits, ref)
+	}
 	return &s, nil
 }

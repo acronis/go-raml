@@ -24,16 +24,41 @@ func Test_main(t *testing.T) {
 	shapesAll := rml.GetShapes()
 	fmt.Printf("Total shapes: %d\n", len(shapesAll))
 
-	for _, shape := range shapesAll {
-		s, unresolved := shape.(*UnknownShape)
-		if unresolved {
-			t.Errorf("Unknown shape found %s", s.Name)
+	conv := NewJSONSchemaConverter()
+	for _, frag := range rml.fragmentsCache {
+		switch f := frag.(type) {
+		case *Library:
+			for _, shape := range f.AnnotationTypes {
+				s := *shape
+				conv.Convert(s)
+				// b, err := json.MarshalIndent(schema, "", "  ")
+				// if err != nil {
+				// 	t.Errorf("Error marshalling schema: %s", err)
+				// }
+				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+				//fmt.Println(string(b))
+			}
+			for _, shape := range f.Types {
+				s := *shape
+				conv.Convert(s)
+				// b, err := json.MarshalIndent(schema, "", "  ")
+				// if err != nil {
+				// 	t.Errorf("Error marshalling schema: %s", err)
+				// }
+				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+				//fmt.Println(string(b))
+			}
+		case *DataType:
+			s := *f.Shape
+			conv.Convert(s)
+			// b, err := json.MarshalIndent(schema, "", "  ")
+			// if err != nil {
+			// 	t.Errorf("Error marshalling schema: %s", err)
+			// }
+			// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+			//fmt.Println(string(b))
 		}
-		fmt.Printf("Shape: %s: resolved: %v: unwrapped: %v\n", shape, !unresolved, shape.Base().unwrapped)
 	}
-
-	fmt.Printf("Resolved: %d\n", resolved)
-	fmt.Printf("Unresolved: %d\n", unresolved)
 
 	printMemUsage(t)
 }
