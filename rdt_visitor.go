@@ -148,17 +148,18 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	parts := strings.Split(shapeType, ".")
 	var ref *Shape
 	if len(parts) == 1 {
-		ref = frag.Types[parts[0]]
-		if ref == nil {
+		r, ok := frag.Types.Get(parts[0])
+		if !ok {
 			return nil, fmt.Errorf("reference \"%s\" not found", parts[0])
 		}
+		ref = r
 	} else if len(parts) == 2 {
-		lib := frag.Uses[parts[0]]
-		if lib == nil {
+		lib, ok := frag.Uses.Get(parts[0])
+		if !ok {
 			return nil, fmt.Errorf("library \"%s\" not found", parts[0])
 		}
-		ref = lib.Link.Types[parts[1]]
-		if ref == nil {
+		ref, ok = lib.Link.Types.Get(parts[1])
+		if !ok {
 			return nil, fmt.Errorf("reference \"%s\" not found", parts[1])
 		}
 	} else {

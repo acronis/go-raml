@@ -21,23 +21,25 @@ func (r *RAML) UnwrapShapes() error {
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
-			for k, shape := range f.AnnotationTypes {
+			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
+				k, shape := pair.Key, pair.Value
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
 					return NewWrappedError("unwrap shape", err, f.Location)
 				}
 				ptr := &us
-				f.AnnotationTypes[k] = ptr
+				f.AnnotationTypes.Set(k, ptr)
 				r.PutAnnotationTypeIntoFragment(us.Base().Name, f.Location, ptr)
 				r.PutShapePtr(ptr)
 			}
-			for k, shape := range f.Types {
+			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
+				k, shape := pair.Key, pair.Value
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
 					return NewWrappedError("unwrap shape", err, f.Location)
 				}
 				ptr := &us
-				f.Types[k] = ptr
+				f.Types.Set(k, ptr)
 				r.PutTypeIntoFragment(us.Base().Name, f.Location, ptr)
 				r.PutShapePtr(ptr)
 			}
@@ -71,14 +73,16 @@ func (r *RAML) inheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 	// to keep the original ID when inheriting properties.
 	sourceBase.Id = targetBase.Id
 	// TODO: Maybe needs a bool switch for flexibility?
-	for k, item := range sourceBase.CustomShapeFacets {
-		if _, ok := targetBase.CustomShapeFacets[k]; !ok {
-			targetBase.CustomShapeFacets[k] = item
+	for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+		k, item := pair.Key, pair.Value
+		if _, ok := targetBase.CustomShapeFacets.Get(k); !ok {
+			targetBase.CustomShapeFacets.Set(k, item)
 		}
 	}
-	for k, item := range sourceBase.CustomDomainProperties {
-		if _, ok := targetBase.CustomDomainProperties[k]; !ok {
-			targetBase.CustomDomainProperties[k] = item
+	for pair := sourceBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
+		k, item := pair.Key, pair.Value
+		if _, ok := targetBase.CustomDomainProperties.Get(k); !ok {
+			targetBase.CustomDomainProperties.Set(k, item)
 		}
 	}
 	// TODO: CustomShapeFacetDefinitions are not inheritable in context of unwrapper. But maybe they can be inheritable in other context?
@@ -229,7 +233,8 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		*t.Items = us
 	} else if t, ok := target.(*ObjectShape); ok {
 		if t.Properties != nil {
-			for _, prop := range t.Properties {
+			for pair := t.Properties.Oldest(); pair != nil; pair = pair.Next() {
+				prop := pair.Value
 				us, err := r.UnwrapShape(prop.Shape, history)
 				if err != nil {
 					return nil, NewWrappedError("object property unwrap", err, base.Location, WithPosition(&base.Position))
@@ -238,7 +243,8 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 			}
 		}
 		if t.PatternProperties != nil {
-			for _, prop := range t.PatternProperties {
+			for pair := t.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+				prop := pair.Value
 				us, err := r.UnwrapShape(prop.Shape, history)
 				if err != nil {
 					return nil, NewWrappedError("object pattern property unwrap", err, base.Location, WithPosition(&base.Position))
@@ -256,7 +262,8 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		}
 	}
 
-	for _, prop := range base.CustomShapeFacetDefinitions {
+	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		prop := pair.Value
 		us, err := r.UnwrapShape(prop.Shape, history)
 		if err != nil {
 			return nil, NewWrappedError("custom shape facet definition unwrap", err, base.Location, WithPosition(&base.Position))

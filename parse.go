@@ -80,7 +80,8 @@ func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 	r.PutFragment(path, dt)
 
 	baseDir := filepath.Dir(dt.Location)
-	for _, include := range dt.Uses {
+	for pair := dt.Uses.Oldest(); pair != nil; pair = pair.Next() {
+		include := pair.Value
 		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
 			return nil, fmt.Errorf("parse library: %w", err)
@@ -174,7 +175,8 @@ func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 
 	// Resolve included libraries in a separate stage.
 	baseDir := filepath.Dir(lib.Location)
-	for _, include := range lib.Uses {
+	for pair := lib.Uses.Oldest(); pair != nil; pair = pair.Next() {
+		include := pair.Value
 
 		slibloc := filepath.Join(baseDir, include.Value)
 		sublib, err := r.parseLibrary(slibloc)

@@ -1,6 +1,10 @@
 package raml
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	orderedmap "github.com/wk8/go-ordered-map/v2"
+)
 
 // Adapted from https://github.com/invopop/jsonschema/blob/main/schema.go
 
@@ -28,10 +32,10 @@ type JSONSchema struct {
 
 	Items *JSONSchema `json:"items,omitempty"`
 
-	Properties           map[string]*JSONSchema `json:"properties,omitempty"`
-	PatternProperties    map[string]*JSONSchema `json:"patternProperties,omitempty"`
-	AdditionalProperties *bool                  `json:"additionalProperties,omitempty"`
-	PropertyNames        *JSONSchema            `json:"propertyNames,omitempty"`
+	Properties           *orderedmap.OrderedMap[string, *JSONSchema] `json:"properties,omitempty"`
+	PatternProperties    *orderedmap.OrderedMap[string, *JSONSchema] `json:"patternProperties,omitempty"`
+	AdditionalProperties *bool                                       `json:"additionalProperties,omitempty"`
+	PropertyNames        *JSONSchema                                 `json:"propertyNames,omitempty"`
 
 	Type             string      `json:"type,omitempty"`
 	Enum             []any       `json:"enum,omitempty"`

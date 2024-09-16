@@ -54,17 +54,18 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 	switch frag := r.GetFragment(de.Location).(type) {
 	case *Library:
 		if len(parts) == 1 {
-			ref = frag.AnnotationTypes[parts[0]]
-			if ref == nil {
+			r, ok := frag.AnnotationTypes.Get(parts[0])
+			if !ok {
 				return fmt.Errorf("reference \"%s\" not found", parts[0])
 			}
+			ref = r
 		} else if len(parts) == 2 {
-			lib := frag.Uses[parts[0]]
-			if lib == nil {
+			lib, ok := frag.Uses.Get(parts[0])
+			if !ok {
 				return fmt.Errorf("library \"%s\" not found", parts[0])
 			}
-			ref = lib.Link.AnnotationTypes[parts[1]]
-			if ref == nil {
+			ref, ok = lib.Link.AnnotationTypes.Get(parts[1])
+			if !ok {
 				return fmt.Errorf("reference \"%s\" not found", parts[1])
 			}
 		} else {
@@ -73,12 +74,12 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 	case *DataType:
 		// DataType cannot have local reference to annotation type.
 		if len(parts) == 2 {
-			lib := frag.Uses[parts[0]]
-			if lib == nil {
+			lib, ok := frag.Uses.Get(parts[0])
+			if !ok {
 				return fmt.Errorf("library \"%s\" not found", parts[0])
 			}
-			ref = lib.Link.AnnotationTypes[parts[1]]
-			if ref == nil {
+			ref, ok = lib.Link.AnnotationTypes.Get(parts[1])
+			if !ok {
 				return fmt.Errorf("reference \"%s\" not found", parts[1])
 			}
 		} else {

@@ -223,7 +223,7 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -379,7 +379,7 @@ func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -522,7 +522,7 @@ func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -642,7 +642,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -729,7 +729,7 @@ func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 
@@ -816,7 +816,7 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			if err != nil {
 				return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 			}
-			s.CustomShapeFacets[node.Value] = n
+			s.CustomShapeFacets.Set(node.Value, n)
 		}
 	}
 	return nil
@@ -873,7 +873,7 @@ func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 		}
-		s.CustomShapeFacets[node.Value] = n
+		s.CustomShapeFacets.Set(node.Value, n)
 	}
 	return nil
 }
@@ -929,7 +929,7 @@ func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 		}
-		s.CustomShapeFacets[node.Value] = n
+		s.CustomShapeFacets.Set(node.Value, n)
 	}
 	return nil
 }
@@ -985,7 +985,7 @@ func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 		}
-		s.CustomShapeFacets[node.Value] = n
+		s.CustomShapeFacets.Set(node.Value, n)
 	}
 	return nil
 }
@@ -1032,7 +1032,7 @@ func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 		}
-		s.CustomShapeFacets[node.Value] = n
+		s.CustomShapeFacets.Set(node.Value, n)
 	}
 	return nil
 }
@@ -1082,7 +1082,7 @@ func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if err != nil {
 			return NewWrappedError("make node", err, s.Location, WithNodePosition(valueNode))
 		}
-		s.CustomShapeFacets[node.Value] = n
+		s.CustomShapeFacets.Set(node.Value, n)
 	}
 	return nil
 }
