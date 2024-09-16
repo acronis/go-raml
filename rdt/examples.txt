@@ -1,0 +1,13 @@
+string
+integer?
+date-time[]
+Ref?
+Ref[]
+external.Ref
+external.Ref?
+external.Ref[]
+string | nil
+Ref | string
+(string | integer)?
+(string | integer)[]
+(string | integer) | Ref[] | external.Ref?
