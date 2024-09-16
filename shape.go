@@ -283,6 +283,8 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 				}
 				base.TypeLabel = shapeTypeNode.Value
 				base.Link = dt
+			} else if shapeTypeNode.Tag == "!!null" {
+				shapeType = TypeString
 			} else {
 				return nil, NewError("type must be string", location, WithNodePosition(shapeTypeNode))
 			}
