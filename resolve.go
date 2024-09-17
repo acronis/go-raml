@@ -24,25 +24,45 @@ This helps to avoid additional traversals of nested shapes since the traverse is
 generate UnknownShapes and add them to `unresolvedShapes` recursively as they occur.
 */
 func (r *RAML) resolveShapes() error {
+	var st *stacktrace.StackTrace
 	for r.unresolvedShapes.Len() > 0 {
 		v := r.unresolvedShapes.Front()
 		s := v.Value.(*Shape)
 		if err := r.resolveShape(s); err != nil {
-			return stacktrace.NewWrapped("resolve shape", err, (*s).Base().Location, stacktrace.WithPosition(&(*s).Base().Position),
+			se := stacktrace.NewWrapped("resolve shape", err, (*s).Base().Location, stacktrace.WithPosition(&(*s).Base().Position),
 				stacktrace.WithType(stacktrace.TypeResolving))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+			continue
 		}
 		r.unresolvedShapes.Remove(v)
+	}
+	if st != nil {
+		return st
 	}
 
 	return nil
 }
 
 func (r *RAML) resolveDomainExtensions() error {
+	var st *stacktrace.StackTrace
 	for _, de := range r.domainExtensions {
 		if err := r.resolveDomainExtension(de); err != nil {
-			return stacktrace.NewWrapped("resolve domain extension", err, de.Location, stacktrace.WithPosition(&de.Position),
+			se := stacktrace.NewWrapped("resolve domain extension", err, de.Location, stacktrace.WithPosition(&de.Position),
 				stacktrace.WithType(stacktrace.TypeResolving))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+			continue
 		}
+	}
+	if st != nil {
+		return st
 	}
 
 	return nil

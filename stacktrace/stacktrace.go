@@ -177,6 +177,8 @@ type StackTrace struct {
 	// Info is the additional information about the error.
 	Info StructInfo
 
+	List []*StackTrace
+
 	typeIsSet bool
 }
 
@@ -247,6 +249,9 @@ func (st *StackTrace) String() string {
 	if st.Wrapped != nil {
 		result = fmt.Sprintf("%s: %s", result, st.Wrapped.String())
 	}
+	if len(st.List) > 0 {
+		result = fmt.Sprintf("%s: and more (%d)...", result, len(st.List))
+	}
 	return result
 }
 
@@ -259,24 +264,27 @@ func (st *StackTrace) Error() string {
 // Unwrap checks if the given error is an StackTrace and returns it.
 // It returns false if the error is not an StackTrace.
 func Unwrap(err error) (*StackTrace, bool) {
+	if err == nil {
+		return nil, false
+	}
 	err = FixYamlError(err)
-	e, ok := err.(*StackTrace)
+	st, ok := err.(*StackTrace)
 	if !ok {
 		wrappedErr := errors.Unwrap(err)
 		if wrappedErr == nil {
 			return nil, false
 		}
-		e, ok = Unwrap(wrappedErr)
+		st, ok = Unwrap(wrappedErr)
 		if ok {
-			msg := strings.ReplaceAll(err.Error(), e.OrigStringW(), "")
+			msg := strings.ReplaceAll(err.Error(), st.OrigStringW(), "")
 			msg = strings.TrimSuffix(msg, ": ")
-			e.WrappingMessage = msg
-			e.Err = err
+			st.WrappingMessage = msg
+			st.Err = err
 		}
 	}
 
 	// Clone the error to avoid modifying the original error.
-	return e.Clone(), ok
+	return st.Clone(), ok
 }
 
 // New creates a new StackTrace.
@@ -376,11 +384,11 @@ func WithType(errType Type) Option {
 func NewWrapped(message string, err error, location string, opts ...Option) *StackTrace {
 	err = FixYamlError(err)
 	resultErr := &StackTrace{}
-	if e, ok := Unwrap(err); ok {
+	if st, ok := Unwrap(err); ok {
 		resultErr = New(
 			message,
 			location,
-		).Wrap(e).SetErr(e.Err)
+		).Wrap(st).SetErr(st.Err)
 	} else {
 		resultErr = New(fmt.Sprintf("%s: %s", message, err.Error()), location).SetErr(err)
 	}
@@ -441,6 +449,15 @@ func (st *StackTrace) SetErr(err error) *StackTrace {
 // Wrap wraps the given StackTrace and returns it
 func (st *StackTrace) Wrap(w *StackTrace) *StackTrace {
 	st.Wrapped = w
+	return st
+}
+
+// Append adds the given StackTrace to the list of StackTraces and returns it
+func (st *StackTrace) Append(e *StackTrace) *StackTrace {
+	if st.List == nil {
+		st.List = make([]*StackTrace, 0)
+	}
+	st.List = append(st.List, e)
 	return st
 }
 
