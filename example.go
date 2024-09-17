@@ -3,6 +3,8 @@ package raml
 import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
+
+	"github.com/acronis/go-raml/stacktrace"
 )
 
 // makeExample creates an example from the given value node
@@ -11,7 +13,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 		Name:                   name,
 		Strict:                 true,
 		Location:               location,
-		Position:               Position{Line: value.Line, Column: value.Column},
+		Position:               stacktrace.Position{Line: value.Line, Column: value.Column},
 		CustomDomainProperties: orderedmap.New[string, *DomainExtension](0),
 		raml:                   r,
 	}
@@ -37,26 +39,26 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 				if IsCustomDomainExtensionNode(node.Value) {
 					name, de, err := r.unmarshalCustomDomainExtension(location, node, valueNode)
 					if err != nil {
-						return nil, NewWrappedError("unmarshal custom domain extension", err, location, WithNodePosition(valueNode))
+						return nil, stacktrace.NewWrapped("unmarshal custom domain extension", err, location, stacktrace.WithNodePosition(valueNode))
 					}
 					ex.CustomDomainProperties.Set(name, de)
 				} else if node.Value == "strict" {
 					if err := valueNode.Decode(&ex.Strict); err != nil {
-						return nil, NewWrappedError("decode strict", err, location, WithNodePosition(valueNode))
+						return nil, stacktrace.NewWrapped("decode strict", err, location, stacktrace.WithNodePosition(valueNode))
 					}
 				} else if node.Value == "displayName" {
 					if err := valueNode.Decode(&ex.DisplayName); err != nil {
-						return nil, NewWrappedError("decode displayName", err, location, WithNodePosition(valueNode))
+						return nil, stacktrace.NewWrapped("decode displayName", err, location, stacktrace.WithNodePosition(valueNode))
 					}
 				} else if node.Value == "description" {
 					if err := valueNode.Decode(&ex.Description); err != nil {
-						return nil, NewWrappedError("decode description", err, location, WithNodePosition(valueNode))
+						return nil, stacktrace.NewWrapped("decode description", err, location, stacktrace.WithNodePosition(valueNode))
 					}
 				}
 			}
 			n, err := r.makeNode(valueKey, location)
 			if err != nil {
-				return nil, NewWrappedError("make node", err, location, WithNodePosition(valueKey))
+				return nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(valueKey))
 			}
 			ex.Data = n
 			return ex, nil
@@ -65,7 +67,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 	// In all other cases, the example is considered as a value node
 	n, err := r.makeNode(value, location)
 	if err != nil {
-		return nil, NewWrappedError("make node", err, location, WithNodePosition(value))
+		return nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(value))
 	}
 	ex.Data = n
 	return ex, nil
@@ -83,6 +85,6 @@ type Example struct {
 	CustomDomainProperties *orderedmap.OrderedMap[string, *DomainExtension]
 
 	Location string
-	Position
+	stacktrace.Position
 	raml *RAML
 }

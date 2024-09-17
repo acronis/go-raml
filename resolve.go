@@ -7,6 +7,7 @@ import (
 	"github.com/antlr4-go/antlr/v4"
 
 	"github.com/acronis/go-raml/rdt"
+	"github.com/acronis/go-raml/stacktrace"
 )
 
 /*
@@ -27,7 +28,8 @@ func (r *RAML) resolveShapes() error {
 		v := r.unresolvedShapes.Front()
 		s := v.Value.(*Shape)
 		if err := r.resolveShape(s); err != nil {
-			return NewWrappedError("resolve shape", err, (*s).Base().Location, WithPosition(&(*s).Base().Position))
+			return stacktrace.NewWrapped("resolve shape", err, (*s).Base().Location, stacktrace.WithPosition(&(*s).Base().Position),
+				stacktrace.WithType(stacktrace.TypeResolving))
 		}
 		r.unresolvedShapes.Remove(v)
 	}
@@ -38,7 +40,8 @@ func (r *RAML) resolveShapes() error {
 func (r *RAML) resolveDomainExtensions() error {
 	for _, de := range r.domainExtensions {
 		if err := r.resolveDomainExtension(de); err != nil {
-			return NewWrappedError("resolve domain extension", err, de.Location, WithPosition(&de.Position))
+			return stacktrace.NewWrapped("resolve domain extension", err, de.Location, stacktrace.WithPosition(&de.Position),
+				stacktrace.WithType(stacktrace.TypeResolving))
 		}
 	}
 
@@ -131,7 +134,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 	if link != nil {
 		s, err := r.resolveLink(target)
 		if err != nil {
-			return NewWrappedError("resolve link", err, target.Base().Location, WithPosition(&target.Base().Position))
+			return stacktrace.NewWrapped("resolve link", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -142,7 +145,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 		// Special case for multiple inheritance
 		s, err := r.resolveMultipleInheritance(target)
 		if err != nil {
-			return NewWrappedError("resolve multiple inheritance", err, target.Base().Location, WithPosition(&target.Base().Position))
+			return stacktrace.NewWrapped("resolve multiple inheritance", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -157,7 +160,7 @@ func (r *RAML) resolveShape(shape *Shape) error {
 
 	s, err := visitor.Visit(tree, target.(*UnknownShape))
 	if err != nil {
-		return NewWrappedError("visit type expression", err, target.Base().Location, WithPosition(&target.Base().Position))
+		return stacktrace.NewWrapped("visit type expression", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
 	}
 	*shape = *s
 	return nil

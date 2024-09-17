@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/acronis/go-raml/stacktrace"
 )
 
 type Nodes []*Node
@@ -29,7 +31,7 @@ type Node struct {
 	//Link *Node
 
 	Location string
-	Position
+	stacktrace.Position
 	raml *RAML
 }
 
@@ -40,12 +42,12 @@ func (n *Node) String() string {
 func (r *RAML) makeNode(node *yaml.Node, location string) (*Node, error) {
 	data, err := yamlNodeToDataNode(node, location, false)
 	if err != nil {
-		return nil, NewWrappedError("yaml node to data node", err, location)
+		return nil, stacktrace.NewWrapped("yaml node to data node", err, location)
 	}
 	return &Node{
 		Value:    data,
 		Location: location,
-		Position: Position{node.Line, node.Column},
+		Position: stacktrace.Position{node.Line, node.Column},
 		raml:     r,
 	}, nil
 }
@@ -53,7 +55,7 @@ func (r *RAML) makeNode(node *yaml.Node, location string) (*Node, error) {
 func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
 	switch node.Kind {
 	default:
-		return nil, NewError("unexpected kind", location, WithInfo("node.kind", Stringer(node.Kind)), WithNodePosition(node))
+		return nil, stacktrace.New("unexpected kind", location, stacktrace.WithInfo("node.kind", stacktrace.Stringer(node.Kind)), stacktrace.WithNodePosition(node))
 	case yaml.DocumentNode:
 		return yamlNodeToDataNode(node.Content[0], location, isInclude)
 	case yaml.ScalarNode:
@@ -61,7 +63,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 		default:
 			var val any
 			if err := node.Decode(&val); err != nil {
-				return nil, NewWrappedError("decode scalar node", err, location)
+				return nil, stacktrace.NewWrapped("decode scalar node", err, location)
 			}
 			return val, nil
 		case "!!str":
@@ -69,7 +71,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			if node.Value != "" && node.Value[0] == '{' {
 				var val any
 				if err := json.Unmarshal([]byte(node.Value), &val); err != nil {
-					return nil, NewWrappedError("json unmarshal", err, location, WithNodePosition(node))
+					return nil, stacktrace.NewWrapped("json unmarshal", err, location, stacktrace.WithNodePosition(node))
 				}
 				return val, nil
 			}
@@ -78,7 +80,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			return node.Value, nil
 		case "!include":
 			if isInclude {
-				return nil, NewError("nested includes are not allowed", location, WithNodePosition(node))
+				return nil, stacktrace.New("nested includes are not allowed", location, stacktrace.WithNodePosition(node))
 			}
 			// TODO: In case with includes that are explicitly required to be string value, probably need to introduce a new tag.
 			// !includestr sounds like a good candidate.
@@ -87,7 +89,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			// TODO: Need to refactor and move out IO logic from this function.
 			r, err := ReadRawFile(filepath.Join(baseDir, node.Value))
 			if err != nil {
-				return nil, NewWrappedError("include: read raw file", err, location, WithNodePosition(node), WithInfo("path", fragmentPath))
+				return nil, stacktrace.NewWrapped("include: read raw file", err, location, stacktrace.WithNodePosition(node), stacktrace.WithInfo("path", fragmentPath))
 			}
 			defer func(r io.ReadCloser) {
 				err = r.Close()
@@ -101,20 +103,20 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 				var data any
 				d := json.NewDecoder(r)
 				if err := d.Decode(&data); err != nil {
-					return nil, NewWrappedError("include: json decode", err, fragmentPath, WithNodePosition(node))
+					return nil, stacktrace.NewWrapped("include: json decode", err, fragmentPath, stacktrace.WithNodePosition(node))
 				}
 				return data, nil
 			} else if ext == ".yaml" || ext == ".yml" {
 				var data yaml.Node
 				d := yaml.NewDecoder(r)
 				if err := d.Decode(&data); err != nil {
-					return nil, NewWrappedError("include: yaml decode", err, fragmentPath, WithNodePosition(node))
+					return nil, stacktrace.NewWrapped("include: yaml decode", err, fragmentPath, stacktrace.WithNodePosition(node))
 				}
 				return yamlNodeToDataNode(&data, fragmentPath, true)
 			} else {
 				v, err := io.ReadAll(r)
 				if err != nil {
-					return nil, NewWrappedError("include: read all", err, fragmentPath, WithNodePosition(node))
+					return nil, stacktrace.NewWrapped("include: read all", err, fragmentPath, stacktrace.WithNodePosition(node))
 				}
 				return string(v), nil
 			}
@@ -126,7 +128,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			value := node.Content[i+1]
 			data, err := yamlNodeToDataNode(value, location, isInclude)
 			if err != nil {
-				return nil, NewWrappedError("yaml node to data node", err, location, WithNodePosition(value))
+				return nil, stacktrace.NewWrapped("yaml node to data node", err, location, stacktrace.WithNodePosition(value))
 			}
 			properties[key] = data
 		}
@@ -136,7 +138,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 		for i, item := range node.Content {
 			data, err := yamlNodeToDataNode(item, location, isInclude)
 			if err != nil {
-				return nil, NewWrappedError("yaml node to data node", err, location, WithNodePosition(item))
+				return nil, stacktrace.NewWrapped("yaml node to data node", err, location, stacktrace.WithNodePosition(item))
 			}
 			items[i] = data
 		}
