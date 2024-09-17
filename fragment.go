@@ -5,6 +5,8 @@ import (
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
+
+	"github.com/acronis/go-raml/stacktrace"
 )
 
 type FragmentKind int
@@ -51,13 +53,13 @@ type LibraryLink struct {
 	Link *Library
 
 	Location string
-	Position
+	stacktrace.Position
 }
 
 // UnmarshalYAML unmarshals a Library from a yaml.Node, implementing the yaml.Unmarshaler interface
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return NewError("must be map", l.Location, WithNodePosition(value))
+		return stacktrace.New("must be map", l.Location, stacktrace.WithNodePosition(value))
 	}
 	l.CustomDomainProperties = orderedmap.New[string, *DomainExtension](0)
 
@@ -67,7 +69,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		if IsCustomDomainExtensionNode(node.Value) {
 			name, de, err := l.raml.unmarshalCustomDomainExtension(l.Location, node, valueNode)
 			if err != nil {
-				return NewWrappedError("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
+				return stacktrace.NewWrapped("unmarshal custom domain extension", err, l.Location, stacktrace.WithNodePosition(valueNode))
 			}
 			l.CustomDomainProperties.Set(name, de)
 		} else if node.Value == "uses" {
@@ -83,7 +85,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				l.Uses.Set(name, &LibraryLink{
 					Value:    path.Value,
 					Location: l.Location,
-					Position: Position{path.Line, path.Column},
+					Position: stacktrace.Position{path.Line, path.Column},
 				})
 			}
 		} else if node.Value == "types" {
@@ -98,7 +100,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := l.raml.makeShape(data, name, l.Location)
 				if err != nil {
-					return NewWrappedError("parse types: make shape", err, l.Location, WithNodePosition(data))
+					return stacktrace.NewWrapped("parse types: make shape", err, l.Location, stacktrace.WithNodePosition(data))
 				}
 				l.Types.Set(name, shape)
 				l.raml.PutTypeIntoFragment(name, l.Location, shape)
@@ -116,7 +118,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				data := valueNode.Content[j+1]
 				shape, err := l.raml.makeShape(data, name, l.Location)
 				if err != nil {
-					return NewWrappedError("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
+					return stacktrace.NewWrapped("parse annotation types: make shape", err, l.Location, stacktrace.WithNodePosition(data))
 				}
 				l.AnnotationTypes.Set(name, shape)
 				l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
@@ -124,7 +126,7 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 			}
 		} else if node.Value == "usage" {
 			if err := valueNode.Decode(&l.Usage); err != nil {
-				return NewWrappedError("parse usage: value node decode", err, l.Location, WithNodePosition(valueNode))
+				return stacktrace.NewWrapped("parse usage: value node decode", err, l.Location, stacktrace.WithNodePosition(valueNode))
 			}
 		}
 	}
@@ -156,7 +158,7 @@ func (dt *DataType) GetLocation() string {
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return NewError("must be map", dt.Location, WithNodePosition(value))
+		return stacktrace.New("must be map", dt.Location, stacktrace.WithNodePosition(value))
 	}
 
 	shapeValue := &yaml.Node{
@@ -180,7 +182,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 				dt.Uses.Set(name, &LibraryLink{
 					Value:    path.Value,
 					Location: dt.Location,
-					Position: Position{path.Line, path.Column},
+					Position: stacktrace.Position{path.Line, path.Column},
 				})
 			}
 		} else {
@@ -189,7 +191,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	}
 	shape, err := dt.raml.makeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
 	if err != nil {
-		return NewWrappedError("parse types: make shape", err, dt.Location, WithNodePosition(shapeValue))
+		return stacktrace.NewWrapped("parse types: make shape", err, dt.Location, stacktrace.WithNodePosition(shapeValue))
 	}
 	dt.Shape = shape
 	return nil
@@ -221,7 +223,7 @@ func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
 		},
 	}
 	if err := node.Decode(&dt); err != nil {
-		return nil, NewWrappedError("decode fragment", err, path)
+		return nil, stacktrace.NewWrapped("decode fragment", err, path)
 	}
 	return dt, nil
 }
@@ -248,7 +250,7 @@ func (r *RAML) MakeNamedExample(path string) *NamedExample {
 
 func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return NewError("must be map", ne.Location, WithNodePosition(value))
+		return stacktrace.New("must be map", ne.Location, stacktrace.WithNodePosition(value))
 	}
 	examples := orderedmap.New[string, *Example](len(value.Content) / 2)
 	for i := 0; i != len(value.Content); i += 2 {
@@ -256,7 +258,7 @@ func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 		valueNode := value.Content[i+1]
 		example, err := ne.raml.makeExample(valueNode, node.Value, ne.Location)
 		if err != nil {
-			return NewWrappedError("make example", err, ne.Location, WithNodePosition(valueNode))
+			return stacktrace.NewWrapped("make example", err, ne.Location, stacktrace.WithNodePosition(valueNode))
 		}
 		examples.Set(node.Value, example)
 	}

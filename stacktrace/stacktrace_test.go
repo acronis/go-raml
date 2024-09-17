@@ -1,4 +1,4 @@
-package raml
+package stacktrace
 
 import (
 	"errors"
@@ -13,14 +13,14 @@ func TestUnwrapError(t *testing.T) {
 	type args struct {
 		err error
 	}
-	firstValidErr := NewError(
+	firstValidErr := New(
 		"first validation error",
 		"/usr/local/raml.raml",
 	).SetPosition(&Position{Line: 10, Column: 1})
 	simpleErr := fmt.Errorf("simple error")
 	wrappedSimpleErr := fmt.Errorf("wrapped simpleErr: %w", simpleErr)
 	wrappedFirstValidErr := fmt.Errorf("wrapped firstValidErr: %w", firstValidErr)
-	secondValidErr := NewWrappedError(
+	secondValidErr := NewWrapped(
 		"wrapped firstValidErr",
 		firstValidErr,
 		"/usr/local/raml2.raml",
@@ -29,7 +29,7 @@ func TestUnwrapError(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *Error
+		want    *StackTrace
 		want1   bool
 		wantMsg string
 	}{
@@ -47,9 +47,9 @@ func TestUnwrapError(t *testing.T) {
 			args: args{
 				err: wrappedFirstValidErr,
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				Type:            TypeValidating,
 				Message:         firstValidErr.Message,
 				Location:        firstValidErr.Location,
 				Position:        firstValidErr.Position,
@@ -86,11 +86,11 @@ func TestUnwrapError(t *testing.T) {
 		{
 			name: "Check validation error wrapped in another error",
 			args: args{
-				err: NewWrappedError("wrapped", wrappedSimpleErr, "/usr/local/raml3.raml").SetPosition(&Position{Line: 30, Column: 3}),
+				err: NewWrapped("wrapped", wrappedSimpleErr, "/usr/local/raml3.raml").SetPosition(&Position{Line: 30, Column: 3}),
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				Type:            TypeValidating,
 				Message:         fmt.Sprintf("wrapped: %s", wrappedSimpleErr.Error()),
 				Location:        "/usr/local/raml3.raml",
 				Position:        &Position{Line: 30, Column: 3},
@@ -105,17 +105,17 @@ func TestUnwrapError(t *testing.T) {
 			args: args{
 				err: wrappedSecondValidErr,
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				Type:            TypeValidating,
 				Message:         secondValidErr.Message,
 				Location:        secondValidErr.Location,
 				Position:        secondValidErr.Position,
 				Err:             wrappedSecondValidErr,
 				WrappingMessage: "wrapped secondValidErr",
-				Wrapped: &Error{
+				Wrapped: &StackTrace{
 					Severity: SeverityError,
-					ErrType:  ErrTypeValidating,
+					Type:     TypeValidating,
 					Message:  firstValidErr.Message,
 					Location: firstValidErr.Location,
 					Position: firstValidErr.Position,
@@ -127,16 +127,16 @@ func TestUnwrapError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := UnwrapError(tt.args.err)
+			got, got1 := Unwrap(tt.args.err)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("UnwrapError()\ngot:\n%v\nwant:\n%v\n", got, tt.want)
+				t.Errorf("Unwrap()\ngot:\n%v\nwant:\n%v\n", got, tt.want)
 			}
 			if got1 != tt.want1 {
-				t.Errorf("UnwrapError() got1 = %v, want %v", got1, tt.want1)
+				t.Errorf("Unwrap() got1 = %v, want %v", got1, tt.want1)
 			}
 			if got != nil {
 				if got.Error() != tt.wantMsg {
-					t.Errorf("UnwrapError() Message\ngot:\n%s\nwant:\n%s\n", got.Error(), tt.wantMsg)
+					t.Errorf("Unwrap() Message\ngot:\n%s\nwant:\n%s\n", got.Error(), tt.wantMsg)
 				}
 			}
 		})
@@ -541,7 +541,7 @@ func TestError_SetSeverity(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *Error
+		want   *StackTrace
 	}{
 		{
 			name: "Check set severity",
@@ -551,14 +551,14 @@ func TestError_SetSeverity(t *testing.T) {
 			args: args{
 				severity: SeverityCritical,
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity: SeverityCritical,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				Severity: tt.fields.Severity,
 			}
 			if got := v.SetSeverity(tt.args.severity); !reflect.DeepEqual(got, tt.want) {
@@ -570,34 +570,34 @@ func TestError_SetSeverity(t *testing.T) {
 
 func TestError_SetType(t *testing.T) {
 	type fields struct {
-		ErrType ErrType
+		ErrType Type
 	}
 	type args struct {
-		errType ErrType
+		errType Type
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
-		want   *Error
+		want   *StackTrace
 	}{
 		{
 			name: "Check set type",
 			fields: fields{
-				ErrType: ErrTypeValidating,
+				ErrType: TypeValidating,
 			},
 			args: args{
-				errType: ErrTypeParsing,
+				errType: TypeParsing,
 			},
-			want: &Error{
-				ErrType: ErrTypeParsing,
+			want: &StackTrace{
+				Type: TypeParsing,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
-				ErrType: tt.fields.ErrType,
+			v := &StackTrace{
+				Type: tt.fields.ErrType,
 			}
 			if got := v.SetType(tt.args.errType); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SetType() = %v, want %v", got, tt.want)
@@ -619,7 +619,7 @@ func TestError_SetLocationAndPosition(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *Error
+		want   *StackTrace
 	}{
 		{
 			name: "Check set location and position",
@@ -637,7 +637,7 @@ func TestError_SetLocationAndPosition(t *testing.T) {
 					Column: 2,
 				},
 			},
-			want: &Error{
+			want: &StackTrace{
 				Location: "/usr/local/raml2.raml",
 				Position: &Position{
 					Line:   20,
@@ -648,7 +648,7 @@ func TestError_SetLocationAndPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				Location: tt.fields.Location,
 				Position: &tt.fields.Position,
 			}
@@ -671,7 +671,7 @@ func TestError_SetMessage(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *Error
+		want   *StackTrace
 	}{
 		{
 			name: "Check set message",
@@ -682,7 +682,7 @@ func TestError_SetMessage(t *testing.T) {
 				message: "new message",
 				a:       []any{},
 			},
-			want: &Error{
+			want: &StackTrace{
 				Message: "new message",
 			},
 		},
@@ -695,14 +695,14 @@ func TestError_SetMessage(t *testing.T) {
 				message: "new message with %s",
 				a:       []any{"argument"},
 			},
-			want: &Error{
+			want: &StackTrace{
 				Message: "new message with argument",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				Message: tt.fields.Message,
 			}
 			if got := v.SetMessage(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
@@ -724,7 +724,7 @@ func TestError_SetWrappingMessage(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *Error
+		want   *StackTrace
 	}{
 		{
 			name: "Check set message",
@@ -735,7 +735,7 @@ func TestError_SetWrappingMessage(t *testing.T) {
 				message: "new message",
 				a:       []any{},
 			},
-			want: &Error{
+			want: &StackTrace{
 				WrappingMessage: "new message",
 			},
 		},
@@ -748,14 +748,14 @@ func TestError_SetWrappingMessage(t *testing.T) {
 				message: "new message with %s",
 				a:       []any{"argument"},
 			},
-			want: &Error{
+			want: &StackTrace{
 				WrappingMessage: "new message with argument",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				WrappingMessage: tt.fields.Message,
 			}
 			if got := v.SetWrappingMessage(tt.args.message, tt.args.a...); !reflect.DeepEqual(got, tt.want) {
@@ -768,10 +768,10 @@ func TestError_SetWrappingMessage(t *testing.T) {
 func TestError_Error(t *testing.T) {
 	type fields struct {
 		Severity        Severity
-		ErrType         ErrType
+		ErrType         Type
 		Location        string
 		Position        *Position
-		Wrapped         *Error
+		Wrapped         *StackTrace
 		Err             error
 		Message         string
 		WrappedMessages string
@@ -786,7 +786,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error",
 			fields: fields{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				ErrType:         TypeValidating,
 				Location:        "/usr/local/raml.raml",
 				Position:        &Position{Line: 10, Column: 1},
 				Message:         "message",
@@ -798,7 +798,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error without position",
 			fields: fields{
 				Severity: SeverityError,
-				ErrType:  ErrTypeValidating,
+				ErrType:  TypeValidating,
 				Location: "/usr/local/raml.raml",
 				Message:  "message",
 			},
@@ -808,7 +808,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error with info",
 			fields: fields{
 				Severity: SeverityError,
-				ErrType:  ErrTypeValidating,
+				ErrType:  TypeValidating,
 				Location: "/usr/local/raml.raml",
 				Position: &Position{Line: 10, Column: 1},
 				Message:  "message",
@@ -820,7 +820,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error with empty message",
 			fields: fields{
 				Severity: SeverityError,
-				ErrType:  ErrTypeValidating,
+				ErrType:  TypeValidating,
 				Location: "/usr/local/raml.raml",
 				Position: &Position{Line: 10, Column: 1},
 			},
@@ -830,7 +830,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error with only wrapped messages",
 			fields: fields{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				ErrType:         TypeValidating,
 				Location:        "/usr/local/raml.raml",
 				Position:        &Position{Line: 10, Column: 1},
 				WrappedMessages: "wrapped message",
@@ -841,7 +841,7 @@ func TestError_Error(t *testing.T) {
 			name: "Check error with only wrapped messages and info",
 			fields: fields{
 				Severity:        SeverityError,
-				ErrType:         ErrTypeValidating,
+				ErrType:         TypeValidating,
 				Location:        "/usr/local/raml.raml",
 				Position:        &Position{Line: 10, Column: 1},
 				WrappedMessages: "wrapped message",
@@ -853,18 +853,18 @@ func TestError_Error(t *testing.T) {
 			name: "Check error with only wrapped error",
 			fields: fields{
 				Severity: SeverityError,
-				ErrType:  ErrTypeParsing,
+				ErrType:  TypeParsing,
 				Location: "/usr/local/raml.raml",
 				Position: &Position{Line: 10, Column: 1},
-				Wrapped: &Error{
+				Wrapped: &StackTrace{
 					Severity: SeverityCritical,
-					ErrType:  ErrTypeValidating,
+					Type:     TypeValidating,
 					Location: "/usr/local/raml2.raml",
 					Position: &Position{Line: 20, Column: 2},
 					Message:  "message 1",
-					Wrapped: &Error{
+					Wrapped: &StackTrace{
 						Severity: SeverityError,
-						ErrType:  ErrTypeResolving,
+						Type:     TypeResolving,
 						Location: "/usr/local/raml3.raml",
 						Position: &Position{Line: 30, Column: 3},
 						Message:  "message 2",
@@ -877,9 +877,9 @@ func TestError_Error(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				Severity:        tt.fields.Severity,
-				ErrType:         tt.fields.ErrType,
+				Type:            tt.fields.ErrType,
 				Location:        tt.fields.Location,
 				Position:        tt.fields.Position,
 				Wrapped:         tt.fields.Wrapped,
@@ -889,7 +889,7 @@ func TestError_Error(t *testing.T) {
 				Info:            tt.fields.Info,
 			}
 			if got := v.Error(); got != tt.want {
-				t.Errorf("Error() = %v, want %v", got, tt.want)
+				t.Errorf("StackTrace() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -898,10 +898,10 @@ func TestError_Error(t *testing.T) {
 func TestError_OrigString(t *testing.T) {
 	type fields struct {
 		Severity        Severity
-		ErrType         ErrType
+		ErrType         Type
 		Location        string
 		Position        Position
-		Wrapped         *Error
+		Wrapped         *StackTrace
 		Err             error
 		Message         string
 		WrappedMessages string
@@ -916,14 +916,14 @@ func TestError_OrigString(t *testing.T) {
 			name: "Check original string",
 			fields: fields{
 				Severity: SeverityError,
-				ErrType:  ErrTypeValidating,
+				ErrType:  TypeValidating,
 				Location: "/usr/local/raml.raml",
 				Position: Position{Line: 10, Column: 1},
 				Message:  "message",
 				Info:     *NewStructInfo().Add("key", Stringer("value")),
-				Wrapped: &Error{
+				Wrapped: &StackTrace{
 					Severity: SeverityError,
-					ErrType:  ErrTypeValidating,
+					Type:     TypeValidating,
 					Location: "/usr/local/raml2.raml",
 					Position: &Position{Line: 20, Column: 2},
 					Message:  "wrapped",
@@ -935,9 +935,9 @@ func TestError_OrigString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Error{
+			v := &StackTrace{
 				Severity:        tt.fields.Severity,
-				ErrType:         tt.fields.ErrType,
+				Type:            tt.fields.ErrType,
 				Location:        tt.fields.Location,
 				Position:        &tt.fields.Position,
 				Wrapped:         tt.fields.Wrapped,
@@ -1037,12 +1037,12 @@ func TestNewWrappedError(t *testing.T) {
 		message  string
 		err      error
 		location string
-		opts     []ErrOpt
+		opts     []Option
 	}
 	tests := []struct {
 		name string
 		args args
-		want *Error
+		want *StackTrace
 	}{
 		{
 			name: "Check wrapped error",
@@ -1050,16 +1050,16 @@ func TestNewWrappedError(t *testing.T) {
 				message:  "message",
 				err:      fmt.Errorf("error"),
 				location: "/usr/local/raml.raml",
-				opts: []ErrOpt{
+				opts: []Option{
 					WithSeverity(SeverityCritical),
 					WithPosition(NewPosition(10, 1)),
 					WithInfo("key", Stringer("value")),
-					WithType(ErrTypeParsing),
+					WithType(TypeParsing),
 				},
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity: SeverityCritical,
-				ErrType:  ErrTypeParsing,
+				Type:     TypeParsing,
 				Message:  "message: error",
 				Location: "/usr/local/raml.raml",
 				Position: &Position{Line: 10, Column: 1},
@@ -1070,8 +1070,8 @@ func TestNewWrappedError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewWrappedError(tt.args.message, tt.args.err, tt.args.location, tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewWrappedError() = %v, want %v", got, tt.want)
+			if got := NewWrapped(tt.args.message, tt.args.err, tt.args.location, tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewWrapped() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1081,28 +1081,28 @@ func TestNewError(t *testing.T) {
 	type args struct {
 		message  string
 		location string
-		opts     []ErrOpt
+		opts     []Option
 	}
 	tests := []struct {
 		name string
 		args args
-		want *Error
+		want *StackTrace
 	}{
 		{
 			name: "Check error",
 			args: args{
 				message:  "message",
 				location: "/usr/local/raml.raml",
-				opts: []ErrOpt{
+				opts: []Option{
 					WithSeverity(SeverityCritical),
 					WithPosition(NewPosition(10, 1)),
 					WithInfo("key", Stringer("value")),
-					WithType(ErrTypeParsing),
+					WithType(TypeParsing),
 				},
 			},
-			want: &Error{
+			want: &StackTrace{
 				Severity: SeverityCritical,
-				ErrType:  ErrTypeParsing,
+				Type:     TypeParsing,
 				Message:  "message",
 				Location: "/usr/local/raml.raml",
 				Position: &Position{Line: 10, Column: 1},
@@ -1112,8 +1112,8 @@ func TestNewError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewError(tt.args.message, tt.args.location, tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewError() = %v, want %v", got, tt.want)
+			if got := New(tt.args.message, tt.args.location, tt.args.opts...); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
 	}

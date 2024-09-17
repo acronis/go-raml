@@ -7,13 +7,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/acronis/go-raml/stacktrace"
 )
 
 func Test_main(t *testing.T) {
 	start := time.Now()
-	rml, err := ParseFromPath(`./tests/library.raml`, OptWithUnwrap())
-	if vErr, ok := UnwrapError(err); ok {
-		t.Logf("Validation error: %s", vErr.Error())
+	rml, err := ParseFromPath(`./tests/library.raml`, OptWithUnwrap(), OptWithValidate())
+	if vErr, ok := stacktrace.Unwrap(err); ok {
+		t.Logf("ParseFromPath error:\n%s", vErr.Sprint())
 		err = vErr
 	}
 	require.NoError(t, err)
@@ -34,7 +36,7 @@ func Test_main(t *testing.T) {
 				conv.Convert(s)
 				// b, err := json.MarshalIndent(schema, "", "  ")
 				// if err != nil {
-				// 	t.Errorf("Error marshalling schema: %s", err)
+				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
 				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
 				//fmt.Println(string(b))
@@ -45,7 +47,7 @@ func Test_main(t *testing.T) {
 				conv.Convert(s)
 				// b, err := json.MarshalIndent(schema, "", "  ")
 				// if err != nil {
-				// 	t.Errorf("Error marshalling schema: %s", err)
+				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
 				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
 				//fmt.Println(string(b))
@@ -55,7 +57,7 @@ func Test_main(t *testing.T) {
 			conv.Convert(s)
 			// b, err := json.MarshalIndent(schema, "", "  ")
 			// if err != nil {
-			// 	t.Errorf("Error marshalling schema: %s", err)
+			// 	t.Errorf("StackTrace marshalling schema: %s", err)
 			// }
 			// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
 			//fmt.Println(string(b))

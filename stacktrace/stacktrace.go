@@ -1,4 +1,4 @@
-package raml
+package stacktrace
 
 import (
 	"errors"
@@ -9,17 +9,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ErrType string
+// Type is the type of the error.
+type Type string
 
 const (
-	ErrTypeUnknown    ErrType = "unknown"
-	ErrTypeParsing    ErrType = "parsing"
-	ErrTypeLoading    ErrType = "loading"
-	ErrTypeReading    ErrType = "reading"
-	ErrTypeResolving  ErrType = "resolving"
-	ErrTypeValidating ErrType = "validating"
+	TypeUnknown    Type = "unknown"
+	TypeParsing    Type = "parsing"
+	TypeLoading    Type = "loading"
+	TypeReading    Type = "reading"
+	TypeResolving  Type = "resolving"
+	TypeValidating Type = "validating"
+	TypeUnwrapping Type = "unwrapping"
 )
 
+// Severity is the severity of the error.
 type Severity string
 
 const (
@@ -78,6 +81,7 @@ func (s *StructInfo) String() string {
 	return result
 }
 
+// ensureMap ensures that the map is initialized.
 func (s *StructInfo) ensureMap() {
 	if s.info == nil {
 		s.info = make(map[string]fmt.Stringer)
@@ -151,19 +155,19 @@ func NewStructInfo() *StructInfo {
 	}
 }
 
-// Error contains information about a parser error.
-type Error struct {
+// StackTrace contains information about a parser error.
+type StackTrace struct {
 	// Severity is the severity of the error.
 	Severity Severity
-	// ErrType is the type of the error.
-	ErrType ErrType
+	// Type is the type of the error.
+	Type Type
 	// Location is the location file path of the error.
 	Location string
 	// Position is the position of the error in the file.
 	Position *Position
 
 	// Wrapped is the error that wrapped by this error.
-	Wrapped *Error
+	Wrapped *StackTrace
 	// Err is the underlying error. It is not used for the error message.
 	Err error
 	// Message is the error message.
@@ -172,17 +176,19 @@ type Error struct {
 	WrappingMessage string
 	// Info is the additional information about the error.
 	Info StructInfo
+
+	typeIsSet bool
 }
 
-// Header returns the header of the Error.
-func (e *Error) Header() string {
+// Header returns the header of the StackTrace.
+func (st *StackTrace) Header() string {
 	result := fmt.Sprintf("[%s] %s: %s",
-		e.Severity,
-		e.ErrType,
-		e.Location,
+		st.Severity,
+		st.Type,
+		st.Location,
 	)
-	if e.Position != nil {
-		result = fmt.Sprintf("%s:%d:%d", result, e.Position.Line, e.Position.Column)
+	if st.Position != nil {
+		result = fmt.Sprintf("%s:%d:%d", result, st.Position.Line, st.Position.Column)
 	} else {
 		result = fmt.Sprintf("%s:1", result)
 	}
@@ -190,76 +196,77 @@ func (e *Error) Header() string {
 }
 
 // FullMessage returns the full message of the error including the wrapped messages.
-func (e *Error) FullMessage() string {
-	if e.WrappingMessage != "" {
-		if e.Message != "" {
-			return fmt.Sprintf("%s: %s", e.WrappingMessage, e.Message)
+func (st *StackTrace) FullMessage() string {
+	if st.WrappingMessage != "" {
+		if st.Message != "" {
+			return fmt.Sprintf("%s: %s", st.WrappingMessage, st.Message)
 		}
-		return e.WrappingMessage
+		return st.WrappingMessage
 	} else {
-		return e.Message
+		return st.Message
 	}
 }
 
-type ErrOpt interface {
-	Apply(*Error)
+// Option is an option for the StackTrace creation.
+type Option interface {
+	Apply(*StackTrace)
 }
 
 // OrigString returns the original error message without the wrapping messages.
-func (e *Error) OrigString() string {
-	result := e.Header()
-	if e.Message != "" {
-		result = fmt.Sprintf("%s: %s", result, e.Message)
+func (st *StackTrace) OrigString() string {
+	result := st.Header()
+	if st.Message != "" {
+		result = fmt.Sprintf("%s: %s", result, st.Message)
 	}
-	if len(e.Info.info) > 0 {
-		result = fmt.Sprintf("%s: %s", result, e.Info.String())
+	if len(st.Info.info) > 0 {
+		result = fmt.Sprintf("%s: %s", result, st.Info.String())
 	}
 	return result
 }
 
 // OrigStringW returns the original error message with the wrapped error messages
-func (e *Error) OrigStringW() string {
-	result := e.OrigString()
-	if e.Wrapped != nil {
-		result = fmt.Sprintf("%s: %s", result, e.Wrapped.String())
+func (st *StackTrace) OrigStringW() string {
+	result := st.OrigString()
+	if st.Wrapped != nil {
+		result = fmt.Sprintf("%s: %s", result, st.Wrapped.String())
 	}
 	return result
 }
 
 // String implements the fmt.Stringer interface.
-// It returns the string representation of the Error.
-func (e *Error) String() string {
-	result := e.Header()
-	msg := e.FullMessage()
+// It returns the string representation of the StackTrace.
+func (st *StackTrace) String() string {
+	result := st.Header()
+	msg := st.FullMessage()
 	if msg != "" {
 		result = fmt.Sprintf("%s: %s", result, msg)
 	}
-	if len(e.Info.info) > 0 {
-		result = fmt.Sprintf("%s: %s", result, e.Info.String())
+	if len(st.Info.info) > 0 {
+		result = fmt.Sprintf("%s: %s", result, st.Info.String())
 	}
-	if e.Wrapped != nil {
-		result = fmt.Sprintf("%s: %s", result, e.Wrapped.String())
+	if st.Wrapped != nil {
+		result = fmt.Sprintf("%s: %s", result, st.Wrapped.String())
 	}
 	return result
 }
 
-// Error implements the error interface.
-// It returns the string representation of the Error.
-func (e *Error) Error() string {
-	return e.String()
+// StackTrace implements the error interface.
+// It returns the string representation of the StackTrace.
+func (st *StackTrace) Error() string {
+	return st.String()
 }
 
-// UnwrapError checks if the given error is an Error and returns it.
-// It returns false if the error is not an Error.
-func UnwrapError(err error) (*Error, bool) {
+// Unwrap checks if the given error is an StackTrace and returns it.
+// It returns false if the error is not an StackTrace.
+func Unwrap(err error) (*StackTrace, bool) {
 	err = FixYamlError(err)
-	e, ok := err.(*Error)
+	e, ok := err.(*StackTrace)
 	if !ok {
 		wrappedErr := errors.Unwrap(err)
 		if wrappedErr == nil {
 			return nil, false
 		}
-		e, ok = UnwrapError(wrappedErr)
+		e, ok = Unwrap(wrappedErr)
 		if ok {
 			msg := strings.ReplaceAll(err.Error(), e.OrigStringW(), "")
 			msg = strings.TrimSuffix(msg, ": ")
@@ -272,11 +279,11 @@ func UnwrapError(err error) (*Error, bool) {
 	return e.Clone(), ok
 }
 
-// NewError creates a new Error.
-func NewError(message string, location string, opts ...ErrOpt) *Error {
-	e := &Error{
+// New creates a new StackTrace.
+func New(message string, location string, opts ...Option) *StackTrace {
+	e := &StackTrace{
 		Severity: SeverityError,
-		ErrType:  ErrTypeValidating,
+		Type:     TypeParsing,
 		Message:  message,
 		Location: location,
 	}
@@ -320,7 +327,7 @@ type optErrInfo struct {
 	Value fmt.Stringer
 }
 
-func (o optErrInfo) Apply(e *Error) {
+func (o optErrInfo) Apply(e *StackTrace) {
 	e.Info.Add(o.Key, o.Value)
 }
 
@@ -328,7 +335,7 @@ type optErrPosition struct {
 	Pos *Position
 }
 
-func (o optErrPosition) Apply(e *Error) {
+func (o optErrPosition) Apply(e *StackTrace) {
 	e.Position = o.Pos
 }
 
@@ -336,45 +343,46 @@ type optErrSeverity struct {
 	Severity Severity
 }
 
-func (o optErrSeverity) Apply(e *Error) {
+func (o optErrSeverity) Apply(e *StackTrace) {
 	e.Severity = o.Severity
 }
 
 type optErrType struct {
-	ErrType ErrType
+	ErrType Type
 }
 
-func (o optErrType) Apply(e *Error) {
-	e.ErrType = o.ErrType
+func (o optErrType) Apply(e *StackTrace) {
+	_ = e.SetType(o.ErrType)
 }
 
-func WithInfo(key string, value any) ErrOpt {
+func WithInfo(key string, value any) Option {
 	return optErrInfo{Key: key, Value: Stringer(value)}
 }
 
-func WithPosition(pos *Position) ErrOpt {
+func WithPosition(pos *Position) Option {
 	return optErrPosition{Pos: pos}
 }
 
-func WithSeverity(severity Severity) ErrOpt {
+func WithSeverity(severity Severity) Option {
 	return optErrSeverity{Severity: severity}
 }
 
-func WithType(errType ErrType) ErrOpt {
+// WithType sets the type of the error with override.
+func WithType(errType Type) Option {
 	return optErrType{ErrType: errType}
 }
 
-// NewWrappedError creates a new Error from the given go error.
-func NewWrappedError(message string, err error, location string, opts ...ErrOpt) *Error {
+// NewWrapped creates a new StackTrace from the given go error.
+func NewWrapped(message string, err error, location string, opts ...Option) *StackTrace {
 	err = FixYamlError(err)
-	resultErr := &Error{}
-	if e, ok := UnwrapError(err); ok {
-		resultErr = NewError(
+	resultErr := &StackTrace{}
+	if e, ok := Unwrap(err); ok {
+		resultErr = New(
 			message,
 			location,
 		).Wrap(e).SetErr(e.Err)
 	} else {
-		resultErr = NewError(fmt.Sprintf("%s: %s", message, err.Error()), location).SetErr(err)
+		resultErr = New(fmt.Sprintf("%s: %s", message, err.Error()), location).SetErr(err)
 	}
 	for _, opt := range opts {
 		opt.Apply(resultErr)
@@ -382,59 +390,97 @@ func NewWrappedError(message string, err error, location string, opts ...ErrOpt)
 	return resultErr
 }
 
-// SetSeverity sets the severity of the Error and returns it
-func (e *Error) SetSeverity(severity Severity) *Error {
-	e.Severity = severity
-	return e
+// SetSeverity sets the severity of the StackTrace and returns it
+func (st *StackTrace) SetSeverity(severity Severity) *StackTrace {
+	st.Severity = severity
+	return st
 }
 
-// SetType sets the type of the Error and returns it
-func (e *Error) SetType(errType ErrType) *Error {
-	e.ErrType = errType
-	return e
+// SetType sets the type of the StackTrace and returns it, operation can be done only once.
+func (st *StackTrace) SetType(errType Type) *StackTrace {
+	if !st.typeIsSet {
+		st.Type = errType
+		st.typeIsSet = true
+	}
+	if st.Wrapped != nil {
+		_ = st.Wrapped.SetType(errType)
+	}
+	return st
 }
 
-// SetLocation sets the location of the Error and returns it
-func (e *Error) SetLocation(location string) *Error {
-	e.Location = location
-	return e
+// SetLocation sets the location of the StackTrace and returns it
+func (st *StackTrace) SetLocation(location string) *StackTrace {
+	st.Location = location
+	return st
 }
 
-// SetPosition sets the position of the Error and returns it
-func (e *Error) SetPosition(pos *Position) *Error {
-	e.Position = pos
-	return e
+// SetPosition sets the position of the StackTrace and returns it
+func (st *StackTrace) SetPosition(pos *Position) *StackTrace {
+	st.Position = pos
+	return st
 }
 
-// SetWrappingMessage sets a message which wraps the message of Error and returns *Error
-func (e *Error) SetWrappingMessage(msg string, a ...any) *Error {
-	e.WrappingMessage = fmt.Sprintf(msg, a...)
-	return e
+// SetWrappingMessage sets a message which wraps the message of StackTrace and returns *StackTrace
+func (st *StackTrace) SetWrappingMessage(msg string, a ...any) *StackTrace {
+	st.WrappingMessage = fmt.Sprintf(msg, a...)
+	return st
 }
 
-// SetMessage sets the message of the Error and returns it
-func (e *Error) SetMessage(message string, a ...any) *Error {
-	e.Message = fmt.Sprintf(message, a...)
-	return e
+// SetMessage sets the message of the StackTrace and returns it
+func (st *StackTrace) SetMessage(message string, a ...any) *StackTrace {
+	st.Message = fmt.Sprintf(message, a...)
+	return st
 }
 
-// SetErr sets the underlying error of the Error and returns it
-func (e *Error) SetErr(err error) *Error {
-	e.Err = err
-	return e
+// SetErr sets the underlying error of the StackTrace and returns it
+func (st *StackTrace) SetErr(err error) *StackTrace {
+	st.Err = err
+	return st
 }
 
-// Wrap wraps the given Error and returns it
-func (e *Error) Wrap(w *Error) *Error {
-	e.Wrapped = w
-	return e
+// Wrap wraps the given StackTrace and returns it
+func (st *StackTrace) Wrap(w *StackTrace) *StackTrace {
+	st.Wrapped = w
+	return st
 }
 
-// Clone returns a clone of the Error.
-func (e *Error) Clone() *Error {
-	if e == nil {
+// Clone returns a clone of the StackTrace.
+func (st *StackTrace) Clone() *StackTrace {
+	if st == nil {
 		return nil
 	}
-	c := *e
+	c := *st
 	return &c
+}
+
+// Position contains the line and column where the error occurred.
+type Position struct {
+	Line   int
+	Column int
+}
+
+// NewNodePosition creates a new position from the given node.
+func NewNodePosition(node *yaml.Node) *Position {
+	return &Position{Line: node.Line, Column: node.Column}
+}
+
+// NewPosition creates a new position with the given line and column.
+func NewPosition(line, column int) *Position {
+	return &Position{Line: line, Column: column}
+}
+
+// optErrNodePosition is an option to set the position of the error to the position of the given node.
+type optErrNodePosition struct {
+	pos *Position
+}
+
+// Apply sets the position of the error to the given position.
+// implements Option
+func (o optErrNodePosition) Apply(e *StackTrace) {
+	e.Position = o.pos
+}
+
+// WithNodePosition sets the position of the error to the position of the given node.
+func WithNodePosition(node *yaml.Node) Option {
+	return optErrNodePosition{pos: NewNodePosition(node)}
 }
