@@ -21,8 +21,7 @@ This package aims to achieve the following:
 
 The following sections are currently implemented. See notes for each point:
 
-- [] RAML API definitions
-
+- [ ] RAML API definitions
 - [x] RAML Data Types
   - [x] Defining Types
   - [x] Type Declarations
@@ -49,33 +48,33 @@ The following sections are currently implemented. See notes for each point:
   - [x] Determine Default Types
   - [x] Type Expressions
     - [x] Inheritance
-  - [] Multiple Inheritance (supported, but not fully compliant)
+  - [ ] Multiple Inheritance (supported, but not fully compliant)
   - [x] Inline Type Declarations
   - [x] Defining Examples in RAML
     - [x] Multiple Examples
     - [x] Single Example
     - [x] Validation against defined data type
-- [] Annotations
+- [ ] Annotations
   - [x] Declaring Annotation Types
-  - [] Applying Annotations
-    - [] Annotating Scalar-valued Nodes
-    - [] Annotation Targets
+  - [ ] Applying Annotations
+    - [ ] Annotating Scalar-valued Nodes
+    - [ ] Annotation Targets
     - [x] Annotating types
-- [] Modularization
-  - [] Includes
+- [ ] Modularization
+  - [ ] Includes
     - [x] Library
       - [x] NamedExample
       - [x] DataType
-      - [] AnnotationTypeDeclaration
-      - [] DocumentationItem
-      - [] ResourceType
-      - [] Trait
-      - [] Overlay
-      - [] Extension
-      - [] SecurityScheme
-- [] Conversion
+      - [ ] AnnotationTypeDeclaration
+      - [ ] DocumentationItem
+      - [ ] ResourceType
+      - [ ] Trait
+      - [ ] Overlay
+      - [ ] Extension
+      - [ ] SecurityScheme
+- [ ] Conversion
   - [x] Conversion to JSON Schema
-  - [] Conversion to RAML
+  - [ ] Conversion to RAML
 
 ## Comparison to existing libraries
 
