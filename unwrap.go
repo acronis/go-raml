@@ -160,7 +160,6 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 			if _, ok := i.(*AnyShape); ok {
 				return target, nil
 			}
-			// TODO: Check type compatibility
 			if i.Base().Type == target.Base().Type {
 				// Deep copy with ID change is required since we create new union members from source members
 				cs := target.Clone()
@@ -168,8 +167,10 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 				cs.Base().Id = generateShapeId()
 				ms, err := cs.Inherit(i)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("merge shapes", err, target.Base().Location,
-						stacktrace.WithPosition(&target.Base().Position))
+					// TODO: Collect errors
+					// stacktrace.NewWrapped("merge shapes", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+					// Skip shapes that didn't pass inheritance check
+					continue
 				}
 				filtered = append(filtered, &ms)
 			}
