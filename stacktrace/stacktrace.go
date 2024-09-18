@@ -235,16 +235,21 @@ func (st *StackTrace) OrigStringW() string {
 	return result
 }
 
+func (st *StackTrace) FullMessageWithInfo() string {
+	result := st.FullMessage()
+	if len(st.Info.info) > 0 {
+		result = fmt.Sprintf("%s: %s", result, st.Info.String())
+	}
+	return result
+}
+
 // String implements the fmt.Stringer interface.
 // It returns the string representation of the StackTrace.
 func (st *StackTrace) String() string {
 	result := st.Header()
-	msg := st.FullMessage()
+	msg := st.FullMessageWithInfo()
 	if msg != "" {
 		result = fmt.Sprintf("%s: %s", result, msg)
-	}
-	if len(st.Info.info) > 0 {
-		result = fmt.Sprintf("%s: %s", result, st.Info.String())
 	}
 	if st.Wrapped != nil {
 		result = fmt.Sprintf("%s: %s", result, st.Wrapped.String())
