@@ -137,7 +137,7 @@ func (r *RAML) inheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 	}
 	targetBase.CustomShapeFacets = customShapeFacets
 
-	customDomainProperties := orderedmap.New[string, *DomainExtension](targetBase.CustomShapeFacets.Len())
+	customDomainProperties := orderedmap.New[string, *DomainExtension](targetBase.CustomDomainProperties.Len())
 	for pair := targetBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
 		k, item := pair.Key, pair.Value
 		customDomainProperties.Set(k, item)
