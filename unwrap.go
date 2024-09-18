@@ -139,6 +139,7 @@ func (r *RAML) inheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 
 // Inherit merges source shape into target shape.
 func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
+	var st *stacktrace.StackTrace
 	r.inheritBase(source.Base(), target.Base())
 	// If source is recursive, return source as is
 	if _, ok := source.(*RecursiveShape); ok {
@@ -167,8 +168,12 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 				cs.Base().Id = generateShapeId()
 				ms, err := cs.Inherit(i)
 				if err != nil {
-					// TODO: Collect errors
-					// stacktrace.NewWrapped("merge shapes", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+					se := stacktrace.NewWrapped("merge shapes", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
 					// Skip shapes that didn't pass inheritance check
 					continue
 				}
@@ -176,8 +181,14 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 			}
 		}
 		if len(filtered) == 0 {
-			return nil, stacktrace.New("failed to find compatible union member", target.Base().Location,
+			se := stacktrace.New("failed to find compatible union member", target.Base().Location,
 				stacktrace.WithPosition(&target.Base().Position))
+			if st != nil {
+				se = se.Append(st)
+			}
+			return nil, se
+		} else {
+			st = nil
 		}
 		// If only one union member remains - simplify to target type
 		if len(filtered) == 1 {
@@ -196,9 +207,18 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 			// Merge will raise an error in case any of union members has incompatible type
 			_, err := (*item).Inherit(source)
 			if err != nil {
-				return nil, stacktrace.NewWrapped("merge shapes", err, target.Base().Location,
+				se := stacktrace.NewWrapped("merge shapes", err, target.Base().Location,
 					stacktrace.WithPosition(&target.Base().Position))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
 			}
+		}
+		if st != nil {
+			return nil, st
 		}
 		return targetUnion, nil
 	} else {
