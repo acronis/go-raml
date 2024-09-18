@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/acronis/go-raml/stacktrace"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 /*
@@ -116,24 +117,38 @@ func (r *RAML) UnwrapShapes() error {
 }
 
 // InheritBase writes inheritable properties of sourceBase into targetBase.
-// Modifies targetBase in-place.
+// Copies necessary properties and modifies targetBase in-place.
 func (r *RAML) inheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 	// Back-propagate shape ID from child to parent
 	// to keep the original ID when inheriting properties.
 	sourceBase.Id = targetBase.Id
-	// TODO: Maybe needs a bool switch for flexibility?
+
+	// TODO: Probably the copies must be implemented in Clone method.
+	customShapeFacets := orderedmap.New[string, *Node](targetBase.CustomShapeFacets.Len())
+	for pair := targetBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+		k, item := pair.Key, pair.Value
+		customShapeFacets.Set(k, item)
+	}
 	for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, item := pair.Key, pair.Value
 		if _, ok := targetBase.CustomShapeFacets.Get(k); !ok {
-			targetBase.CustomShapeFacets.Set(k, item)
+			customShapeFacets.Set(k, item)
 		}
+	}
+	targetBase.CustomShapeFacets = customShapeFacets
+
+	customDomainProperties := orderedmap.New[string, *DomainExtension](targetBase.CustomShapeFacets.Len())
+	for pair := targetBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
+		k, item := pair.Key, pair.Value
+		customDomainProperties.Set(k, item)
 	}
 	for pair := sourceBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
 		k, item := pair.Key, pair.Value
 		if _, ok := targetBase.CustomDomainProperties.Get(k); !ok {
-			targetBase.CustomDomainProperties.Set(k, item)
+			customDomainProperties.Set(k, item)
 		}
 	}
+	targetBase.CustomDomainProperties = customDomainProperties
 	// TODO: CustomShapeFacetDefinitions are not inheritable in context of unwrapper. But maybe they can be inheritable in other context?
 }
 
