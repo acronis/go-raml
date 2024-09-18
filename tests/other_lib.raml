@@ -2,3 +2,17 @@
 
 uses:
   cti: ./common.raml
+
+types:
+# Uncomment to see the error
+  A:
+    type: object
+#    minProperties: 5
+#    maxProperties: 2
+    properties:
+      a: string
+
+  B:
+    type: A
+    properties:
+#      a: integer

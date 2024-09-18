@@ -7,6 +7,8 @@ func (r *RAML) ValidateShapes() error {
 	// to ensure the original references (aliases and links) match.
 	unwrapCache := make(map[string]Shape)
 
+	var st *stacktrace.StackTrace
+
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
@@ -16,19 +18,37 @@ func (r *RAML) ValidateShapes() error {
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
 					if err != nil {
-						return stacktrace.NewWrapped("unwrap shape", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+						se := stacktrace.NewWrapped("unwrap shape", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 							stacktrace.WithType(stacktrace.TypeValidating))
+						if st == nil {
+							st = se
+						} else {
+							st = st.Append(se)
+						}
+						continue
 					}
 					unwrapCache[s.Base().Id] = s
 					s = us
 				}
 				if err := s.Check(); err != nil {
-					return stacktrace.NewWrapped("check annotation type", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+					se := stacktrace.NewWrapped("check annotation type", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 						stacktrace.WithType(stacktrace.TypeValidating))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				if err := r.validateShapeCommons(s); err != nil {
-					return stacktrace.NewWrapped("validate shape commons", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+					se := stacktrace.NewWrapped("validate shape commons", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 						stacktrace.WithType(stacktrace.TypeValidating))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 			}
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
@@ -37,19 +57,37 @@ func (r *RAML) ValidateShapes() error {
 				if !s.Base().unwrapped {
 					us, err := r.UnwrapShape(shape, make([]Shape, 0))
 					if err != nil {
-						return stacktrace.NewWrapped("unwrap shape", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+						se := stacktrace.NewWrapped("unwrap shape", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 							stacktrace.WithType(stacktrace.TypeValidating))
+						if st == nil {
+							st = se
+						} else {
+							st = st.Append(se)
+						}
+						continue
 					}
 					unwrapCache[s.Base().Id] = s
 					s = us
 				}
 				if err := s.Check(); err != nil {
-					return stacktrace.NewWrapped("check type", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+					se := stacktrace.NewWrapped("check type", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 						stacktrace.WithType(stacktrace.TypeValidating))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				if err := r.validateShapeCommons(s); err != nil {
-					return stacktrace.NewWrapped("validate shape commons", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
+					se := stacktrace.NewWrapped("validate shape commons", err, s.Base().Location, stacktrace.WithPosition(&s.Base().Position),
 						stacktrace.WithType(stacktrace.TypeValidating))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 			}
 		case *DataType:
@@ -78,15 +116,30 @@ func (r *RAML) ValidateShapes() error {
 		if !db.Base().unwrapped {
 			us, ok := unwrapCache[db.Base().Id]
 			if !ok {
-				return stacktrace.New("unwrapped shape not found", db.Base().Location, stacktrace.WithPosition(&db.Base().Position),
+				se := stacktrace.New("unwrapped shape not found", db.Base().Location, stacktrace.WithPosition(&db.Base().Position),
 					stacktrace.WithType(stacktrace.TypeValidating))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
 			}
 			db = us
 		}
 		if err := db.Validate(item.Extension.Value, "$"); err != nil {
-			return stacktrace.NewWrapped("check domain extension", err, item.Extension.Location, stacktrace.WithPosition(&item.Extension.Position),
+			se := stacktrace.NewWrapped("check domain extension", err, item.Extension.Location, stacktrace.WithPosition(&item.Extension.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+			continue
 		}
+	}
+	if st != nil {
+		return st
 	}
 	return nil
 }

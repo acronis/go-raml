@@ -15,7 +15,7 @@ func Test_main(t *testing.T) {
 	start := time.Now()
 	rml, err := ParseFromPath(`./tests/library.raml`, OptWithUnwrap(), OptWithValidate())
 	if vErr, ok := stacktrace.Unwrap(err); ok {
-		t.Logf("ParseFromPath error:\n%s", vErr.Sprint())
+		t.Logf("ParseFromPath error:\n%s", vErr.Sprint(stacktrace.WithEnsureDuplicates()))
 		err = vErr
 	}
 	require.NoError(t, err)

@@ -20,18 +20,32 @@ func (r *RAML) UnwrapShapes() error {
 	r.fragmentTypes = make(map[string]map[string]*Shape)
 	r.fragmentAnnotationTypes = make(map[string]map[string]*Shape)
 	r.shapes = nil
+	var st *stacktrace.StackTrace
+	st = nil
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
 			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
 				k, shape := pair.Key, pair.Value
 				if shape == nil {
-					return stacktrace.New("shape is nil", f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping))
+					se := stacktrace.New("shape is nil", f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				position := (*shape).Base().Position
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					return stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					se := stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				ptr := &us
 				f.AnnotationTypes.Set(k, ptr)
@@ -41,12 +55,24 @@ func (r *RAML) UnwrapShapes() error {
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
 				k, shape := pair.Key, pair.Value
 				if shape == nil {
-					return stacktrace.New("shape is nil", f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping))
+					se := stacktrace.New("shape is nil", f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				position := (*shape).Base().Position
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					return stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					se := stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					if st == nil {
+						st = se
+					} else {
+						st = st.Append(se)
+					}
+					continue
 				}
 				ptr := &us
 				f.Types.Set(k, ptr)
@@ -73,9 +99,18 @@ func (r *RAML) UnwrapShapes() error {
 		db := *item.DefinedBy
 		ptr, err := r.GetAnnotationTypeFromFragmentPtr(db.Base().Location, db.Base().Name)
 		if err != nil {
-			return stacktrace.NewWrapped("get annotation from fragment", err, db.Base().Location, stacktrace.WithPosition(&db.Base().Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			se := stacktrace.NewWrapped("get annotation from fragment", err, db.Base().Location, stacktrace.WithPosition(&db.Base().Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+			continue
 		}
 		item.DefinedBy = ptr
+	}
+	if st != nil {
+		return st
 	}
 	return nil
 }
