@@ -99,10 +99,10 @@ func (s *IntegerShape) Validate(v interface{}, ctxPath string) error {
 	}
 
 	if s.Minimum != nil && val.Cmp(s.Minimum) < 0 {
-		return fmt.Errorf("value must be less than %s", s.Minimum.String())
+		return fmt.Errorf("value must be greater than %s", s.Minimum.String())
 	}
 	if s.Maximum != nil && val.Cmp(s.Maximum) > 0 {
-		return fmt.Errorf("value must be greater than %s", s.Maximum.String())
+		return fmt.Errorf("value must be less than %s", s.Maximum.String())
 	}
 	// TODO: Implement multipleOf validation
 	// TODO: Implement format validation
@@ -279,10 +279,10 @@ func (s *NumberShape) Validate(v interface{}, ctxPath string) error {
 	}
 
 	if s.Minimum != nil && val < *s.Minimum {
-		return fmt.Errorf("value must be less than %f", *s.Minimum)
+		return fmt.Errorf("value must be greater than %f", *s.Minimum)
 	}
 	if s.Maximum != nil && val > *s.Maximum {
-		return fmt.Errorf("value must be greater than %f", *s.Maximum)
+		return fmt.Errorf("value must be less than %f", *s.Maximum)
 	}
 	// TODO: Implement multipleOf validation
 	// TODO: Implement format validation
@@ -435,10 +435,10 @@ func (s *StringShape) Validate(v interface{}, ctxPath string) error {
 
 	strLen := uint64(len(i))
 	if s.MinLength != nil && strLen < *s.MinLength {
-		return fmt.Errorf("length must be less than %d", *s.MinLength)
+		return fmt.Errorf("length must be greater than %d", *s.MinLength)
 	}
 	if s.MaxLength != nil && strLen > *s.MaxLength {
-		return fmt.Errorf("length must be greater than %d", *s.MaxLength)
+		return fmt.Errorf("length must be less than %d", *s.MaxLength)
 	}
 	if s.Pattern != nil && !s.Pattern.MatchString(i) {
 		return fmt.Errorf("must match pattern %s", s.Pattern.String())
@@ -577,10 +577,10 @@ func (s *FileShape) Validate(v interface{}, ctxPath string) error {
 	// TODO: What is compared, byte size or base64 string size?
 	strLen := uint64(len(i))
 	if s.MinLength != nil && strLen < *s.MinLength {
-		return fmt.Errorf("length must be less than %d", *s.MinLength)
+		return fmt.Errorf("length must be greater than %d", *s.MinLength)
 	}
 	if s.MaxLength != nil && strLen > *s.MaxLength {
-		return fmt.Errorf("length must be greater than %d", *s.MaxLength)
+		return fmt.Errorf("length must be less than %d", *s.MaxLength)
 	}
 	// TODO: Validation against file types
 
