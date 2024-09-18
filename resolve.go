@@ -36,7 +36,6 @@ func (r *RAML) resolveShapes() error {
 			} else {
 				st = st.Append(se)
 			}
-			continue
 		}
 		r.unresolvedShapes.Remove(v)
 	}
