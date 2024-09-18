@@ -618,12 +618,10 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 		s.AnyOf = ss.AnyOf
 		return s, nil
 	}
-	// TODO: Facets need merging
-	// TODO: This can be optimized
-	sourceUnionTypes := make(map[string]struct{})
-	var filtered []*Shape
+	// TODO: Implement enum facets inheritance
+	var finalFiltered []*Shape
 	for _, sourceMember := range ss.AnyOf {
-		sourceUnionTypes[(*sourceMember).Base().Type] = struct{}{}
+		var filtered []*Shape
 		for _, targetMember := range s.AnyOf {
 			if (*sourceMember).Base().Type == (*targetMember).Base().Type {
 				// Clone is required to avoid modifying the original target member shape.
@@ -632,19 +630,19 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 				cs.Base().Id = generateShapeId()
 				ms, err := cs.Inherit(*sourceMember)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("merge union member", err, s.Location)
+					// TODO: Collect errors
+					// stacktrace.NewWrapped("merge union member", err, s.Location)
+					continue
 				}
 				filtered = append(filtered, &ms)
 			}
 		}
-	}
-	for _, targetMember := range s.AnyOf {
-		if _, ok := sourceUnionTypes[(*targetMember).Base().Type]; !ok {
-			return nil, stacktrace.New("target union includes an incompatible type", s.Location, stacktrace.WithPosition(&s.Position),
-				stacktrace.WithInfo("target_type", (*targetMember).Base().Type), stacktrace.WithInfo("source_types", sourceUnionTypes))
+		if len(filtered) == 0 {
+			return nil, stacktrace.New("failed to find compatible union member", s.Location, stacktrace.WithPosition(&s.Position))
 		}
+		finalFiltered = append(finalFiltered, filtered...)
 	}
-	s.AnyOf = filtered
+	s.AnyOf = finalFiltered
 	return s, nil
 }
 
@@ -694,8 +692,8 @@ func (s *JSONShape) Inherit(source Shape) (Shape, error) {
 			stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("source", source.Base().Type),
 			stacktrace.WithInfo("target", s.Base().Type))
 	}
-	if s.Schema != nil && ss.Schema != nil {
-		return nil, stacktrace.New("cannot inherit from different schema", s.Location,
+	if s.Raw != "" && ss.Raw != "" && s.Raw != ss.Raw {
+		return nil, stacktrace.New("cannot inherit from different JSON schema", s.Location,
 			stacktrace.WithPosition(&s.Position))
 	}
 	s.Schema = ss.Schema
