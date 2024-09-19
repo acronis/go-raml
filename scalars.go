@@ -27,7 +27,7 @@ func (r *RAML) MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 	}
 	enums := make(Nodes, len(v.Content))
 	for i, v := range v.Content {
-		n, err := r.makeNode(v, location)
+		n, err := r.makeRootNode(v, location)
 		if err != nil {
 			return nil, stacktrace.NewWrapped("make node enum", err, location, stacktrace.WithNodePosition(v))
 		}
@@ -226,7 +226,7 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Enum = enums
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -387,7 +387,7 @@ func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return stacktrace.NewWrapped("decode multipleOf", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -534,7 +534,7 @@ func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Enum = enums
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -650,7 +650,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				if v.Tag != "!!str" {
 					return stacktrace.New("member of fileTypes must be string", s.Location, stacktrace.WithNodePosition(v))
 				}
-				n, err := s.raml.makeNode(v, s.Location)
+				n, err := s.raml.makeRootNode(v, s.Location)
 				if err != nil {
 					return stacktrace.NewWrapped("make node fileTypes", err, s.Location, stacktrace.WithNodePosition(v))
 				}
@@ -658,7 +658,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.FileTypes = fileTypes
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -747,7 +747,7 @@ func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 			}
 			s.Enum = enums
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -838,7 +838,7 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return stacktrace.NewWrapped("decode format", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -896,7 +896,7 @@ func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		n, err := s.raml.makeNode(valueNode, s.Location)
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 		}
@@ -953,7 +953,7 @@ func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		n, err := s.raml.makeNode(valueNode, s.Location)
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 		}
@@ -1010,7 +1010,7 @@ func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		n, err := s.raml.makeNode(valueNode, s.Location)
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 		}
@@ -1058,7 +1058,7 @@ func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		n, err := s.raml.makeNode(valueNode, s.Location)
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 		}
@@ -1109,7 +1109,7 @@ func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		n, err := s.raml.makeNode(valueNode, s.Location)
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 		}

@@ -411,7 +411,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 			}
 			s.Examples = &Examples{Map: examples, Location: s.Location}
 		} else if node.Value == "default" {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return nil, nil, stacktrace.NewWrapped("make node default", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
