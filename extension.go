@@ -22,7 +22,7 @@ func (r *RAML) unmarshalCustomDomainExtension(location string, keyNode *yaml.Nod
 	if name == "" {
 		return "", nil, stacktrace.New("annotation name must not be empty", location, stacktrace.WithNodePosition(keyNode))
 	}
-	n, err := r.makeNode(valueNode, location)
+	n, err := r.makeRootNode(valueNode, location)
 	if err != nil {
 		return "", nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(valueNode))
 	}

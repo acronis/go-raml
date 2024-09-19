@@ -56,7 +56,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 					}
 				}
 			}
-			n, err := r.makeNode(valueKey, location)
+			n, err := r.makeRootNode(valueKey, location)
 			if err != nil {
 				return nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(valueKey))
 			}
@@ -65,7 +65,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 		}
 	}
 	// In all other cases, the example is considered as a value node
-	n, err := r.makeNode(value, location)
+	n, err := r.makeRootNode(value, location)
 	if err != nil {
 		return nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(value))
 	}

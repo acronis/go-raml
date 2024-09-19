@@ -166,7 +166,7 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return stacktrace.NewWrapped("decode uniqueItems", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}
@@ -251,7 +251,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				}
 			}
 		} else {
-			n, err := s.raml.makeNode(valueNode, s.Location)
+			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
 			}

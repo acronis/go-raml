@@ -39,10 +39,73 @@ func (n *Node) String() string {
 	return fmt.Sprintf("%v", n.Value)
 }
 
-func (r *RAML) makeNode(node *yaml.Node, location string) (*Node, error) {
+func (r *RAML) makeRootNode(node *yaml.Node, location string) (*Node, error) {
+	if node.Tag == "!include" {
+		baseDir := filepath.Dir(location)
+		fragmentPath := filepath.Join(baseDir, node.Value)
+		rdr, err := ReadRawFile(fragmentPath)
+		if err != nil {
+			return nil, stacktrace.NewWrapped("include: read raw file", err, location, stacktrace.WithNodePosition(node), stacktrace.WithInfo("path", fragmentPath))
+		}
+		defer func(rdr io.ReadCloser) {
+			err = rdr.Close()
+			if err != nil {
+				log.Fatal(fmt.Errorf("close file error: %w", err))
+			}
+		}(rdr)
+		var value any
+		ext := filepath.Ext(node.Value)
+		switch ext {
+		default:
+			v, err := io.ReadAll(rdr)
+			if err != nil {
+				return nil, stacktrace.NewWrapped("include: read all", err, fragmentPath, stacktrace.WithNodePosition(node))
+			}
+			value = string(v)
+		case ".json":
+			var data any
+			d := json.NewDecoder(rdr)
+			if err := d.Decode(&data); err != nil {
+				return nil, stacktrace.NewWrapped("include: json decode", err, fragmentPath, stacktrace.WithNodePosition(node))
+			}
+			value = data
+		case ".yaml", ".yml":
+			var data yaml.Node
+			d := yaml.NewDecoder(rdr)
+			if err := d.Decode(&data); err != nil {
+				return nil, stacktrace.NewWrapped("include: yaml decode", err, fragmentPath, stacktrace.WithNodePosition(node))
+			}
+			value, err = yamlNodeToDataNode(&data, fragmentPath, false)
+			if err != nil {
+				return nil, stacktrace.NewWrapped("include: yaml node to data node", err, fragmentPath, stacktrace.WithNodePosition(node))
+			}
+		}
+		return &Node{
+			Value:    value,
+			Location: fragmentPath,
+			Position: stacktrace.Position{node.Line, node.Column},
+			raml:     r,
+		}, nil
+	} else if node.Value != "" && node.Value[0] == '{' {
+		var value any
+		if err := json.Unmarshal([]byte(node.Value), &value); err != nil {
+			return nil, stacktrace.NewWrapped("json unmarshal", err, location, stacktrace.WithNodePosition(node))
+		}
+		return &Node{
+			Value:    value,
+			Location: location,
+			Position: stacktrace.Position{node.Line, node.Column},
+			raml:     r,
+		}, nil
+	}
+
+	return r.makeYamlNode(node, location)
+}
+
+func (r *RAML) makeYamlNode(node *yaml.Node, location string) (*Node, error) {
 	data, err := yamlNodeToDataNode(node, location, false)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("yaml node to data node", err, location)
+		return nil, stacktrace.NewWrapped("yaml node to data node", err, location, stacktrace.WithNodePosition(node))
 	}
 	return &Node{
 		Value:    data,
@@ -67,14 +130,6 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			}
 			return val, nil
 		case "!!str":
-			// TODO: Unmarshalling JSON string may be not always desirable, but it's extensively used in RAML.
-			if node.Value != "" && node.Value[0] == '{' {
-				var val any
-				if err := json.Unmarshal([]byte(node.Value), &val); err != nil {
-					return nil, stacktrace.NewWrapped("json unmarshal", err, location, stacktrace.WithNodePosition(node))
-				}
-				return val, nil
-			}
 			return node.Value, nil
 		case "!!timestamp":
 			return node.Value, nil
@@ -99,26 +154,20 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 			}(r)
 			// TODO: This logic should be more complex because content type may depend on the header reported by remote server.
 			ext := filepath.Ext(node.Value)
-			if ext == ".json" {
-				var data any
-				d := json.NewDecoder(r)
-				if err := d.Decode(&data); err != nil {
-					return nil, stacktrace.NewWrapped("include: json decode", err, fragmentPath, stacktrace.WithNodePosition(node))
+			switch ext {
+			default:
+				v, err := io.ReadAll(r)
+				if err != nil {
+					return nil, stacktrace.NewWrapped("include: read all", err, fragmentPath, stacktrace.WithNodePosition(node))
 				}
-				return data, nil
-			} else if ext == ".yaml" || ext == ".yml" {
+				return string(v), nil
+			case ".yaml", ".yml":
 				var data yaml.Node
 				d := yaml.NewDecoder(r)
 				if err := d.Decode(&data); err != nil {
 					return nil, stacktrace.NewWrapped("include: yaml decode", err, fragmentPath, stacktrace.WithNodePosition(node))
 				}
 				return yamlNodeToDataNode(&data, fragmentPath, true)
-			} else {
-				v, err := io.ReadAll(r)
-				if err != nil {
-					return nil, stacktrace.NewWrapped("include: read all", err, fragmentPath, stacktrace.WithNodePosition(node))
-				}
-				return string(v), nil
 			}
 		}
 	case yaml.MappingNode:
