@@ -8,7 +8,7 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 )
 
 // ArrayFacets contains constraints for array shapes.
@@ -98,7 +98,7 @@ func (s *ArrayShape) Inherit(source Shape) (Shape, error) {
 	} else if ss.Items != nil {
 		_, err := s.raml.Inherit(*s.Items, *ss.Items)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("merge array items", err, s.Location,
+			return nil, StacktraceNewWrapped("merge array items", err, s.Location,
 				stacktrace.WithPosition(&(*s.Items).Base().Position))
 		}
 	}
@@ -132,7 +132,7 @@ func (s *ArrayShape) Check() error {
 	}
 	if s.Items != nil {
 		if err := (*s.Items).Check(); err != nil {
-			return stacktrace.NewWrapped("check items", err, s.Location, stacktrace.WithPosition(&(*s.Items).Base().Position))
+			return StacktraceNewWrapped("check items", err, s.Location, stacktrace.WithPosition(&(*s.Items).Base().Position))
 		}
 	}
 	return nil
@@ -146,29 +146,29 @@ func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "minItems" {
 			if err := valueNode.Decode(&s.MinItems); err != nil {
-				return stacktrace.NewWrapped("decode minItems", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode minItems", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxItems" {
 			if err := valueNode.Decode(&s.MaxItems); err != nil {
-				return stacktrace.NewWrapped("decode maxItems: %w", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode maxItems: %w", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "items" {
 			name := "items"
 			shape, err := s.raml.makeShape(valueNode, name, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make shape", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make shape", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Items = shape
 			// s.raml.PutTypeIntoFragment(s.Name+"#items", s.Location, s.Items)
 			s.raml.PutShapePtr(s.Items)
 		} else if node.Value == "uniqueItems" {
 			if err := valueNode.Decode(&s.UniqueItems); err != nil {
-				return stacktrace.NewWrapped("decode uniqueItems", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode uniqueItems", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -202,23 +202,23 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "additionalProperties" {
 			if err := valueNode.Decode(&s.AdditionalProperties); err != nil {
-				return stacktrace.NewWrapped("decode additionalProperties", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode additionalProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "discriminator" {
 			if err := valueNode.Decode(&s.Discriminator); err != nil {
-				return stacktrace.NewWrapped("decode discriminator", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode discriminator", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "discriminatorValue" {
 			if err := valueNode.Decode(&s.DiscriminatorValue); err != nil {
-				return stacktrace.NewWrapped("decode discriminatorValue", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode discriminatorValue", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "minProperties" {
 			if err := valueNode.Decode(&s.MinProperties); err != nil {
-				return stacktrace.NewWrapped("decode minProperties", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode minProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxProperties" {
 			if err := valueNode.Decode(&s.MaxProperties); err != nil {
-				return stacktrace.NewWrapped("decode maxProperties", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode maxProperties", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "properties" {
 			for j := 0; j != len(valueNode.Content); j += 2 {
@@ -232,7 +232,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 					}
 					property, err := s.raml.makePatternProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
-						return stacktrace.NewWrapped("make pattern property", err, s.Location, stacktrace.WithNodePosition(data))
+						return StacktraceNewWrapped("make pattern property", err, s.Location, WithNodePosition(data))
 					}
 					s.PatternProperties.Set(propertyName, property)
 					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
@@ -243,7 +243,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 					}
 					property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 					if err != nil {
-						return stacktrace.NewWrapped("make property", err, s.Location, stacktrace.WithNodePosition(data))
+						return StacktraceNewWrapped("make property", err, s.Location, WithNodePosition(data))
 					}
 					s.Properties.Set(property.Name, property)
 					// s.raml.PutTypeIntoFragment(s.Name+"#"+property.Name, s.Location, property.Shape)
@@ -253,7 +253,7 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -400,7 +400,7 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 				}
 				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("inherit property", err, s.Base().Location,
+					return nil, StacktraceNewWrapped("inherit property", err, s.Base().Location,
 						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
 						stacktrace.WithInfo("property", k),
 						stacktrace.WithType(stacktrace.TypeUnwrapping))
@@ -418,7 +418,7 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 			if targetProp, ok := s.PatternProperties.Get(k); ok {
 				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("inherit pattern property", err, s.Base().Location,
+					return nil, StacktraceNewWrapped("inherit pattern property", err, s.Base().Location,
 						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
 						stacktrace.WithInfo("property", k),
 						stacktrace.WithType(stacktrace.TypeUnwrapping))
@@ -445,7 +445,7 @@ func (s *ObjectShape) Check() error {
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
 			if err := (*prop.Shape).Check(); err != nil {
-				return stacktrace.NewWrapped("check pattern property", err, s.Location, stacktrace.WithPosition(&(*prop.Shape).Base().Position), stacktrace.WithInfo("property", prop.Pattern.String()))
+				return StacktraceNewWrapped("check pattern property", err, s.Location, stacktrace.WithPosition(&(*prop.Shape).Base().Position), stacktrace.WithInfo("property", prop.Pattern.String()))
 			}
 		}
 	}
@@ -453,7 +453,7 @@ func (s *ObjectShape) Check() error {
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
 			if err := (*prop.Shape).Check(); err != nil {
-				return stacktrace.NewWrapped("check property", err, s.Location, stacktrace.WithPosition(&(*prop.Shape).Base().Position), stacktrace.WithInfo("property", prop.Name))
+				return StacktraceNewWrapped("check property", err, s.Location, stacktrace.WithPosition(&(*prop.Shape).Base().Position), stacktrace.WithInfo("property", prop.Name))
 			}
 		}
 		// FIXME: Need to validate on which level the discriminator is applied to avoid potential false positives.
@@ -470,7 +470,7 @@ func (s *ObjectShape) Check() error {
 			}
 			ps := *prop.Shape
 			if err := ps.Validate(discriminatorValue, "$"); err != nil {
-				return stacktrace.NewWrapped("validate discriminator value", err, s.Location, stacktrace.WithPosition(&s.Base().Position), stacktrace.WithInfo("discriminator", *s.Discriminator))
+				return StacktraceNewWrapped("validate discriminator value", err, s.Location, stacktrace.WithPosition(&s.Base().Position), stacktrace.WithInfo("discriminator", *s.Discriminator))
 			}
 		}
 	} else if s.Discriminator != nil {
@@ -483,15 +483,15 @@ func (s *ObjectShape) Check() error {
 func (r *RAML) makePatternProperty(nodeName string, propertyName string, v *yaml.Node, location string, hasImplicitOptional bool) (PatternProperty, error) {
 	shape, err := r.makeShape(v, nodeName, location)
 	if err != nil {
-		return PatternProperty{}, stacktrace.NewWrapped("make shape", err, location, stacktrace.WithNodePosition(v))
+		return PatternProperty{}, StacktraceNewWrapped("make shape", err, location, WithNodePosition(v))
 	}
 	// Pattern properties cannot be required
 	if (*shape).Base().Required != nil || hasImplicitOptional {
-		return PatternProperty{}, stacktrace.New("'required' facet is not supported on pattern property", location, stacktrace.WithNodePosition(v))
+		return PatternProperty{}, stacktrace.New("'required' facet is not supported on pattern property", location, WithNodePosition(v))
 	}
 	re, err := regexp.Compile(propertyName[1 : len(propertyName)-1])
 	if err != nil {
-		return PatternProperty{}, stacktrace.NewWrapped("compile pattern", err, location, stacktrace.WithNodePosition(v))
+		return PatternProperty{}, StacktraceNewWrapped("compile pattern", err, location, WithNodePosition(v))
 	}
 	return PatternProperty{
 		Pattern: re,
@@ -512,7 +512,7 @@ func (r *RAML) chompImplicitOptional(nodeName string) (string, bool) {
 func (r *RAML) makeProperty(nodeName string, propertyName string, v *yaml.Node, location string, hasImplicitOptional bool) (Property, error) {
 	shape, err := r.makeShape(v, nodeName, location)
 	if err != nil {
-		return Property{}, stacktrace.NewWrapped("make shape", err, location, stacktrace.WithNodePosition(v))
+		return Property{}, StacktraceNewWrapped("make shape", err, location, WithNodePosition(v))
 	}
 	finalName := propertyName
 	var required bool
@@ -631,7 +631,7 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 				ms, err := cs.Inherit(*sourceMember)
 				if err != nil {
 					// TODO: Collect errors
-					// stacktrace.NewWrapped("merge union member", err, s.Location)
+					// StacktraceNewWrapped("merge union member", err, s.Location)
 					continue
 				}
 				filtered = append(filtered, &ms)
@@ -649,7 +649,7 @@ func (s *UnionShape) Inherit(source Shape) (Shape, error) {
 func (s *UnionShape) Check() error {
 	for _, item := range s.AnyOf {
 		if err := (*item).Check(); err != nil {
-			return stacktrace.NewWrapped("check union member", err, s.Location, stacktrace.WithPosition(&(*item).Base().Position))
+			return StacktraceNewWrapped("check union member", err, s.Location, stacktrace.WithPosition(&(*item).Base().Position))
 		}
 	}
 	// TODO: Unions may have enum facets

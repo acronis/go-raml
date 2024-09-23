@@ -8,7 +8,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 )
 
 const (
@@ -23,13 +23,13 @@ type EnumFacets struct {
 
 func (r *RAML) MakeEnum(v *yaml.Node, location string) (Nodes, error) {
 	if v.Kind != yaml.SequenceNode {
-		return nil, stacktrace.New("enum must be sequence node", location, stacktrace.WithNodePosition(v))
+		return nil, stacktrace.New("enum must be sequence node", location, WithNodePosition(v))
 	}
 	enums := make(Nodes, len(v.Content))
 	for i, v := range v.Content {
 		n, err := r.makeRootNode(v, location)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("make node enum", err, location, stacktrace.WithNodePosition(v))
+			return nil, StacktraceNewWrapped("make node enum", err, location, WithNodePosition(v))
 		}
 		enums[i] = n
 	}
@@ -189,46 +189,46 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		valueNode := v[i+1]
 		if node.Value == "minimum" {
 			if valueNode.Tag != "!!int" {
-				return stacktrace.New("minimum must be integer", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("minimum must be integer", s.Location, WithNodePosition(valueNode))
 			}
 
 			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
 			if !ok {
-				return stacktrace.New("invalid minimum value", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("invalid minimum value", s.Location, WithNodePosition(valueNode))
 			}
 			s.Minimum = num
 		} else if node.Value == "maximum" {
 			if valueNode.Tag != "!!int" {
-				return stacktrace.New("maximum must be integer", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("maximum must be integer", s.Location, WithNodePosition(valueNode))
 			}
 
 			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
 			if !ok {
-				return stacktrace.New("invalid maximum value", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("invalid maximum value", s.Location, WithNodePosition(valueNode))
 			}
 			s.Maximum = num
 		} else if node.Value == "multipleOf" {
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
-				return stacktrace.NewWrapped("decode multipleOf", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "format" {
 			if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, stacktrace.WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
+				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
 			}
 
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return stacktrace.NewWrapped("decode format", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "enum" {
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make enum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -362,34 +362,34 @@ func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		valueNode := v[i+1]
 		if node.Value == "minimum" {
 			if err := valueNode.Decode(&s.Minimum); err != nil {
-				return stacktrace.NewWrapped("decode minimum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode minimum", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maximum" {
 			if err := valueNode.Decode(&s.Maximum); err != nil {
-				return stacktrace.NewWrapped("decode maximum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode maximum", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "format" {
 			if _, ok := SetOfNumberFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, stacktrace.WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfNumberFormats))
+				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfNumberFormats))
 			}
 
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return stacktrace.NewWrapped("decode format", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "enum" {
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make enum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else if node.Value == "multipleOf" {
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
-				return stacktrace.NewWrapped("decode multipleOf", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -511,32 +511,32 @@ func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "minLength" {
 			if err := valueNode.Decode(&s.MinLength); err != nil {
-				return stacktrace.NewWrapped("decode minLength", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode minLength", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxLength" {
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
-				return stacktrace.NewWrapped("decode maxLength", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode maxLength", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "pattern" {
 			if valueNode.Tag != "!!str" {
-				return stacktrace.New("pattern must be string", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("pattern must be string", s.Location, WithNodePosition(valueNode))
 			}
 
 			re, err := regexp.Compile(valueNode.Value)
 			if err != nil {
-				return stacktrace.NewWrapped("decode pattern", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode pattern", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Pattern = re
 		} else if node.Value == "enum" {
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make enum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -635,24 +635,24 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		if node.Value == "minLength" {
 			if err := valueNode.Decode(&s.MinLength); err != nil {
-				return stacktrace.NewWrapped("decode minLength", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode minLength", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "maxLength" {
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
-				return stacktrace.NewWrapped("decode maxLength", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode maxLength", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else if node.Value == "fileTypes" {
 			if valueNode.Kind != yaml.SequenceNode {
-				return stacktrace.New("fileTypes must be sequence node", s.Location, stacktrace.WithNodePosition(valueNode))
+				return stacktrace.New("fileTypes must be sequence node", s.Location, WithNodePosition(valueNode))
 			}
 			fileTypes := make(Nodes, len(valueNode.Content))
 			for i, v := range valueNode.Content {
 				if v.Tag != "!!str" {
-					return stacktrace.New("member of fileTypes must be string", s.Location, stacktrace.WithNodePosition(v))
+					return stacktrace.New("member of fileTypes must be string", s.Location, WithNodePosition(v))
 				}
 				n, err := s.raml.makeRootNode(v, s.Location)
 				if err != nil {
-					return stacktrace.NewWrapped("make node fileTypes", err, s.Location, stacktrace.WithNodePosition(v))
+					return StacktraceNewWrapped("make node fileTypes", err, s.Location, WithNodePosition(v))
 				}
 				fileTypes[i] = n
 			}
@@ -660,7 +660,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -743,13 +743,13 @@ func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		if node.Value == "enum" {
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make enum", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -830,17 +830,17 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		valueNode := v[i+1]
 		if node.Value == "format" {
 			if _, ok := SetOfDateTimeFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, stacktrace.WithNodePosition(valueNode),
+				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode),
 					stacktrace.WithInfo("allowed_formats", SetOfNumberFormats))
 			}
 
 			if err := valueNode.Decode(&s.Format); err != nil {
-				return stacktrace.NewWrapped("decode format", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
 		} else {
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.CustomShapeFacets.Set(node.Value, n)
 		}
@@ -898,7 +898,7 @@ func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
-			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 		}
 		s.CustomShapeFacets.Set(node.Value, n)
 	}
@@ -955,7 +955,7 @@ func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
-			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 		}
 		s.CustomShapeFacets.Set(node.Value, n)
 	}
@@ -1012,7 +1012,7 @@ func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
-			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 		}
 		s.CustomShapeFacets.Set(node.Value, n)
 	}
@@ -1060,7 +1060,7 @@ func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
-			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 		}
 		s.CustomShapeFacets.Set(node.Value, n)
 	}
@@ -1111,7 +1111,7 @@ func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
-			return stacktrace.NewWrapped("make node", err, s.Location, stacktrace.WithNodePosition(valueNode))
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
 		}
 		s.CustomShapeFacets.Set(node.Value, n)
 	}

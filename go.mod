@@ -1,8 +1,11 @@
 module github.com/acronis/go-raml
 
-go 1.22
+go 1.22.6
+
+toolchain go1.23.0
 
 require (
+	github.com/acronis/go-stacktrace v0.1.0
 	github.com/antlr4-go/antlr/v4 v4.13.1
 	github.com/stretchr/testify v1.9.0
 	github.com/wk8/go-ordered-map/v2 v2.1.8
