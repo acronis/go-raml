@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
@@ -89,8 +90,6 @@ type Examples struct {
 
 	Location string
 	stacktrace.Position
-
-	raml *RAML
 }
 
 // ShapeBaser is the interface that represents a retriever of a base shape.
@@ -249,7 +248,7 @@ func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.
 var idCounter int = 1
 
 func generateShapeId() string {
-	id := "#" + fmt.Sprint(idCounter)
+	id := "#" + strconv.Itoa(idCounter)
 	idCounter++
 	return id
 }

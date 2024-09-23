@@ -39,7 +39,7 @@ func Test_main(t *testing.T) {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
 				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
-				//fmt.Println(string(b))
+				// fmt.Println(string(b))
 			}
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
 				shape := pair.Value
@@ -50,7 +50,7 @@ func Test_main(t *testing.T) {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
 				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
-				//fmt.Println(string(b))
+				// fmt.Println(string(b))
 			}
 		case *DataType:
 			s := *f.Shape
@@ -60,7 +60,7 @@ func Test_main(t *testing.T) {
 			// 	t.Errorf("StackTrace marshalling schema: %s", err)
 			// }
 			// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
-			//fmt.Println(string(b))
+			// fmt.Println(string(b))
 		}
 	}
 
