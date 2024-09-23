@@ -3,7 +3,7 @@ package raml
 import (
 	"fmt"
 
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
@@ -40,7 +40,7 @@ func (r *RAML) UnwrapShapes() error {
 				position := (*shape).Base().Position
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					se := stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					se := StacktraceNewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
 					if st == nil {
 						st = se
 					} else {
@@ -67,7 +67,7 @@ func (r *RAML) UnwrapShapes() error {
 				position := (*shape).Base().Position
 				us, err := r.UnwrapShape(shape, make([]Shape, 0))
 				if err != nil {
-					se := stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+					se := StacktraceNewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
 					if st == nil {
 						st = se
 					} else {
@@ -87,7 +87,7 @@ func (r *RAML) UnwrapShapes() error {
 			position := (*f.Shape).Base().Position
 			us, err := r.UnwrapShape(f.Shape, make([]Shape, 0))
 			if err != nil {
-				return stacktrace.NewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
+				return StacktraceNewWrapped("unwrap shape", err, f.Location, stacktrace.WithType(stacktrace.TypeUnwrapping), stacktrace.WithPosition(&position))
 			}
 			ptr := &us
 			f.Shape = ptr
@@ -100,7 +100,7 @@ func (r *RAML) UnwrapShapes() error {
 		db := *item.DefinedBy
 		ptr, err := r.GetAnnotationTypeFromFragmentPtr(db.Base().Location, db.Base().Name)
 		if err != nil {
-			se := stacktrace.NewWrapped("get annotation from fragment", err, db.Base().Location, stacktrace.WithPosition(&db.Base().Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			se := StacktraceNewWrapped("get annotation from fragment", err, db.Base().Location, stacktrace.WithPosition(&db.Base().Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			if st == nil {
 				st = se
 			} else {
@@ -183,7 +183,7 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 				cs.Base().Id = generateShapeId()
 				ms, err := cs.Inherit(i)
 				if err != nil {
-					se := stacktrace.NewWrapped("merge shapes", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+					se := StacktraceNewWrapped("merge shapes", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
 					if st == nil {
 						st = se
 					} else {
@@ -222,7 +222,7 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 			// Merge will raise an error in case any of union members has incompatible type
 			_, err := (*item).Inherit(source)
 			if err != nil {
-				se := stacktrace.NewWrapped("merge shapes", err, target.Base().Location,
+				se := StacktraceNewWrapped("merge shapes", err, target.Base().Location,
 					stacktrace.WithPosition(&target.Base().Position))
 				if st == nil {
 					st = se
@@ -240,7 +240,7 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 		// Homogenous types produce same type
 		ms, err := target.Inherit(source)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("merge shapes", err, target.Base().Location,
+			return nil, StacktraceNewWrapped("merge shapes", err, target.Base().Location,
 				stacktrace.WithPosition(&target.Base().Position))
 		}
 		return ms, nil
@@ -274,7 +274,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	if base.Alias != nil {
 		us, err := r.UnwrapShape(base.Alias, history)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("alias unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("alias unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		// Alias simply points to another shape, so we just change the name and return it as is.
 		us.Base().Name = base.Name
@@ -283,7 +283,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		// r.inheritBase((*link.Shape).Base(), base)
 		us, err := r.UnwrapShape(base.Link.Shape, history)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("link unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("link unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		source = us
 
@@ -295,7 +295,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		// Multiple inheritance members must be checked for compatibility with each other before unwrapping.
 		ss, err := r.UnwrapShape(inherits[0], history)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("parent unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("parent unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		unwrappedInherits[0] = &ss
 		for i := 1; i < len(inherits); i++ {
@@ -306,7 +306,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 			unwrappedInherits[i] = &us
 			_, err = ss.Inherit(us)
 			if err != nil {
-				return nil, stacktrace.NewWrapped("multiple parents unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+				return nil, StacktraceNewWrapped("multiple parents unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
 		}
 		source = ss
@@ -317,7 +317,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	if t, ok := target.(*ArrayShape); ok && t.Items != nil {
 		us, err := r.UnwrapShape(t.Items, history)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("array item unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("array item unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		*t.Items = us
 	} else if t, ok := target.(*ObjectShape); ok {
@@ -326,7 +326,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 				prop := pair.Value
 				us, err := r.UnwrapShape(prop.Shape, history)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("object property unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+					return nil, StacktraceNewWrapped("object property unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 				}
 				*prop.Shape = us
 			}
@@ -336,7 +336,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 				prop := pair.Value
 				us, err := r.UnwrapShape(prop.Shape, history)
 				if err != nil {
-					return nil, stacktrace.NewWrapped("object pattern property unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+					return nil, StacktraceNewWrapped("object pattern property unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 				}
 				*prop.Shape = us
 			}
@@ -345,7 +345,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		for _, item := range t.AnyOf {
 			us, err := r.UnwrapShape(item, history)
 			if err != nil {
-				return nil, stacktrace.NewWrapped("union unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+				return nil, StacktraceNewWrapped("union unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
 			*item = us
 		}
@@ -355,7 +355,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 		prop := pair.Value
 		us, err := r.UnwrapShape(prop.Shape, history)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("custom shape facet definition unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("custom shape facet definition unwrap", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		*prop.Shape = us
 	}
@@ -363,7 +363,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	if source != nil {
 		ms, err := r.Inherit(source, target)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("merge shapes", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+			return nil, StacktraceNewWrapped("merge shapes", err, base.Location, stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
 		ms.Base().unwrapped = true
 		return ms, nil

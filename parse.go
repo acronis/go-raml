@@ -13,7 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 )
 
 // ReadHead reads, reset file and returns the trimmed first line of a file.
@@ -51,7 +51,7 @@ func IdentifyFragment(head string) (FragmentKind, error) {
 func ReadRawFile(path string) (io.ReadCloser, error) {
 	f, err := openFragmentFile(path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return nil, StacktraceNewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	return f, nil
@@ -62,11 +62,11 @@ func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 	if strings.HasSuffix(path, ".json") {
 		data, err := io.ReadAll(f)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("read file", err, path, stacktrace.WithType(stacktrace.TypeReading))
+			return nil, StacktraceNewWrapped("read file", err, path, stacktrace.WithType(stacktrace.TypeReading))
 		}
 		dt, err := r.MakeJsonDataType(data, path)
 		if err != nil {
-			return nil, stacktrace.NewWrapped("make json data type", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+			return nil, StacktraceNewWrapped("make json data type", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 		}
 		r.PutFragment(path, dt)
 		return dt, nil
@@ -76,7 +76,7 @@ func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 
 	dt := r.MakeDataType(path)
 	if err := decoder.Decode(&dt); err != nil {
-		return nil, stacktrace.NewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	r.PutFragment(path, dt)
@@ -86,7 +86,7 @@ func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 		include := pair.Value
 		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
-			return nil, stacktrace.NewWrapped("parse library", err, dt.Location, stacktrace.WithType(stacktrace.TypeParsing))
+			return nil, StacktraceNewWrapped("parse library", err, dt.Location, stacktrace.WithType(stacktrace.TypeParsing))
 		}
 		include.Link = sublib
 	}
@@ -126,7 +126,7 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 
 	f, err := openFragmentFile(path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return nil, StacktraceNewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	defer func(f *os.File) {
@@ -137,12 +137,12 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 	}(f)
 
 	if err = CheckFragmentKind(f, FragmentDataType); err != nil {
-		return nil, stacktrace.NewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return nil, StacktraceNewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	dt, err := r.decodeDataType(f, path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("decode data type", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode data type", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	return dt, nil
@@ -170,7 +170,7 @@ func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 
 	lib := r.MakeLibrary(path)
 	if err := decoder.Decode(&lib); err != nil {
-		return nil, stacktrace.NewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	var st *stacktrace.StackTrace
@@ -184,7 +184,7 @@ func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 
 		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
 		if err != nil {
-			se := stacktrace.NewWrapped("parse uses library", err, path, stacktrace.WithType(stacktrace.TypeParsing), stacktrace.WithPosition(&include.Position))
+			se := StacktraceNewWrapped("parse uses library", err, path, stacktrace.WithType(stacktrace.TypeParsing), stacktrace.WithPosition(&include.Position))
 			if st == nil {
 				st = se
 			} else {
@@ -214,7 +214,7 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 
 	f, err := openFragmentFile(path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeLoading))
+		return nil, StacktraceNewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeLoading))
 	}
 
 	defer func(f *os.File) {
@@ -225,12 +225,12 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 	}(f)
 
 	if err = CheckFragmentKind(f, FragmentLibrary); err != nil {
-		return nil, stacktrace.NewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return nil, StacktraceNewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	lib, err := r.decodeLibrary(f, path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("decode library", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode library", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	return lib, nil
@@ -241,7 +241,7 @@ func (r *RAML) decodeNamedExample(f io.Reader, path string) (*NamedExample, erro
 
 	ne := r.MakeNamedExample(path)
 	if err := decoder.Decode(&ne); err != nil {
-		return nil, stacktrace.NewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode fragment", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	r.PutFragment(path, ne)
@@ -271,12 +271,12 @@ func (r *RAML) parseNamedExample(path string) (*NamedExample, error) {
 	}(f)
 
 	if err = CheckFragmentKind(f, FragmentNamedExample); err != nil {
-		return nil, stacktrace.NewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return nil, StacktraceNewWrapped("check fragment kind", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	ne, err := r.decodeNamedExample(f, path)
 	if err != nil {
-		return nil, stacktrace.NewWrapped("decode named example", err, path, stacktrace.WithType(stacktrace.TypeParsing))
+		return nil, StacktraceNewWrapped("decode named example", err, path, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
 	return ne, nil
@@ -293,7 +293,7 @@ func (r *RAML) ParseFromPath(path string, opts ...ParseOpt) error {
 
 	f, err := openFragmentFile(path)
 	if err != nil {
-		return stacktrace.NewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
+		return StacktraceNewWrapped("open fragment file", err, path, stacktrace.WithType(stacktrace.TypeReading))
 	}
 
 	defer func(f *os.File) {
@@ -320,29 +320,29 @@ func (r *RAML) ParseFromString(content string, fileName string, baseDir string, 
 func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parserOptions) error {
 	head, err := ReadHead(f)
 	if err != nil {
-		return stacktrace.NewWrapped("read head", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+		return StacktraceNewWrapped("read head", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 	frag, err := IdentifyFragment(head)
 	if err != nil {
-		return stacktrace.NewWrapped("identify fragment", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+		return StacktraceNewWrapped("identify fragment", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 	switch frag {
 	case FragmentLibrary:
 		lib, err := r.decodeLibrary(f, fragmentPath)
 		if err != nil {
-			return stacktrace.NewWrapped("parse library", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+			return StacktraceNewWrapped("parse library", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 		}
 		r.SetEntryPoint(lib)
 	case FragmentDataType:
 		dt, err := r.decodeDataType(f, fragmentPath)
 		if err != nil {
-			return stacktrace.NewWrapped("parse data type", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+			return StacktraceNewWrapped("parse data type", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 		}
 		r.SetEntryPoint(dt)
 	case FragmentNamedExample:
 		ne, err := r.decodeNamedExample(f, fragmentPath)
 		if err != nil {
-			return stacktrace.NewWrapped("parse named example", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+			return StacktraceNewWrapped("parse named example", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 		}
 		r.SetEntryPoint(ne)
 	default:
@@ -353,11 +353,11 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 
 	err = r.resolveShapes()
 	if err != nil {
-		st = stacktrace.NewWrapped("resolve shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+		st = StacktraceNewWrapped("resolve shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 	}
 	err = r.resolveDomainExtensions()
 	if err != nil {
-		se := stacktrace.NewWrapped("resolve domain extensions", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+		se := StacktraceNewWrapped("resolve domain extensions", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 		if st == nil {
 			st = se
 		} else {
@@ -368,7 +368,7 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 	if pOpts.withUnwrapOpt {
 		err = r.UnwrapShapes()
 		if err != nil {
-			se := stacktrace.NewWrapped("unwrap shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+			se := StacktraceNewWrapped("unwrap shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 			if st == nil {
 				st = se
 			} else {
@@ -380,7 +380,7 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 	if pOpts.withValidateOpt {
 		err = r.ValidateShapes()
 		if err != nil {
-			se := stacktrace.NewWrapped("validate shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
+			se := StacktraceNewWrapped("validate shapes", err, fragmentPath, stacktrace.WithType(stacktrace.TypeParsing))
 			if st == nil {
 				st = se
 			} else {

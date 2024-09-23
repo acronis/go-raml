@@ -1,7 +1,7 @@
 package raml
 
 import (
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 )
 
 type Value[T any] struct {

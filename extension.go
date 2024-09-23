@@ -3,7 +3,7 @@ package raml
 import (
 	"gopkg.in/yaml.v3"
 
-	"github.com/acronis/go-raml/stacktrace"
+	"github.com/acronis/go-stacktrace"
 )
 
 type DomainExtension struct {
@@ -20,17 +20,17 @@ type DomainExtension struct {
 func (r *RAML) unmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNode *yaml.Node) (string, *DomainExtension, error) {
 	name := keyNode.Value[1 : len(keyNode.Value)-1]
 	if name == "" {
-		return "", nil, stacktrace.New("annotation name must not be empty", location, stacktrace.WithNodePosition(keyNode))
+		return "", nil, stacktrace.New("annotation name must not be empty", location, WithNodePosition(keyNode))
 	}
 	n, err := r.makeRootNode(valueNode, location)
 	if err != nil {
-		return "", nil, stacktrace.NewWrapped("make node", err, location, stacktrace.WithNodePosition(valueNode))
+		return "", nil, StacktraceNewWrapped("make node", err, location, WithNodePosition(valueNode))
 	}
 	de := &DomainExtension{
 		Name:      name,
 		Extension: n,
 		Location:  location,
-		Position:  stacktrace.Position{keyNode.Line, keyNode.Column},
+		Position:  stacktrace.Position{Line: keyNode.Line, Column: keyNode.Column},
 		raml:      r,
 	}
 	r.domainExtensions = append(r.domainExtensions, de)

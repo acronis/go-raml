@@ -2,3 +2,5 @@
 .antlr
 *.interp
 *.tokens
+cover.html
+cover.out

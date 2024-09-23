@@ -48,10 +48,7 @@ func (r *RAML) GetLocation() string {
 // GetAllAnnotationsPtr returns all annotations as pointers.
 func (r *RAML) GetAllAnnotationsPtr() []*DomainExtension {
 	var annotations []*DomainExtension
-	for _, de := range r.domainExtensions {
-		annotations = append(annotations, de)
-	}
-	return annotations
+	return append(annotations, r.domainExtensions...)
 }
 
 // GetAllAnnotations returns all annotations.
