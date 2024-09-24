@@ -1,5 +1,5 @@
-github.com/acronis/go-raml v0.9.0 h1:5jvIInX44u9HDkqc7g7zJltUJsHaplQqG6aKcNnT50o=
-github.com/acronis/go-raml v0.9.0/go.mod h1:NwovfR4e7ufFaoH77/3U0f82lu6soXlNc+vdFfpik4A=
+github.com/acronis/go-raml v0.11.0 h1:wzpVC9EEY2QnneI0Me5yaK6yvyd+rQ1OpklXTn14G1w=
+github.com/acronis/go-raml v0.11.0/go.mod h1:sZQ+e5lepkFm9pta+FAzNIxjFgdg6kS2tq0ClCRC5jM=
 github.com/acronis/go-stacktrace v0.2.0 h1:aUME2BnO2WwBpmidhSq+C2cCm6T0i7u1mwraetKPyjQ=
 github.com/acronis/go-stacktrace v0.2.0/go.mod h1:FOvjPOpMOpJhNgt2adD+FEnOpzcOzUBeiRkPaAd2aLQ=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=
