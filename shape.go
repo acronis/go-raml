@@ -32,7 +32,7 @@ type ShapeVisitor[T any] interface {
 }
 
 type BaseShape struct {
-	Id          string
+	ID          string
 	Name        string
 	DisplayName *string
 	Description *string
@@ -49,9 +49,12 @@ type BaseShape struct {
 	// To support !include of DataType fragment
 	Link *DataType
 
-	CustomShapeFacets           *orderedmap.OrderedMap[string, *Node]            // Map of custom facets with values
-	CustomShapeFacetDefinitions *orderedmap.OrderedMap[string, Property]         // Object properties share the same syntax with custom shape facets.
-	CustomDomainProperties      *orderedmap.OrderedMap[string, *DomainExtension] // Map of custom annotations
+	// CustomShapeFacets is a map of custom facets with values
+	CustomShapeFacets *orderedmap.OrderedMap[string, *Node]
+	// CustomShapeFacetDefinitions is an object properties share the same syntax with custom shape facets.
+	CustomShapeFacetDefinitions *orderedmap.OrderedMap[string, Property]
+	// CustomDomainProperties is a map of custom annotations
+	CustomDomainProperties *orderedmap.OrderedMap[string, *DomainExtension]
 
 	raml *RAML
 
@@ -82,7 +85,7 @@ func (s *BaseShape) String() string {
 
 // Examples represents a collection of examples.
 type Examples struct {
-	Id  string
+	ID  string
 	Map *orderedmap.OrderedMap[string, *Example]
 
 	// To support !include of NamedExample fragment
@@ -148,18 +151,18 @@ func identifyShapeType(shapeFacets []*yaml.Node) string {
 	var t = TypeString
 	for i := 0; i != len(shapeFacets); i += 2 {
 		node := shapeFacets[i]
-		if _, ok := SetOfStringFacets[node.Value]; ok {
+		if _, isString := SetOfStringFacets[node.Value]; isString {
 			t = TypeString
-		} else if _, ok := SetOfNumberFacets[node.Value]; ok {
+		} else if _, isInteger := SetOfNumberFacets[node.Value]; isInteger {
 			t = TypeInteger
 			break
-		} else if _, ok := SetOfFileFacets[node.Value]; ok {
+		} else if _, isFile := SetOfFileFacets[node.Value]; isFile {
 			t = TypeFile
 			break // File has a unique facet
-		} else if _, ok := SetOfObjectFacets[node.Value]; ok {
+		} else if _, isObj := SetOfObjectFacets[node.Value]; isObj {
 			t = TypeObject
 			break
-		} else if _, ok := SetOfArrayFacets[node.Value]; ok {
+		} else if _, isArray := SetOfArrayFacets[node.Value]; isArray {
 			t = TypeArray
 			break
 		}
@@ -173,7 +176,8 @@ func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (Shape, error) {
 	var schema *JSONSchema
 	err := json.Unmarshal([]byte(rawSchema), &schema)
 	if err != nil {
-		return nil, StacktraceNewWrapped("unmarshal json", err, base.Location, stacktrace.WithPosition(&base.Position))
+		return nil, StacktraceNewWrapped("unmarshal json", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
 	}
 
 	return &JSONShape{BaseShape: *base, Raw: rawSchema, Schema: schema}, nil
@@ -232,7 +236,7 @@ func (r *RAML) MakeConcreteShape(base *BaseShape, shapeType string, shapeFacets 
 // MakeBaseShape creates a new base shape which is a base for all shapes.
 func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.Position) *BaseShape {
 	return &BaseShape{
-		Id:       generateShapeId(),
+		ID:       generateShapeID(),
 		Name:     name,
 		Location: location,
 		Position: *position,
@@ -245,9 +249,9 @@ func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.
 }
 
 // TODO: Temporary workaround
-var idCounter int = 1
+var idCounter = 1
 
-func generateShapeId() string {
+func generateShapeID() string {
 	id := "#" + strconv.Itoa(idCounter)
 	idCounter++
 	return id
@@ -268,30 +272,43 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 	} else {
 		switch shapeTypeNode.Kind {
 		default:
-			return nil, stacktrace.New("type must be string or array", location, WithNodePosition(shapeTypeNode))
+			return nil, stacktrace.New("type must be string or array", location,
+				WithNodePosition(shapeTypeNode))
+		case yaml.DocumentNode:
+			return nil, stacktrace.New("document node is not allowed", location,
+				WithNodePosition(shapeTypeNode))
+		case yaml.MappingNode:
+			return nil, stacktrace.New("mapping node is not allowed", location,
+				WithNodePosition(shapeTypeNode))
+		case yaml.AliasNode:
+			return nil, stacktrace.New("alias node is not allowed", location,
+				WithNodePosition(shapeTypeNode))
 		case yaml.ScalarNode:
-			if shapeTypeNode.Tag == "!!str" {
+			switch shapeTypeNode.Tag {
+			case TagStr:
 				shapeType = shapeTypeNode.Value
 				if shapeType == "" {
 					shapeType = identifyShapeType(shapeFacets)
 				} else if shapeType[0] == '{' {
-					s, err := r.MakeJSONShape(base, shapeType)
-					if err != nil {
-						return nil, StacktraceNewWrapped("make json shape", err, location, WithNodePosition(shapeTypeNode))
+					s, errMake := r.MakeJSONShape(base, shapeType)
+					if errMake != nil {
+						return nil, StacktraceNewWrapped("make json shape", errMake, location,
+							WithNodePosition(shapeTypeNode))
 					}
 					return &s, nil
 				}
-			} else if shapeTypeNode.Tag == "!include" {
+			case TagInclude:
 				baseDir := filepath.Dir(location)
-				dt, err := r.parseDataType(filepath.Join(baseDir, shapeTypeNode.Value))
-				if err != nil {
-					return nil, StacktraceNewWrapped("parse data", err, location, WithNodePosition(shapeTypeNode))
+				dt, errParse := r.parseDataType(filepath.Join(baseDir, shapeTypeNode.Value))
+				if errParse != nil {
+					return nil, StacktraceNewWrapped("parse data", errParse, location,
+						WithNodePosition(shapeTypeNode))
 				}
 				base.TypeLabel = shapeTypeNode.Value
 				base.Link = dt
-			} else if shapeTypeNode.Tag == "!!null" {
+			case TagNull:
 				shapeType = TypeString
-			} else {
+			default:
 				return nil, stacktrace.New("type must be string", location, WithNodePosition(shapeTypeNode))
 			}
 		case yaml.SequenceNode:
@@ -300,11 +317,12 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 				if node.Kind != yaml.ScalarNode {
 					return nil, stacktrace.New("node kind must be scalar", location, WithNodePosition(node))
 				} else if node.Tag == "!include" {
-					return nil, stacktrace.New("!include is not allowed in multiple inheritance", location, WithNodePosition(node))
+					return nil, stacktrace.New("!include is not allowed in multiple inheritance",
+						location, WithNodePosition(node))
 				}
-				s, err := r.makeShape(node, name, location)
-				if err != nil {
-					return nil, StacktraceNewWrapped("make shape", err, location, WithNodePosition(node))
+				s, errMake := r.makeShape(node, name, location)
+				if errMake != nil {
+					return nil, StacktraceNewWrapped("make shape", errMake, location, WithNodePosition(node))
 				}
 				inherits[i] = s
 			}
@@ -315,7 +333,8 @@ func (r *RAML) makeShape(v *yaml.Node, name string, location string) (*Shape, er
 
 	s, err := r.MakeConcreteShape(base, shapeType, shapeFacets)
 	if err != nil {
-		return nil, StacktraceNewWrapped("make concrete shape", err, base.Location, stacktrace.WithPosition(&base.Position))
+		return nil, StacktraceNewWrapped("make concrete shape", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
 	}
 	ptr := &s
 	if _, ok := s.(*UnknownShape); ok {
@@ -341,27 +360,25 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
-		if IsCustomDomainExtensionNode(node.Value) {
-			name, de, err := s.raml.unmarshalCustomDomainExtension(s.Location, node, valueNode)
-			if err != nil {
-				return nil, nil, StacktraceNewWrapped("unmarshal custom domain extension", err, s.Location, WithNodePosition(valueNode))
-			}
-			s.CustomDomainProperties.Set(name, de)
-		} else if node.Value == "type" {
+		switch node.Value {
+		case "type":
 			shapeTypeNode = valueNode
-		} else if node.Value == "displayName" {
+		case "displayName":
 			if err := valueNode.Decode(&s.DisplayName); err != nil {
-				return nil, nil, StacktraceNewWrapped("decode display name", err, s.Location, WithNodePosition(valueNode))
+				return nil, nil, StacktraceNewWrapped("decode display name", err, s.Location,
+					WithNodePosition(valueNode))
 			}
-		} else if node.Value == "description" {
+		case "description":
 			if err := valueNode.Decode(&s.Description); err != nil {
-				return nil, nil, StacktraceNewWrapped("decode description", err, s.Location, WithNodePosition(valueNode))
+				return nil, nil, StacktraceNewWrapped("decode description", err, s.Location,
+					WithNodePosition(valueNode))
 			}
-		} else if node.Value == "required" {
+		case "required":
 			if err := valueNode.Decode(&s.Required); err != nil {
-				return nil, nil, StacktraceNewWrapped("decode required", err, s.Location, WithNodePosition(valueNode))
+				return nil, nil, StacktraceNewWrapped("decode required", err, s.Location,
+					WithNodePosition(valueNode))
 			}
-		} else if node.Value == "facets" {
+		case "facets":
 			s.CustomShapeFacetDefinitions = orderedmap.New[string, Property](len(valueNode.Content) / 2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
 				nodeName := valueNode.Content[j].Value
@@ -370,33 +387,39 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
 				property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
 				if err != nil {
-					return nil, nil, StacktraceNewWrapped("make property", err, s.Location, WithNodePosition(data))
+					return nil, nil, StacktraceNewWrapped("make property", err, s.Location,
+						WithNodePosition(data))
 				}
 				s.CustomShapeFacetDefinitions.Set(property.Name, property)
 			}
-		} else if node.Value == "example" {
+		case "example":
 			if s.Examples != nil {
-				return nil, nil, stacktrace.New("example and examples cannot be defined together", s.Location, WithNodePosition(valueNode))
+				return nil, nil, stacktrace.New("example and examples cannot be defined together", s.Location,
+					WithNodePosition(valueNode))
 			}
 			example, err := s.raml.makeExample(valueNode, "", s.Location)
 			if err != nil {
-				return nil, nil, StacktraceNewWrapped("make example", err, s.Location, WithNodePosition(valueNode))
+				return nil, nil, StacktraceNewWrapped("make example", err, s.Location,
+					WithNodePosition(valueNode))
 			}
 			s.Example = example
-		} else if node.Value == "examples" {
+		case "examples":
 			if s.Example != nil {
-				return nil, nil, stacktrace.New("example and examples cannot be defined together", s.Location, WithNodePosition(valueNode))
+				return nil, nil, stacktrace.New("example and examples cannot be defined together", s.Location,
+					WithNodePosition(valueNode))
 			}
 			if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == "!include" {
 				baseDir := filepath.Dir(s.Location)
 				n, err := s.raml.parseNamedExample(filepath.Join(baseDir, valueNode.Value))
 				if err != nil {
-					return nil, nil, StacktraceNewWrapped("parse named example", err, s.Location, WithNodePosition(valueNode))
+					return nil, nil, StacktraceNewWrapped("parse named example", err, s.Location,
+						WithNodePosition(valueNode))
 				}
 				s.Examples = &Examples{Link: n, Location: s.Location}
 				continue
 			} else if valueNode.Kind != yaml.MappingNode {
-				return nil, nil, stacktrace.New("examples must be map", s.Location, WithNodePosition(valueNode))
+				return nil, nil, stacktrace.New("examples must be map", s.Location,
+					WithNodePosition(valueNode))
 			}
 			examples := orderedmap.New[string, *Example](len(valueNode.Content) / 2)
 			for j := 0; j != len(valueNode.Content); j += 2 {
@@ -404,21 +427,32 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 				data := valueNode.Content[j+1]
 				example, err := s.raml.makeExample(data, name, s.Location)
 				if err != nil {
-					return nil, nil, StacktraceNewWrapped(fmt.Sprintf("make examples: [%d]", j), err, s.Location, WithNodePosition(data))
+					return nil, nil, StacktraceNewWrapped(fmt.Sprintf("make examples: [%d]", j),
+						err, s.Location, WithNodePosition(data))
 				}
 				examples.Set(name, example)
 			}
 			s.Examples = &Examples{Map: examples, Location: s.Location}
-		} else if node.Value == "default" {
+		case "default":
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
-				return nil, nil, StacktraceNewWrapped("make node default", err, s.Location, WithNodePosition(valueNode))
+				return nil, nil, StacktraceNewWrapped("make node default", err, s.Location,
+					WithNodePosition(valueNode))
 			}
 			s.Default = n
-		} else if node.Value == "allowedTargets" {
+		case "allowedTargets":
 			// TODO: Included by annotationTypes
-		} else {
-			shapeFacets = append(shapeFacets, node, valueNode)
+		default:
+			if IsCustomDomainExtensionNode(node.Value) {
+				name, de, err := s.raml.unmarshalCustomDomainExtension(s.Location, node, valueNode)
+				if err != nil {
+					return nil, nil, StacktraceNewWrapped("unmarshal custom domain extension", err, s.Location,
+						WithNodePosition(valueNode))
+				}
+				s.CustomDomainProperties.Set(name, de)
+			} else {
+				shapeFacets = append(shapeFacets, node, valueNode)
+			}
 		}
 	}
 

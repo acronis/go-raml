@@ -15,7 +15,8 @@ func Test_ParseFromPath(t *testing.T) {
 	require.NoError(t, err)
 	elapsed := time.Since(start)
 	shapesAll := rml.GetShapes()
-	slog.Info("ParseFromPath", "took ms", elapsed.Milliseconds(), "location", rml.entryPoint.GetLocation(), "total shapes", len(shapesAll))
+	slog.Info("ParseFromPath", "took ms", elapsed.Milliseconds(), "location",
+		rml.entryPoint.GetLocation(), "total shapes", len(shapesAll))
 
 	conv := NewJSONSchemaConverter()
 	for _, frag := range rml.fragmentsCache {
@@ -29,7 +30,7 @@ func Test_ParseFromPath(t *testing.T) {
 				// if err != nil {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
-				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().ID), b, 0644)
 				// fmt.Println(string(b))
 			}
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
@@ -40,7 +41,7 @@ func Test_ParseFromPath(t *testing.T) {
 				// if err != nil {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
-				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().ID), b, 0644)
 				// fmt.Println(string(b))
 			}
 		case *DataType:
@@ -50,7 +51,7 @@ func Test_ParseFromPath(t *testing.T) {
 			// if err != nil {
 			// 	t.Errorf("StackTrace marshalling schema: %s", err)
 			// }
-			// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().Id), b, 0644)
+			// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().ID), b, 0644)
 			// fmt.Println(string(b))
 		}
 	}
@@ -60,6 +61,8 @@ func Test_ParseFromPath(t *testing.T) {
 
 func printMemUsage(t *testing.T) {
 	var m runtime.MemStats
+	t.Helper()
 	runtime.ReadMemStats(&m)
-	slog.Info("Memory usage", "alloc MiB", m.Alloc/1024/1024, "total alloc MiB", m.TotalAlloc/1024/1024, "sys MiB", m.Sys/1024/1024, "num GC", m.NumGC)
+	slog.Info("Memory usage", "alloc MiB", m.Alloc/1024/1024, "total alloc MiB",
+		m.TotalAlloc/1024/1024, "sys MiB", m.Sys/1024/1024, "num GC", m.NumGC)
 }

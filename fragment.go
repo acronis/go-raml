@@ -28,7 +28,7 @@ type Fragment interface {
 
 // Library is the RAML 1.0 Library
 type Library struct {
-	Id              string
+	ID              string
 	Usage           string
 	AnnotationTypes *orderedmap.OrderedMap[string, *Shape]
 	// TODO: Specific to API fragments. Not supported yet.
@@ -47,7 +47,7 @@ func (l *Library) GetLocation() string {
 }
 
 type LibraryLink struct {
-	Id    string
+	ID    string
 	Value string
 
 	Link *Library
@@ -66,14 +66,9 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
-		if IsCustomDomainExtensionNode(node.Value) {
-			name, de, err := l.raml.unmarshalCustomDomainExtension(l.Location, node, valueNode)
-			if err != nil {
-				return StacktraceNewWrapped("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
-			}
-			l.CustomDomainProperties.Set(name, de)
-		} else if node.Value == "uses" {
-			if valueNode.Tag == "!!null" {
+		switch node.Value {
+		case "uses":
+			if valueNode.Tag == TagNull {
 				continue
 			}
 
@@ -88,8 +83,8 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 					Position: stacktrace.Position{Line: path.Line, Column: path.Column},
 				})
 			}
-		} else if node.Value == "types" {
-			if valueNode.Tag == "!!null" {
+		case "types":
+			if valueNode.Tag == TagNull {
 				continue
 			}
 
@@ -106,8 +101,8 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				l.raml.PutTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
-		} else if node.Value == "annotationTypes" {
-			if valueNode.Tag == "!!null" {
+		case "annotationTypes":
+			if valueNode.Tag == TagNull {
 				continue
 			}
 
@@ -124,9 +119,17 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 				l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
 				l.raml.PutShapePtr(shape)
 			}
-		} else if node.Value == "usage" {
+		case "usage":
 			if err := valueNode.Decode(&l.Usage); err != nil {
 				return StacktraceNewWrapped("parse usage: value node decode", err, l.Location, WithNodePosition(valueNode))
+			}
+		default:
+			if IsCustomDomainExtensionNode(node.Value) {
+				name, de, err := l.raml.unmarshalCustomDomainExtension(l.Location, node, valueNode)
+				if err != nil {
+					return StacktraceNewWrapped("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
+				}
+				l.CustomDomainProperties.Set(name, de)
 			}
 		}
 	}
@@ -143,7 +146,7 @@ func (r *RAML) MakeLibrary(path string) *Library {
 
 // DataType is the RAML 1.0 DataType
 type DataType struct {
-	Id    string
+	ID    string
 	Usage string
 	Uses  *orderedmap.OrderedMap[string, *LibraryLink]
 	Shape *Shape
@@ -167,11 +170,12 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
-		if node.Value == "usage" {
+		switch node.Value {
+		case "usage":
 			dt.Usage = valueNode.Value
-		} else if node.Value == "uses" {
-			if valueNode.Tag == "!!null" {
-				continue
+		case "uses":
+			if valueNode.Tag == TagNull {
+				break
 			}
 
 			dt.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
@@ -185,7 +189,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 					Position: stacktrace.Position{Line: path.Line, Column: path.Column},
 				})
 			}
-		} else {
+		default:
 			shapeValue.Content = append(shapeValue.Content, node, valueNode)
 		}
 	}
@@ -204,7 +208,7 @@ func (r *RAML) MakeDataType(path string) *DataType {
 	}
 }
 
-func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
+func (r *RAML) MakeJSONDataType(value []byte, path string) (*DataType, error) {
 	dt := r.MakeDataType(path)
 	// Convert to yaml node to reuse the same data node creation interface
 	node := &yaml.Node{
@@ -230,7 +234,7 @@ func (r *RAML) MakeJsonDataType(value []byte, path string) (*DataType, error) {
 
 // NamedExample is the RAML 1.0 NamedExample
 type NamedExample struct {
-	Id  string
+	ID  string
 	Map *orderedmap.OrderedMap[string, *Example]
 
 	Location string

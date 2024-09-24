@@ -16,7 +16,7 @@ const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 // https://json-schema.org/draft-07/draft-handrews-json-schema-00.pdf
 type JSONSchema struct {
 	Version     string      `json:"$schema,omitempty"`
-	Id          string      `json:"$id,omitempty"`
+	ID          string      `json:"$id,omitempty"`
 	Ref         string      `json:"$ref,omitempty"`
 	Definitions Definitions `json:"definitions,omitempty"`
 	Comment     string      `json:"$comment,omitempty"`

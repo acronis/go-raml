@@ -36,23 +36,26 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 			for i := 0; i != len(value.Content); i += 2 {
 				node := value.Content[i]
 				valueNode := value.Content[i+1]
-				if IsCustomDomainExtensionNode(node.Value) {
-					name, de, err := r.unmarshalCustomDomainExtension(location, node, valueNode)
-					if err != nil {
-						return nil, StacktraceNewWrapped("unmarshal custom domain extension", err, location, WithNodePosition(valueNode))
-					}
-					ex.CustomDomainProperties.Set(name, de)
-				} else if node.Value == "strict" {
+				switch node.Value {
+				case "strict":
 					if err := valueNode.Decode(&ex.Strict); err != nil {
 						return nil, StacktraceNewWrapped("decode strict", err, location, WithNodePosition(valueNode))
 					}
-				} else if node.Value == "displayName" {
+				case "displayName":
 					if err := valueNode.Decode(&ex.DisplayName); err != nil {
 						return nil, StacktraceNewWrapped("decode displayName", err, location, WithNodePosition(valueNode))
 					}
-				} else if node.Value == "description" {
+				case "description":
 					if err := valueNode.Decode(&ex.Description); err != nil {
 						return nil, StacktraceNewWrapped("decode description", err, location, WithNodePosition(valueNode))
+					}
+				default:
+					if IsCustomDomainExtensionNode(node.Value) {
+						deName, de, err := r.unmarshalCustomDomainExtension(location, node, valueNode)
+						if err != nil {
+							return nil, StacktraceNewWrapped("unmarshal custom domain extension", err, location, WithNodePosition(valueNode))
+						}
+						ex.CustomDomainProperties.Set(deName, de)
 					}
 				}
 			}
@@ -75,7 +78,7 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 
 // Example represents an example of a shape
 type Example struct {
-	Id          string
+	ID          string
 	Name        string
 	DisplayName string
 	Description string

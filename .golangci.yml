@@ -210,7 +210,6 @@ linters-settings:
     # Default: false
     all: true
 
-
 linters:
   disable-all: true
   enable:

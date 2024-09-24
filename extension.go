@@ -7,7 +7,7 @@ import (
 )
 
 type DomainExtension struct {
-	Id        string
+	ID        string
 	Name      string
 	Extension *Node
 	DefinedBy *Shape
@@ -17,14 +17,18 @@ type DomainExtension struct {
 	raml *RAML
 }
 
-func (r *RAML) unmarshalCustomDomainExtension(location string, keyNode *yaml.Node, valueNode *yaml.Node) (string, *DomainExtension, error) {
+func (r *RAML) unmarshalCustomDomainExtension(location string, keyNode *yaml.Node,
+	valueNode *yaml.Node,
+) (string, *DomainExtension, error) {
 	name := keyNode.Value[1 : len(keyNode.Value)-1]
 	if name == "" {
-		return "", nil, stacktrace.New("annotation name must not be empty", location, WithNodePosition(keyNode))
+		return "", nil, stacktrace.New("annotation name must not be empty", location,
+			WithNodePosition(keyNode))
 	}
 	n, err := r.makeRootNode(valueNode, location)
 	if err != nil {
-		return "", nil, StacktraceNewWrapped("make node", err, location, WithNodePosition(valueNode))
+		return "", nil, StacktraceNewWrapped("make node", err, location,
+			WithNodePosition(valueNode))
 	}
 	de := &DomainExtension{
 		Name:      name,
