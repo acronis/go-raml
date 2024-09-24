@@ -1,9 +1,11 @@
 # RAML 1.0 parser for Go
 
 > [!WARNING]
-> The parser is in active development. See supported features in the **Supported features of RAML 1.0 specification** section.
+> The parser is in active development. See supported features in the **Supported features of RAML 1.0 specification**
+> section.
 
-This is an implementation of RAML 1.0 parser for Go according to [the official RAML 1.0 specification](https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/).
+This is an implementation of RAML 1.0 parser for Go according
+to [the official RAML 1.0 specification](https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/).
 
 This package aims to achieve the following:
 
@@ -23,58 +25,61 @@ The following sections are currently implemented. See notes for each point:
 
 - [ ] RAML API definitions
 - [x] RAML Data Types
-  - [x] Defining Types
-  - [x] Type Declarations
-  - [x] Built-in Types
-    - [x] The "Any" Type
-    - [x] Object Type
-      - [x] Property Declarations (explicit and pattern properties)
-      - [x] Additional Properties
-      - [x] Object Type Specialization
-      - [x] Using Discriminator
-    - [x] Array Type
-    - [x] Scalar Types
-      - [x] String
-      - [x] Number
-      - [x] Integer
-      - [x] Boolean
-      - [x] Date
-      - [x] File
-      - [x] Nil Type
-    - [x] Union Type (mostly supported, lacks enum support)
-    - [x] JSON Schema types (supported, but validation is not implemented)
-    - [x] Recursive types
-  - [x] User-defined Facets
-  - [x] Determine Default Types
-  - [x] Type Expressions
-    - [x] Inheritance
-  - [ ] Multiple Inheritance (supported, but not fully compliant)
-  - [x] Inline Type Declarations
-  - [x] Defining Examples in RAML
-    - [x] Multiple Examples
-    - [x] Single Example
-    - [x] Validation against defined data type
+    - [x] Defining Types
+    - [x] Type Declarations
+    - [x] Built-in Types
+        - [x] The "Any" Type
+        - [x] Object Type
+            - [x] Property Declarations (explicit and pattern properties)
+            - [x] Additional Properties
+            - [x] Object Type Specialization
+            - [x] Using Discriminator
+        - [x] Array Type
+        - [x] Scalar Types
+            - [x] String
+            - [x] Number
+            - [x] Integer
+            - [x] Boolean
+            - [x] Date
+            - [x] File
+            - [x] Nil Type
+        - [x] Union Type (mostly supported, lacks enum support)
+        - [x] JSON Schema types (supported, but validation is not implemented)
+        - [x] Recursive types
+    - [x] User-defined Facets
+    - [x] Determine Default Types
+    - [x] Type Expressions
+        - [x] Inheritance
+    - [ ] Multiple Inheritance (supported, but not fully compliant)
+    - [x] Inline Type Declarations
+    - [x] Defining Examples in RAML
+        - [x] Multiple Examples
+        - [x] Single Example
+        - [x] Validation against defined data type
 - [ ] Annotations
-  - [x] Declaring Annotation Types
-  - [ ] Applying Annotations
-    - [ ] Annotating Scalar-valued Nodes
-    - [ ] Annotation Targets
-    - [x] Annotating types
+    - [x] Declaring Annotation Types
+    - [ ] Applying Annotations
+        - [ ] Annotating Scalar-valued Nodes
+        - [ ] Annotation Targets
+        - [x] Annotating types
 - [ ] Modularization
-  - [ ] Includes
-    - [x] Library
-      - [x] NamedExample
-      - [x] DataType
-      - [ ] AnnotationTypeDeclaration
-      - [ ] DocumentationItem
-      - [ ] ResourceType
-      - [ ] Trait
-      - [ ] Overlay
-      - [ ] Extension
-      - [ ] SecurityScheme
+    - [ ] Includes
+        - [x] Library
+            - [x] NamedExample
+            - [x] DataType
+            - [ ] AnnotationTypeDeclaration
+            - [ ] DocumentationItem
+            - [ ] ResourceType
+            - [ ] Trait
+            - [ ] Overlay
+            - [ ] Extension
+            - [ ] SecurityScheme
 - [ ] Conversion
-  - [x] Conversion to JSON Schema
-  - [ ] Conversion to RAML
+    - [x] Conversion to JSON Schema
+    - [ ] Conversion to RAML
+- [ ] CLI
+    - [x] Validate
+    - [ ] Convert to JSON Schema
 
 ## Comparison to existing libraries
 
@@ -91,61 +96,82 @@ The following sections are currently implemented. See notes for each point:
 
 Complex project (7124 types, 148 libraries)
 
-|            | AML Modeling Framework (TS) | go-raml |
-|------------|-----------------------------|---------|
-| Time taken | ~17s                        | ~280ms  |
-| RAM taken  | ~870MB                      | ~48MB   |
+| Project Type                | Time taken | RAM taken |
+|-----------------------------|------------|-----------|
+| go-raml                     | ~280ms     | ~48MB     |
+| AML Modeling Framework (TS) | ~17s       | ~870MB    |
 
 Simple project (<100 types, 1 library)
 
-|            | AML Modeling Framework (TS) | go-raml |
-|------------|-----------------------------|---------|
-| Time taken | ~2s                         | ~4ms    |
-| RAM taken  | ~100MB                      | ~12MB   |
+| Project Type                | Time taken | RAM taken |
+|-----------------------------|------------|-----------|
+| AML Modeling Framework (TS) | ~2s        | ~100MB    |
+| go-raml                     | ~4ms       | ~12MB     |
 
 ## Installation
 
+### Library
+
 ```
 go get -u github.com/acronis/go-raml
+```
+
+### CLI
+
+Go install
+```
+go install github.com/acronis/go-raml/cmd/raml
+```
+
+Make install
+```
+make install
 ```
 
 ## Library usage examples
 
 ### Parser options
 
-By default, parser outputs the resulting model as is. This means that information about all links and inheritance chains is unmodified. Be aware
-that the parser may generate recursive structures, depending on your definition, and you may need to implement recursion detection with the model.
+By default, parser outputs the resulting model as is. This means that information about all links and inheritance chains
+is unmodified. Be aware
+that the parser may generate recursive structures, depending on your definition, and you may need to implement recursion
+detection with the model.
 
 The parser currently provides two options:
 
-* `raml.OptWithValidate()` - performs validation of the resulting model (types inheritance validation, types facet validations, annotation types and instances validation, examples, defaults, instances, etc.). Also performs unwrap if `raml.OptWithUnwrap()` was not specified, but leaves the original model untouched.
+* `raml.OptWithValidate()` - performs validation of the resulting model (types inheritance validation, types facet
+  validations, annotation types and instances validation, examples, defaults, instances, etc.). Also performs unwrap if
+  `raml.OptWithUnwrap()` was not specified, but leaves the original model untouched.
 
-* `raml.OptWithUnwrap()` - performs an unwrap of the resulting model and replaces all definitions with unwrapped structures. Unwrap resolves the inheritance chain and links and compiles a complete type, with all properties of its parents/links.
+* `raml.OptWithUnwrap()` - performs an unwrap of the resulting model and replaces all definitions with unwrapped
+  structures. Unwrap resolves the inheritance chain and links and compiles a complete type, with all properties of its
+  parents/links.
 
 ### Parsing from string
 
-The following code will parse a RAML string, output a library model and print the common information about the defined type.
+The following code will parse a RAML string, output a library model and print the common information about the defined
+type.
 
 ```go
 package main
 
 import (
-  "fmt"
-  "log"
-  "os"
+	"fmt"
+	"log"
+	"os"
 
-  "github.com/acronis/go-raml"
+	"github.com/acronis/go-raml"
 )
 
 func main() {
-  // Get current working directory that will serve as a base path
-  workDir, err := os.Getwd()
-  if err != nil {
-    log.Fatal(err)
-  }
+	// Get current working directory that will serve as a base path
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // Define RAML 1.0 Library in a string
-  content := `#%RAML 1.0 Library
+	// Define RAML 1.0 Library in a string
+	content := `#%RAML 1.0 Library
 types:
   BasicType: string
   ChildType:
@@ -153,27 +179,27 @@ types:
     minLength: 5
 `
 
-  // Parse with validation
-  r, err := raml.ParseFromString(content, "library.raml", workDir, raml.OptWithValidate())
-  if err != nil {
-    log.Fatal(err)
-  }
-  // Cast type to Library since our fragment is RAML 1.0 Library
-  lib, _ := r.EntryPoint().(*raml.Library)
-  typPtr, _ := lib.Types.Get("ChildType")
-  // Cast type to StringShape since child type inherits from a string type
-  typ := (*typPtr).(*raml.StringShape)
-  fmt.Printf(
-    "Type name: %s, type: %s, minLength: %d, location: %s\n",
-    typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
-  )
-  // Cast type to StringShape since parent type is string
-  parentTyp := (*typ.Base().Inherits[0]).(*raml.StringShape)
-  fmt.Printf("Inherits from:\n")
-  fmt.Printf(
-    "Type name: %s, type: %s, minLength: %d, location: %s\n",
-    parentTyp.Base().Name, parentTyp.Base().Type, parentTyp.MinLength, parentTyp.Base().Location,
-  )
+	// Parse with validation
+	r, err := raml.ParseFromString(content, "library.raml", workDir, raml.OptWithValidate())
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Cast type to Library since our fragment is RAML 1.0 Library
+	lib, _ := r.EntryPoint().(*raml.Library)
+	typPtr, _ := lib.Types.Get("ChildType")
+	// Cast type to StringShape since child type inherits from a string type
+	typ := (*typPtr).(*raml.StringShape)
+	fmt.Printf(
+		"Type name: %s, type: %s, minLength: %d, location: %s\n",
+		typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
+	)
+	// Cast type to StringShape since parent type is string
+	parentTyp := (*typ.Base().Inherits[0]).(*raml.StringShape)
+	fmt.Printf("Inherits from:\n")
+	fmt.Printf(
+		"Type name: %s, type: %s, minLength: %d, location: %s\n",
+		parentTyp.Base().Name, parentTyp.Base().Type, parentTyp.MinLength, parentTyp.Base().Location,
+	)
 }
 ```
 
@@ -187,29 +213,30 @@ Type name: BasicType, type: string, minLength: 0, location: <absolute_path>/libr
 
 ### Parsing from file
 
-The following code will parse a RAML file, output a library model and print the common information about the defined type.
+The following code will parse a RAML file, output a library model and print the common information about the defined
+type.
 
 ```go
 package main
 
 import (
-  "fmt"
-  "log"
-  "os"
+	"fmt"
+	"log"
+	"os"
 
-  "github.com/acronis/go-raml"
+	"github.com/acronis/go-raml"
 )
 
 func main() {
-  filePath := "<path_to_your_file>"
-  r, err := raml.ParseFromPath(content, "library.raml", workDir, raml.OptWithValidate())
-  if err != nil {
-    log.Fatal(err)
-  }
-  lib, _ := r.EntryPoint().(*raml.Library)
-  typPtr, _ := lib.Types.Get("BasicType")
-  typ := *typPtr
-  fmt.Printf("Type name: %s, type: %s, location: %s", typ.Base().Name, typ.Base().Type, typ.Base().Location)
+	filePath := "<path_to_your_file>"
+	r, err := raml.ParseFromPath(content, "library.raml", workDir, raml.OptWithValidate())
+	if err != nil {
+		log.Fatal(err)
+	}
+	lib, _ := r.EntryPoint().(*raml.Library)
+	typPtr, _ := lib.Types.Get("BasicType")
+	typ := *typPtr
+	fmt.Printf("Type name: %s, type: %s, location: %s", typ.Base().Name, typ.Base().Type, typ.Base().Location)
 }
 ```
 
@@ -222,46 +249,46 @@ The following simple example demonstrates how a defined type can be used to vali
 package main
 
 import (
-  "fmt"
-  "log"
-  "os"
+	"fmt"
+	"log"
+	"os"
 
-  "github.com/acronis/go-raml"
+	"github.com/acronis/go-raml"
 )
 
 func main() {
-  // Get current working directory that will serve as a base path
-  workDir, err := os.Getwd()
-  if err != nil {
-    log.Fatal(err)
-  }
+	// Get current working directory that will serve as a base path
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  // Define RAML 1.0 Library in a string
-  content := `#%RAML 1.0 Library
+	// Define RAML 1.0 Library in a string
+	content := `#%RAML 1.0 Library
 types:
   StringType:
     type: string
     minLength: 5
 `
 
-  // Parse with validation
-  r, err := raml.ParseFromString(content, "library.raml", workDir, raml.OptWithValidate())
-  if err != nil {
-    log.Fatal(err)
-  }
-  // Cast type to Library since our fragment is RAML 1.0 Library
-  lib, _ := r.EntryPoint().(*raml.Library)
-  typPtr, _ := lib.Types.Get("StringType")
-  // Cast type to StringShape since defined type is a string
-  typ := (*typPtr).(*raml.StringShape)
-  fmt.Printf(
-    "Type name: %s, type: %s, minLength: %d, location: %s\n",
-    typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
-  )
-  fmt.Printf("Empty string: %v\n", typ.Validate("", "$"))
-  fmt.Printf("Less than 5 characters: %v\n", typ.Validate("abc", "$"))
-  fmt.Printf("More than 5 characters: %v\n", typ.Validate("more than 5 chars", "$"))
-  fmt.Printf("Not a string: %v\n", typ.Validate(123, "$"))
+	// Parse with validation
+	r, err := raml.ParseFromString(content, "library.raml", workDir, raml.OptWithValidate())
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Cast type to Library since our fragment is RAML 1.0 Library
+	lib, _ := r.EntryPoint().(*raml.Library)
+	typPtr, _ := lib.Types.Get("StringType")
+	// Cast type to StringShape since defined type is a string
+	typ := (*typPtr).(*raml.StringShape)
+	fmt.Printf(
+		"Type name: %s, type: %s, minLength: %d, location: %s\n",
+		typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
+	)
+	fmt.Printf("Empty string: %v\n", typ.Validate("", "$"))
+	fmt.Printf("Less than 5 characters: %v\n", typ.Validate("abc", "$"))
+	fmt.Printf("More than 5 characters: %v\n", typ.Validate("more than 5 chars", "$"))
+	fmt.Printf("Not a string: %v\n", typ.Validate(123, "$"))
 }
 ```
 
@@ -272,4 +299,147 @@ Empty string: length must be greater than 5
 Less than 5 characters: length must be greater than 5
 More than 5 characters: <nil>
 Not a string: invalid type, got int, expected string
+```
+
+## CLI usage examples
+
+Flags:
+* `-v` `--verbosity count` - increase verbosity level, one flag for each level, e.g. `-v` for DEBUG
+* `-d` `--ensure-duplicates` - ensure that there are no duplicates in tracebacks
+
+### Validate
+
+The `validate` command validates the RAML file against the RAML 1.0 specification.
+
+The following commands will validate the RAML files and output the validation errors.
+
+One file
+```bash
+raml validate <path_to_your_file>.raml
+```
+
+Multiple files
+```bash
+raml validate <path_to_your_file1>.raml <path_to_your_file2>.raml <path_to_your_file3>.raml
+```
+
+Output example
+```
+% raml validate library.raml
+[11:46:40.053] INFO: Validating RAML... {
+  "path": "library.raml"
+}
+[11:46:40.060] ERROR: RAML is invalid {
+  "tracebacks": {
+    "traces": {
+      "0": {
+        "stack": {
+          "0": {
+            "message": "unwrap shapes",
+            "position": "/tmp/library.raml:1",
+            "severity": "error",
+            "type": "parsing"
+          },
+          "1": {
+            "message": "unwrap shape",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "2": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "3": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "4": {
+            "message": "inherit property: property: a",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "5": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "6": {
+            "message": "cannot inherit from different type: source: string: target: integer",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          }
+        }
+      },
+      "1": {
+        "stack": {
+          "0": {
+            "message": "validate shapes",
+            "position": "/tmp/library.raml:1",
+            "severity": "error",
+            "type": "parsing"
+          },
+          "1": {
+            "message": "check type",
+            "position": "/tmp/common.raml:8:5",
+            "severity": "error",
+            "type": "validating"
+          },
+          "2": {
+            "message": "minProperties must be less than or equal to maxProperties",
+            "position": "/tmp/common.raml:8:5",
+            "severity": "error",
+            "type": "validating"
+          },
+          "3": {
+            "message": "unwrap shape",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "validating"
+          },
+          "4": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "5": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:15:5",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "6": {
+            "message": "inherit property: property: a",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "7": {
+            "message": "merge shapes",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          },
+          "8": {
+            "message": "cannot inherit from different type: source: string: target: integer",
+            "position": "/tmp/common.raml:17:10",
+            "severity": "error",
+            "type": "unwrapping"
+          }
+        }
+      }
+    }
+  }
+}
+[11:46:40.092] ERROR: Command failed {
+  "error": "errors have been found in the RAML files"
+}
 ```

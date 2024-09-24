@@ -1,30 +1,21 @@
 package raml
 
 import (
-	"fmt"
+	"log/slog"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/acronis/go-stacktrace"
 )
 
-func Test_main(t *testing.T) {
+func Test_ParseFromPath(t *testing.T) {
 	start := time.Now()
-	rml, err := ParseFromPath(`./tests/library.raml`, OptWithUnwrap(), OptWithValidate())
-	if vErr, ok := stacktrace.Unwrap(err); ok {
-		t.Logf("ParseFromPath error:\n%s", vErr.Sprint(stacktrace.WithEnsureDuplicates()))
-		err = vErr
-	}
+	rml, err := ParseFromPath(`./fixtures/library.raml`, OptWithUnwrap(), OptWithValidate())
 	require.NoError(t, err)
 	elapsed := time.Since(start)
-	t.Logf("ParseFromPath took %d ms\n", elapsed.Milliseconds())
-	fmt.Printf("Library location: %s\n", rml.entryPoint.GetLocation())
-
 	shapesAll := rml.GetShapes()
-	fmt.Printf("Total shapes: %d\n", len(shapesAll))
+	slog.Info("ParseFromPath", "took ms", elapsed.Milliseconds(), "location", rml.entryPoint.GetLocation(), "total shapes", len(shapesAll))
 
 	conv := NewJSONSchemaConverter()
 	for _, frag := range rml.fragmentsCache {
@@ -70,8 +61,5 @@ func Test_main(t *testing.T) {
 func printMemUsage(t *testing.T) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	t.Logf("Alloc = %v MiB", m.Alloc/1024/1024)
-	t.Logf("\tTotalAlloc = %v MiB", m.TotalAlloc/1024/1024)
-	t.Logf("\tSys = %v MiB", m.Sys/1024/1024)
-	t.Logf("\tNumGC = %v\n", m.NumGC)
+	slog.Info("Memory usage", "alloc MiB", m.Alloc/1024/1024, "total alloc MiB", m.TotalAlloc/1024/1024, "sys MiB", m.Sys/1024/1024, "num GC", m.NumGC)
 }
