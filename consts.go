@@ -6,24 +6,24 @@ var SetOfScalarTypes = map[string]struct{}{
 }
 
 var SetOfStringFacets = map[string]struct{}{
-	"minLength": {}, "maxLength": {}, "pattern": {},
+	FacetMinLength: {}, FacetMaxLength: {}, FacetPattern: {},
 }
 
 var SetOfNumberFacets = map[string]struct{}{
-	"minimum": {}, "maximum": {}, "multipleOf": {},
+	FacetMinimum: {}, FacetMaximum: {}, FacetMultipleOf: {},
 }
 
 var SetOfFileFacets = map[string]struct{}{
-	"fileTypes": {},
+	FacetFileTypes: {},
 }
 
 var SetOfObjectFacets = map[string]struct{}{
-	"properties": {}, "additionalProperties": {}, "minProperties": {},
-	"maxProperties": {}, "discriminator": {}, "discriminatorValue": {},
+	FacetProperties: {}, FacetAdditionalProperties: {}, FacetMinProperties: {},
+	FacetMaxProperties: {}, FacetDiscriminator: {}, FacetDiscriminatorValue: {},
 }
 
 var SetOfArrayFacets = map[string]struct{}{
-	"items": {}, "minItems": {}, "maxItems": {}, "uniqueItems": {},
+	FacetItems: {}, FacetMinItems: {}, FacetMaxItems: {}, FacetUniqueItems: {},
 }
 
 var SetOfNumberFormats = map[string]struct{}{
@@ -55,6 +55,7 @@ const (
 	TypeObject       = "object"
 	TypeFile         = "file"
 	TypeNil          = "nil"
+	TypeNull         = "null"
 )
 
 // Special non-standard types
@@ -62,4 +63,34 @@ const (
 	TypeUnion     = "union"     // Can be used in RAML
 	TypeJSON      = "json"      // Cannot be used in RAML
 	TypeComposite = "composite" // Cannot be used in RAML
+)
+
+const (
+	TagNull      = "!!null"
+	TagInclude   = "!include"
+	TagStr       = "!!str"
+	TagTimestamp = "!!timestamp"
+	TagInt       = "!!int"
+)
+
+const (
+	FacetFormat               = "format"
+	FacetEnum                 = "enum"
+	FacetMinimum              = "minimum"
+	FacetMaximum              = "maximum"
+	FacetMultipleOf           = "multipleOf"
+	FacetMinLength            = "minLength"
+	FacetMaxLength            = "maxLength"
+	FacetPattern              = "pattern"
+	FacetFileTypes            = "fileTypes"
+	FacetAdditionalProperties = "additionalProperties"
+	FacetProperties           = "properties"
+	FacetMinProperties        = "minProperties"
+	FacetMaxProperties        = "maxProperties"
+	FacetItems                = "items"
+	FacetMinItems             = "minItems"
+	FacetMaxItems             = "maxItems"
+	FacetUniqueItems          = "uniqueItems"
+	FacetDiscriminator        = "discriminator"
+	FacetDiscriminatorValue   = "discriminatorValue"
 )

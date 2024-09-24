@@ -33,7 +33,8 @@ func WithNodePosition(node *yaml.Node) stacktrace.Option {
 // GetYamlError returns the yaml type error from the given error.
 // nil if the error is not a yaml type error.
 func GetYamlError(err error) *yaml.TypeError {
-	if yamlError, ok := err.(*yaml.TypeError); ok {
+	var yamlError *yaml.TypeError
+	if errors.As(err, &yamlError) {
 		return yamlError
 	}
 	wErr := errors.Unwrap(err)

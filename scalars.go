@@ -132,20 +132,26 @@ func (s *IntegerShape) Validate(v interface{}, ctxPath string) error {
 func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*IntegerShape)
 	if !ok {
-		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", source.Base().Type), stacktrace.WithInfo("target", s.Base().Type))
+		return nil, stacktrace.New("cannot inherit from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
 	}
 	if s.Minimum == nil {
 		s.Minimum = ss.Minimum
 	} else if ss.Minimum != nil && s.Minimum.Cmp(ss.Minimum) < 0 {
-		return nil, stacktrace.New("minimum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Minimum), stacktrace.WithInfo("target", *s.Minimum))
+		return nil, stacktrace.New("minimum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Minimum),
+			stacktrace.WithInfo("target", *s.Minimum))
 	}
 	if s.Maximum == nil {
 		s.Maximum = ss.Maximum
 	} else if ss.Maximum != nil && s.Maximum.Cmp(ss.Maximum) > 0 {
-		return nil, stacktrace.New("maximum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Maximum), stacktrace.WithInfo("target", *s.Maximum))
+		return nil, stacktrace.New("maximum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Maximum),
+			stacktrace.WithInfo("target", *s.Maximum))
 	}
 	// TODO: multipleOf validation
 	if s.MultipleOf == nil {
@@ -155,28 +161,34 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	if s.Enum == nil {
 		s.Enum = ss.Enum
 	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
-		return nil, stacktrace.New("enum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", ss.Enum.String()), stacktrace.WithInfo("target", s.Enum.String()))
+		return nil, stacktrace.New("enum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", ss.Enum.String()),
+			stacktrace.WithInfo("target", s.Enum.String()))
 	}
 	if s.Format == nil {
 		s.Format = ss.Format
 	} else if ss.Format != nil && SetOfIntegerFormats[*s.Format] != SetOfIntegerFormats[*ss.Format] {
-		return nil, stacktrace.New("format constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Format), stacktrace.WithInfo("target", *s.Format))
+		return nil, stacktrace.New("format constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Format),
+			stacktrace.WithInfo("target", *s.Format))
 	}
 	return s, nil
 }
 
 func (s *IntegerShape) Check() error {
 	if s.Minimum != nil && s.Maximum != nil && s.Minimum.Cmp(s.Maximum) > 0 {
-		return stacktrace.New("minimum must be less than or equal to maximum", s.Location, stacktrace.WithPosition(&s.Position))
+		return stacktrace.New("minimum must be less than or equal to maximum", s.Location,
+			stacktrace.WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
 		for _, e := range s.Enum {
 			switch e.Value.(type) {
 			case int, uint:
 			default:
-				return stacktrace.New("enum value must be int or uint", s.Location, stacktrace.WithPosition(&e.Position))
+				return stacktrace.New("enum value must be int or uint", s.Location,
+					stacktrace.WithPosition(&e.Position))
 			}
 		}
 	}
@@ -187,45 +199,44 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
-		if node.Value == "minimum" {
-			if valueNode.Tag != "!!int" {
+		switch node.Value {
+		case FacetMinimum:
+			if valueNode.Tag != TagInt {
 				return stacktrace.New("minimum must be integer", s.Location, WithNodePosition(valueNode))
 			}
-
 			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
 			if !ok {
 				return stacktrace.New("invalid minimum value", s.Location, WithNodePosition(valueNode))
 			}
 			s.Minimum = num
-		} else if node.Value == "maximum" {
-			if valueNode.Tag != "!!int" {
+		case FacetMaximum:
+			if valueNode.Tag != TagInt {
 				return stacktrace.New("maximum must be integer", s.Location, WithNodePosition(valueNode))
 			}
-
 			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
 			if !ok {
 				return stacktrace.New("invalid maximum value", s.Location, WithNodePosition(valueNode))
 			}
 			s.Maximum = num
-		} else if node.Value == "multipleOf" {
+		case FacetMultipleOf:
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
 				return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "format" {
+		case FacetFormat:
 			if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
+				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode),
+					stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
 			}
-
 			if err := valueNode.Decode(&s.Format); err != nil {
 				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "enum" {
+		case FacetEnum:
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
-		} else {
+		default:
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
@@ -305,20 +316,26 @@ func (s *NumberShape) Validate(v interface{}, ctxPath string) error {
 func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*NumberShape)
 	if !ok {
-		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", source.Base().Type), stacktrace.WithInfo("target", s.Base().Type))
+		return nil, stacktrace.New("cannot inherit from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
 	}
 	if s.Minimum == nil {
 		s.Minimum = ss.Minimum
 	} else if ss.Minimum != nil && *s.Minimum < *ss.Minimum {
-		return nil, stacktrace.New("minimum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Minimum), stacktrace.WithInfo("target", *s.Minimum))
+		return nil, stacktrace.New("minimum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Minimum),
+			stacktrace.WithInfo("target", *s.Minimum))
 	}
 	if s.Maximum == nil {
 		s.Maximum = ss.Maximum
 	} else if ss.Maximum != nil && *s.Maximum > *ss.Maximum {
-		return nil, stacktrace.New("maximum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Maximum), stacktrace.WithInfo("target", *s.Maximum))
+		return nil, stacktrace.New("maximum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Maximum),
+			stacktrace.WithInfo("target", *s.Maximum))
 	}
 	// TODO: multipleOf validation
 	if ss.MultipleOf != nil {
@@ -328,28 +345,34 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	if s.Enum == nil {
 		s.Enum = ss.Enum
 	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
-		return nil, stacktrace.New("enum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", ss.Enum.String()), stacktrace.WithInfo("target", s.Enum.String()))
+		return nil, stacktrace.New("enum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", ss.Enum.String()),
+			stacktrace.WithInfo("target", s.Enum.String()))
 	}
 	if s.Format == nil {
 		s.Format = ss.Format
 	} else if ss.Format != nil && *s.Format != *ss.Format {
-		return nil, stacktrace.New("format constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.Format), stacktrace.WithInfo("target", *s.Format))
+		return nil, stacktrace.New("format constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.Format),
+			stacktrace.WithInfo("target", *s.Format))
 	}
 	return s, nil
 }
 
 func (s *NumberShape) Check() error {
 	if s.Minimum != nil && s.Maximum != nil && *s.Minimum > *s.Maximum {
-		return stacktrace.New("minimum must be less than or equal to maximum", s.Location, stacktrace.WithPosition(&s.Position))
+		return stacktrace.New("minimum must be less than or equal to maximum", s.Location,
+			stacktrace.WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
 		for _, e := range s.Enum {
 			switch e.Value.(type) {
 			case int, uint, float64:
 			default:
-				return stacktrace.New("enum value must be int, uint, float64", s.Location, stacktrace.WithPosition(&e.Position))
+				return stacktrace.New("enum value must be int, uint, float64", s.Location,
+					stacktrace.WithPosition(&e.Position))
 			}
 		}
 	}
@@ -360,33 +383,34 @@ func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
-		if node.Value == "minimum" {
+		switch node.Value {
+		case FacetMinimum:
 			if err := valueNode.Decode(&s.Minimum); err != nil {
 				return StacktraceNewWrapped("decode minimum", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "maximum" {
+		case FacetMaximum:
 			if err := valueNode.Decode(&s.Maximum); err != nil {
 				return StacktraceNewWrapped("decode maximum", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "format" {
+		case FacetFormat:
 			if _, ok := SetOfNumberFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode), stacktrace.WithInfo("allowed_formats", SetOfNumberFormats))
+				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode),
+					stacktrace.WithInfo("allowed_formats", SetOfNumberFormats))
 			}
-
 			if err := valueNode.Decode(&s.Format); err != nil {
 				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "enum" {
+		case FacetEnum:
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
-		} else if node.Value == "multipleOf" {
+		case FacetMultipleOf:
 			if err := valueNode.Decode(&s.MultipleOf); err != nil {
 				return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else {
+		default:
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
@@ -462,20 +486,26 @@ func (s *StringShape) Validate(v interface{}, ctxPath string) error {
 func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*StringShape)
 	if !ok {
-		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", source.Base().Type), stacktrace.WithInfo("target", s.Base().Type))
+		return nil, stacktrace.New("cannot inherit from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
 	}
 	if s.MinLength == nil {
 		s.MinLength = ss.MinLength
 	} else if ss.MinLength != nil && *s.MinLength < *ss.MinLength {
-		return nil, stacktrace.New("minLength constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MinLength), stacktrace.WithInfo("target", *s.MinLength))
+		return nil, stacktrace.New("minLength constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.MinLength),
+			stacktrace.WithInfo("target", *s.MinLength))
 	}
 	if s.MaxLength == nil {
 		s.MaxLength = ss.MaxLength
 	} else if ss.MaxLength != nil && *s.MaxLength > *ss.MaxLength {
-		return nil, stacktrace.New("maxLength constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MaxLength), stacktrace.WithInfo("target", *s.MaxLength))
+		return nil, stacktrace.New("maxLength constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.MaxLength),
+			stacktrace.WithInfo("target", *s.MaxLength))
 	}
 	// FIXME: Patterns are merged unconditionally, but ideally they should be validated against intersection of their DFAs
 	if s.Pattern == nil {
@@ -484,20 +514,24 @@ func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	if s.Enum == nil {
 		s.Enum = ss.Enum
 	} else if ss.Enum != nil && !isCompatibleEnum(ss.Enum, s.Enum) {
-		return nil, stacktrace.New("enum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", ss.Enum.String()), stacktrace.WithInfo("target", s.Enum.String()))
+		return nil, stacktrace.New("enum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", ss.Enum.String()),
+			stacktrace.WithInfo("target", s.Enum.String()))
 	}
 	return s, nil
 }
 
 func (s *StringShape) Check() error {
 	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
-		return stacktrace.New("minLength must be less than or equal to maxLength", s.Location, stacktrace.WithPosition(&s.Position))
+		return stacktrace.New("minLength must be less than or equal to maxLength",
+			s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	if s.Enum != nil {
 		for _, e := range s.Enum {
 			if _, ok := e.Value.(string); !ok {
-				return stacktrace.New("enum value must be string", s.Location, stacktrace.WithPosition(&e.Position))
+				return stacktrace.New("enum value must be string",
+					s.Location, stacktrace.WithPosition(&e.Position))
 			}
 		}
 	}
@@ -509,16 +543,17 @@ func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		if node.Value == "minLength" {
+		switch node.Value {
+		case FacetMinLength:
 			if err := valueNode.Decode(&s.MinLength); err != nil {
 				return StacktraceNewWrapped("decode minLength", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "maxLength" {
+		case FacetMaxLength:
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
 				return StacktraceNewWrapped("decode maxLength", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "pattern" {
-			if valueNode.Tag != "!!str" {
+		case FacetPattern:
+			if valueNode.Tag != TagStr {
 				return stacktrace.New("pattern must be string", s.Location, WithNodePosition(valueNode))
 			}
 
@@ -527,13 +562,13 @@ func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				return StacktraceNewWrapped("decode pattern", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Pattern = re
-		} else if node.Value == "enum" {
+		case FacetEnum:
 			enums, err := s.raml.MakeEnum(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
 			}
 			s.Enum = enums
-		} else {
+		default:
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
@@ -590,38 +625,48 @@ func (s *FileShape) Validate(v interface{}, ctxPath string) error {
 func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*FileShape)
 	if !ok {
-		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", source.Base().Type), stacktrace.WithInfo("target", s.Base().Type))
+		return nil, stacktrace.New("cannot inherit from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
 	}
 	if s.MinLength == nil {
 		s.MinLength = ss.MinLength
 	} else if ss.MinLength != nil && *s.MinLength < *ss.MinLength {
-		return nil, stacktrace.New("minLength constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MinLength), stacktrace.WithInfo("target", *s.MinLength))
+		return nil, stacktrace.New("minLength constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.MinLength),
+			stacktrace.WithInfo("target", *s.MinLength))
 	}
 	if s.MaxLength == nil {
 		s.MaxLength = ss.MaxLength
 	} else if ss.MaxLength != nil && *s.MaxLength > *ss.MaxLength {
-		return nil, stacktrace.New("maxLength constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MaxLength), stacktrace.WithInfo("target", *s.MaxLength))
+		return nil, stacktrace.New("maxLength constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *ss.MaxLength),
+			stacktrace.WithInfo("target", *s.MaxLength))
 	}
 	if s.FileTypes == nil {
 		s.FileTypes = ss.FileTypes
 	} else if ss.FileTypes != nil && !isCompatibleEnum(ss.FileTypes, s.FileTypes) {
-		return nil, stacktrace.New("enum constraint violation", s.Location, stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", ss.FileTypes.String()), stacktrace.WithInfo("target", s.FileTypes.String()))
+		return nil, stacktrace.New("enum constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", ss.FileTypes.String()),
+			stacktrace.WithInfo("target", s.FileTypes.String()))
 	}
 	return s, nil
 }
 
 func (s *FileShape) Check() error {
 	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
-		return stacktrace.New("minLength must be less than or equal to maxLength", s.Location, stacktrace.WithPosition(&s.Position))
+		return stacktrace.New("minLength must be less than or equal to maxLength", s.Location,
+			stacktrace.WithPosition(&s.Position))
 	}
 	if s.FileTypes != nil {
 		for _, e := range s.FileTypes {
 			if _, ok := e.Value.(string); !ok {
-				return stacktrace.New("file type must be string", s.Location, stacktrace.WithPosition(&s.Position))
+				return stacktrace.New("file type must be string", s.Location,
+					stacktrace.WithPosition(&s.Position))
 			}
 		}
 	}
@@ -633,15 +678,16 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 		node := v[i]
 		valueNode := v[i+1]
 
-		if node.Value == "minLength" {
+		switch node.Value {
+		case FacetMinLength:
 			if err := valueNode.Decode(&s.MinLength); err != nil {
 				return StacktraceNewWrapped("decode minLength", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "maxLength" {
+		case FacetMaxLength:
 			if err := valueNode.Decode(&s.MaxLength); err != nil {
 				return StacktraceNewWrapped("decode maxLength", err, s.Location, WithNodePosition(valueNode))
 			}
-		} else if node.Value == "fileTypes" {
+		case FacetFileTypes:
 			if valueNode.Kind != yaml.SequenceNode {
 				return stacktrace.New("fileTypes must be sequence node", s.Location, WithNodePosition(valueNode))
 			}
@@ -657,7 +703,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				fileTypes[i] = n
 			}
 			s.FileTypes = fileTypes
-		} else {
+		default:
 			n, err := s.raml.makeRootNode(valueNode, s.Location)
 			if err != nil {
 				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
@@ -1036,6 +1082,7 @@ func (s *AnyShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+// Validate checks if the value is nil, implements Shape interface
 func (s *AnyShape) Validate(v interface{}, ctxPath string) error {
 	return nil
 }
@@ -1080,10 +1127,12 @@ func (s *NilShape) Clone() Shape {
 	return &c
 }
 
+// clone returns a copy of the shape
 func (s *NilShape) clone(history []Shape) Shape {
 	return s.Clone()
 }
 
+// Validate checks if the value is nil, implements Shape interface
 func (s *NilShape) Validate(v interface{}, ctxPath string) error {
 	if v != nil {
 		return fmt.Errorf("invalid type, got %T, expected nil", v)

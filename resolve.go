@@ -6,8 +6,9 @@ import (
 
 	"github.com/antlr4-go/antlr/v4"
 
-	"github.com/acronis/go-raml/rdt"
 	"github.com/acronis/go-stacktrace"
+
+	"github.com/acronis/go-raml/rdt"
 )
 
 /*
@@ -27,9 +28,13 @@ func (r *RAML) resolveShapes() error {
 	var st *stacktrace.StackTrace
 	for r.unresolvedShapes.Len() > 0 {
 		v := r.unresolvedShapes.Front()
-		s := v.Value.(*Shape)
+		s, ok := v.Value.(*Shape)
+		if !ok {
+			return fmt.Errorf("invalid unresolved shape: Value is not *Shape: %T", v.Value)
+		}
 		if err := r.resolveShape(s); err != nil {
-			se := StacktraceNewWrapped("resolve shape", err, (*s).Base().Location, stacktrace.WithPosition(&(*s).Base().Position),
+			se := StacktraceNewWrapped("resolve shape", err, (*s).Base().Location,
+				stacktrace.WithPosition(&(*s).Base().Position),
 				stacktrace.WithType(stacktrace.TypeResolving))
 			if st == nil {
 				st = se
@@ -50,7 +55,8 @@ func (r *RAML) resolveDomainExtensions() error {
 	var st *stacktrace.StackTrace
 	for _, de := range r.domainExtensions {
 		if err := r.resolveDomainExtension(de); err != nil {
-			se := StacktraceNewWrapped("resolve domain extension", err, de.Location, stacktrace.WithPosition(&de.Position),
+			se := StacktraceNewWrapped("resolve domain extension", err, de.Location,
+				stacktrace.WithPosition(&de.Position),
 				stacktrace.WithType(stacktrace.TypeResolving))
 			if st == nil {
 				st = se
@@ -75,13 +81,14 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 	// TODO: Probably can be done prettier. Needs refactor.
 	switch frag := r.GetFragment(de.Location).(type) {
 	case *Library:
-		if len(parts) == 1 {
+		switch len(parts) {
+		case 1:
 			r, ok := frag.AnnotationTypes.Get(parts[0])
 			if !ok {
 				return fmt.Errorf("reference \"%s\" not found", parts[0])
 			}
 			ref = r
-		} else if len(parts) == 2 {
+		case 2:
 			lib, ok := frag.Uses.Get(parts[0])
 			if !ok {
 				return fmt.Errorf("library \"%s\" not found", parts[0])
@@ -90,7 +97,7 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 			if !ok {
 				return fmt.Errorf("reference \"%s\" not found", parts[1])
 			}
-		} else {
+		default:
 			return fmt.Errorf("invalid reference %s", de.Name)
 		}
 	case *DataType:
@@ -153,7 +160,8 @@ func (r *RAML) resolveShape(shape *Shape) error {
 	if link != nil {
 		s, err := r.resolveLink(target)
 		if err != nil {
-			return StacktraceNewWrapped("resolve link", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+			return StacktraceNewWrapped("resolve link", err, target.Base().Location,
+				stacktrace.WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -164,7 +172,8 @@ func (r *RAML) resolveShape(shape *Shape) error {
 		// Special case for multiple inheritance
 		s, err := r.resolveMultipleInheritance(target)
 		if err != nil {
-			return StacktraceNewWrapped("resolve multiple inheritance", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+			return StacktraceNewWrapped("resolve multiple inheritance", err, target.Base().Location,
+				stacktrace.WithPosition(&target.Base().Position))
 		}
 		*shape = *s
 		return nil
@@ -179,7 +188,8 @@ func (r *RAML) resolveShape(shape *Shape) error {
 
 	s, err := visitor.Visit(tree, target.(*UnknownShape))
 	if err != nil {
-		return StacktraceNewWrapped("visit type expression", err, target.Base().Location, stacktrace.WithPosition(&target.Base().Position))
+		return StacktraceNewWrapped("visit type expression", err, target.Base().Location,
+			stacktrace.WithPosition(&target.Base().Position))
 	}
 	*shape = *s
 	return nil

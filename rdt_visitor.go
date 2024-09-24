@@ -52,7 +52,8 @@ func (visitor *RdtVisitor) VisitChildren(node antlr.RuleNode, target *UnknownSha
 		if _, ok := n.(*antlr.TerminalNodeImpl); ok {
 			continue
 		}
-		implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
+		implicitAnonShape := &UnknownShape{
+			BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 		s, err := visitor.Visit(n.(antlr.ParseTree), implicitAnonShape)
 		if err != nil {
 			return nil, fmt.Errorf("visit children: %w", err)
@@ -83,7 +84,8 @@ func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *Unk
 }
 
 func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
+	implicitAnonShape := &UnknownShape{
+		BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -91,7 +93,8 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	base := target.Base()
 	base.Type = TypeUnion
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
-	nilShape, _ := visitor.raml.MakeConcreteShape(visitor.raml.MakeBaseShape("", base.Location, &base.Position), "nil", nil)
+	nilShape, _ := visitor.raml.MakeConcreteShape(
+		visitor.raml.MakeBaseShape("", base.Location, &base.Position), "nil", nil)
 	var unionShape Shape = &UnionShape{
 		BaseShape: *base,
 		UnionFacets: UnionFacets{
@@ -102,7 +105,8 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 }
 
 func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShape) (*Shape, error) {
-	implicitAnonShape := &UnknownShape{BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
+	implicitAnonShape := &UnknownShape{
+		BaseShape: *visitor.raml.MakeBaseShape("", target.Location, &target.Position)}
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), implicitAnonShape)
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -140,32 +144,36 @@ func (visitor *RdtVisitor) VisitGroup(ctx *rdt.GroupContext, target *UnknownShap
 
 func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *UnknownShape) (*Shape, error) {
 	// TODO: In theory, this can be not only library so this type assertion may fail.
-	frag := visitor.raml.GetFragment(target.Location).(*Library)
+	frag, ok := visitor.raml.GetFragment(target.Location).(*Library)
+	if !ok {
+		return nil, fmt.Errorf("fragment is not a library: %s", target.Location)
+	}
 
 	// External ref - lib.Type
 	// Internal ref - Type
 	shapeType := ctx.GetText()
 	parts := strings.Split(shapeType, ".")
 	var ref *Shape
-	if len(parts) == 1 {
-		r, ok := frag.Types.Get(parts[0])
-		if !ok {
+	switch len(parts) {
+	case 1:
+		r, present := frag.Types.Get(parts[0])
+		if !present {
 			return nil, fmt.Errorf("reference \"%s\" not found", parts[0])
 		}
 		ref = r
-	} else if len(parts) == 2 {
-		lib, ok := frag.Uses.Get(parts[0])
-		if !ok {
+	case 2:
+		lib, present := frag.Uses.Get(parts[0])
+		if !present {
 			return nil, fmt.Errorf("library \"%s\" not found", parts[0])
 		}
-		ref, ok = lib.Link.Types.Get(parts[1])
-		if !ok {
+		ref, present = lib.Link.Types.Get(parts[1])
+		if !present {
 			return nil, fmt.Errorf("reference \"%s\" not found", parts[1])
 		}
-	} else {
+	default:
 		return nil, fmt.Errorf("invalid reference %s", shapeType)
 	}
-	if (*ref).Base().Id == target.Id {
+	if (*ref).Base().ID == target.ID {
 		return nil, fmt.Errorf("self recursion %s", shapeType)
 	}
 	if err := visitor.raml.resolveShape(ref); err != nil {

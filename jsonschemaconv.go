@@ -117,7 +117,7 @@ func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().Id] = schema
+	c.complexSchemas[s.Base().ID] = schema
 
 	schema.Type = "object"
 	schema.MinProperties = s.MinProperties
@@ -147,7 +147,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitArrayShape(s *ArrayShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().Id] = schema
+	c.complexSchemas[s.Base().ID] = schema
 
 	schema.Type = "array"
 	schema.MinItems = s.MinItems
@@ -162,7 +162,7 @@ func (c *JSONSchemaConverter) VisitArrayShape(s *ArrayShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitUnionShape(s *UnionShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().Id] = schema
+	c.complexSchemas[s.Base().ID] = schema
 
 	schema.AnyOf = make([]*JSONSchema, len(s.AnyOf))
 	for i, item := range s.AnyOf {
@@ -173,7 +173,7 @@ func (c *JSONSchemaConverter) VisitUnionShape(s *UnionShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitStringShape(s *StringShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 	schema.MinLength = s.MinLength
 	schema.MaxLength = s.MaxLength
 	if s.Pattern != nil {
@@ -190,7 +190,7 @@ func (c *JSONSchemaConverter) VisitStringShape(s *StringShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitIntegerShape(s *IntegerShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "integer"
+	schema.Type = TypeInteger
 	if s.Minimum != nil {
 		schema.Minimum = json.Number(s.Minimum.String())
 	}
@@ -212,7 +212,7 @@ func (c *JSONSchemaConverter) VisitIntegerShape(s *IntegerShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitNumberShape(s *NumberShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "number"
+	schema.Type = TypeNumber
 	if s.Minimum != nil {
 		schema.Minimum = json.Number(strconv.FormatFloat(*s.Minimum, 'f', -1, 64))
 	}
@@ -234,21 +234,25 @@ func (c *JSONSchemaConverter) VisitNumberShape(s *NumberShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitFileShape(s *FileShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 	schema.MinLength = s.MinLength
 	schema.MaxLength = s.MaxLength
 	schema.ContentEncoding = "base64"
 
 	// TODO: JSON Schema allows for only one content media type
 	if s.FileTypes != nil {
-		schema.ContentMediaType = s.FileTypes[0].Value.(string)
+		maybeStr, ok := s.FileTypes[0].Value.(string)
+		if !ok {
+			panic("file type must be a string")
+		}
+		schema.ContentMediaType = maybeStr
 	}
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitBooleanShape(s *BooleanShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "boolean"
+	schema.Type = TypeBoolean
 
 	if s.Enum != nil {
 		schema.Enum = make([]interface{}, len(s.Enum))
@@ -261,14 +265,16 @@ func (c *JSONSchemaConverter) VisitBooleanShape(s *BooleanShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 
 	if s.Format != nil {
 		switch *s.Format {
 		case "rfc3339":
 			schema.Format = "date-time"
 		case "rfc2616":
-			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4}) ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] GMT$"
+			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) " +
+				"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4})" +
+				" ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] GMT$"
 		}
 	} else {
 		schema.Format = "date-time"
@@ -278,21 +284,21 @@ func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitDateTimeOnlyShape(s *DateTimeOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 	schema.Pattern = "^[0-9]{4}-(?:0[0-9]|1[0-2])-(?:[0-2][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitDateOnlyShape(s *DateOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 	schema.Format = "date"
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitTimeOnlyShape(s *TimeOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "string"
+	schema.Type = TypeString
 	schema.Format = "time"
 	return schema
 }
@@ -303,16 +309,16 @@ func (c *JSONSchemaConverter) VisitAnyShape(s *AnyShape) *JSONSchema {
 
 func (c *JSONSchemaConverter) VisitNilShape(s *NilShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema.Type = "null"
+	schema.Type = TypeNull
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schemaId := (*s.Head).Base().Id
+	schemaID := (*s.Head).Base().ID
 
-	schema.Ref = schemaId
-	c.complexSchemas[schemaId].Id = schemaId
+	schema.Ref = schemaID
+	c.complexSchemas[schemaID].ID = schemaID
 
 	return schema
 }
@@ -383,7 +389,11 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 			m = make(map[string]interface{})
 			schema.Extras["x-shapeExt-definitions"] = m
 		}
-		shapeExtDefs := m.(map[string]interface{})
+		shouldBeMap, ok := m.(map[string]interface{})
+		if !ok {
+			panic("invalid shape extension definitions")
+		}
+		shapeExtDefs := shouldBeMap
 		shapeExtDefs[k] = c.Visit(*v.Shape)
 	}
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
