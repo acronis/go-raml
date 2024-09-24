@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/gojp/goreportcard)](https://goreportcard.com/report/gojp/goreportcard)
+
 # RAML 1.0 parser for Go
 
 > [!WARNING]
