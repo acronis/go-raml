@@ -9,21 +9,23 @@ on:
   pull_request:
     branches: [ "main" ]
 
-jobs:
+permissions:
+  contents: read
 
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v4
+    - uses: actions/setup-go@v4
       with:
         go-version: '1.22'
 
-    - name: Lint
-      run: make lint || true
-      
+    - uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.61.0
+        args: --timeout=5m
+
     - name: Test
       run: make test
 
