@@ -107,8 +107,8 @@ Simple project (<100 types, 1 library)
 
 | Project Type                | Time taken | RAM taken |
 |-----------------------------|------------|-----------|
-| AML Modeling Framework (TS) | ~2s        | ~100MB    |
 | go-raml                     | ~4ms       | ~12MB     |
+| AML Modeling Framework (TS) | ~2s        | ~100MB    |
 
 ## Installation
 
