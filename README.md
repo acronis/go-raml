@@ -120,7 +120,7 @@ go get -u github.com/acronis/go-raml
 
 Go install
 ```
-go install github.com/acronis/go-raml/cmd/raml
+go install github.com/acronis/go-raml/cmd/raml@latest
 ```
 
 Make install
