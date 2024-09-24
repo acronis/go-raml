@@ -4,3 +4,4 @@
 *.tokens
 cover.html
 cover.out
+.build

@@ -1,12 +1,5 @@
 # Directory containing the Makefile.
-PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-
 export PATH := $(GOBIN):$(PATH)
-
-BENCH_FLAGS ?= -cpuprofile=cpu.pprof -memprofile=mem.pprof -benchmem
-
-# Directories that we want to test and track coverage for.
-TEST_DIRS = .
 
 .PHONY: all
 all: lint cover
@@ -23,3 +16,19 @@ test:
 cover:
 	@go test -coverprofile=cover.out -coverpkg=./... ./... \
 	&& go tool cover -html=cover.out -o cover.html
+
+.PHONY: build
+build: go-build
+
+.PHONY: go-build
+go-build:
+	@cd cmd/raml && go build -o ../../.build/raml
+
+.PHONY: install
+install: go-install
+
+.PHONY: go-install
+go-install:
+	@cd cmd/raml && \
+	go install -v ./... \
+	&& echo `go list -f '{{.Module.Path}}'` has been installed to `go list -f '{{.Target}}'` && true
