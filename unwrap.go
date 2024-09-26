@@ -329,15 +329,7 @@ func (r *RAML) unwrapUnionShape(base *BaseShape, unionShape *UnionShape, history
 	return nil
 }
 
-func (r *RAML) unwrapSourceIfObj(src *Shape, history []Shape) (Shape, error) {
-	if src == nil {
-		return nil, fmt.Errorf("source is nil")
-	}
-	srcShape := *src
-	base, isObjShape := srcShape.(*ObjectShape)
-	if !isObjShape {
-		return srcShape, nil
-	}
+func (r *RAML) unwrapSource(base *BaseShape, history []Shape) (Shape, error) {
 	var source Shape
 	switch {
 	case base.Alias != nil:
@@ -432,7 +424,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	}
 	history = append(history, target)
 
-	source, err := r.unwrapSourceIfObj(s, history)
+	source, err := r.unwrapSource(base, history)
 	if err != nil {
 		return nil, StacktraceNewWrapped("unwrap source if obj", err, base.Location,
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
