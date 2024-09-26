@@ -1,6 +1,7 @@
 package raml
 
 import (
+	"fmt"
 	"path/filepath"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -56,6 +57,66 @@ type LibraryLink struct {
 	stacktrace.Position
 }
 
+func (l *Library) unmarshalUses(valueNode *yaml.Node) {
+	if valueNode.Tag == TagNull {
+		return
+	}
+
+	l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
+	// Map nodes come in pairs in order [key, value]
+	for j := 0; j != len(valueNode.Content); j += 2 {
+		name := valueNode.Content[j].Value
+		path := valueNode.Content[j+1]
+		l.Uses.Set(name, &LibraryLink{
+			Value:    path.Value,
+			Location: l.Location,
+			Position: stacktrace.Position{Line: path.Line, Column: path.Column},
+		})
+	}
+}
+
+func (l *Library) unmarshalTypes(valueNode *yaml.Node) {
+	if valueNode.Tag == TagNull {
+		return
+	}
+
+	l.Types = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
+	// Map nodes come in pairs in order [key, value]
+	for j := 0; j != len(valueNode.Content); j += 2 {
+		name := valueNode.Content[j].Value
+		data := valueNode.Content[j+1]
+		shape, err := l.raml.makeShape(data, name, l.Location)
+		if err != nil {
+			panic(StacktraceNewWrapped("parse types: make shape", err, l.Location, WithNodePosition(data)))
+		}
+		l.Types.Set(name, shape)
+		l.raml.PutTypeIntoFragment(name, l.Location, shape)
+		l.raml.PutShapePtr(shape)
+	}
+}
+
+func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
+	if valueNode.Tag == TagNull {
+		return nil
+	}
+
+	l.AnnotationTypes = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
+	// Map nodes come in pairs in order [key, value]
+	for j := 0; j != len(valueNode.Content); j += 2 {
+		name := valueNode.Content[j].Value
+		data := valueNode.Content[j+1]
+		shape, err := l.raml.makeShape(data, name, l.Location)
+		if err != nil {
+			return StacktraceNewWrapped("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
+		}
+		l.AnnotationTypes.Set(name, shape)
+		l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
+		l.raml.PutShapePtr(shape)
+	}
+
+	return nil
+}
+
 // UnmarshalYAML unmarshals a Library from a yaml.Node, implementing the yaml.Unmarshaler interface
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
@@ -68,56 +129,12 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		valueNode := value.Content[i+1]
 		switch node.Value {
 		case "uses":
-			if valueNode.Tag == TagNull {
-				continue
-			}
-
-			l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
-			// Map nodes come in pairs in order [key, value]
-			for j := 0; j != len(valueNode.Content); j += 2 {
-				name := valueNode.Content[j].Value
-				path := valueNode.Content[j+1]
-				l.Uses.Set(name, &LibraryLink{
-					Value:    path.Value,
-					Location: l.Location,
-					Position: stacktrace.Position{Line: path.Line, Column: path.Column},
-				})
-			}
+			l.unmarshalUses(valueNode)
 		case "types":
-			if valueNode.Tag == TagNull {
-				continue
-			}
-
-			l.Types = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
-			// Map nodes come in pairs in order [key, value]
-			for j := 0; j != len(valueNode.Content); j += 2 {
-				name := valueNode.Content[j].Value
-				data := valueNode.Content[j+1]
-				shape, err := l.raml.makeShape(data, name, l.Location)
-				if err != nil {
-					return StacktraceNewWrapped("parse types: make shape", err, l.Location, WithNodePosition(data))
-				}
-				l.Types.Set(name, shape)
-				l.raml.PutTypeIntoFragment(name, l.Location, shape)
-				l.raml.PutShapePtr(shape)
-			}
+			l.unmarshalTypes(valueNode)
 		case "annotationTypes":
-			if valueNode.Tag == TagNull {
-				continue
-			}
-
-			l.AnnotationTypes = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
-			// Map nodes come in pairs in order [key, value]
-			for j := 0; j != len(valueNode.Content); j += 2 {
-				name := valueNode.Content[j].Value
-				data := valueNode.Content[j+1]
-				shape, err := l.raml.makeShape(data, name, l.Location)
-				if err != nil {
-					return StacktraceNewWrapped("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
-				}
-				l.AnnotationTypes.Set(name, shape)
-				l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
-				l.raml.PutShapePtr(shape)
+			if err := l.unmarshalAnnotationTypes(valueNode); err != nil {
+				return fmt.Errorf("unmarshall annotation types: %w", err)
 			}
 		case "usage":
 			if err := valueNode.Decode(&l.Usage); err != nil {

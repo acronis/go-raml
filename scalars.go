@@ -80,11 +80,11 @@ func (s *IntegerShape) Clone() Shape {
 	return &c
 }
 
-func (s *IntegerShape) clone(history []Shape) Shape {
+func (s *IntegerShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *IntegerShape) Validate(v interface{}, ctxPath string) error {
+func (s *IntegerShape) Validate(v interface{}, _ string) error {
 	var val big.Int
 	switch v := v.(type) {
 	case int:
@@ -271,11 +271,11 @@ func (s *NumberShape) Clone() Shape {
 	return &c
 }
 
-func (s *NumberShape) clone(history []Shape) Shape {
+func (s *NumberShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *NumberShape) Validate(v interface{}, ctxPath string) error {
+func (s *NumberShape) Validate(v interface{}, _ string) error {
 	var val float64
 	switch v := v.(type) {
 	// go-yaml unmarshals integers as int
@@ -447,11 +447,11 @@ func (s *StringShape) Clone() Shape {
 	return &c
 }
 
-func (s *StringShape) clone(history []Shape) Shape {
+func (s *StringShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *StringShape) Validate(v interface{}, ctxPath string) error {
+func (s *StringShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -599,11 +599,11 @@ func (s *FileShape) Clone() Shape {
 	return &c
 }
 
-func (s *FileShape) clone(history []Shape) Shape {
+func (s *FileShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *FileShape) Validate(v interface{}, ctxPath string) error {
+func (s *FileShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -729,11 +729,11 @@ func (s *BooleanShape) Clone() Shape {
 	return &c
 }
 
-func (s *BooleanShape) clone(history []Shape) Shape {
+func (s *BooleanShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *BooleanShape) Validate(v interface{}, ctxPath string) error {
+func (s *BooleanShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(bool)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected bool", v)
@@ -819,11 +819,11 @@ func (s *DateTimeShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateTimeShape) clone(history []Shape) Shape {
+func (s *DateTimeShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *DateTimeShape) Validate(v interface{}, ctxPath string) error {
+func (s *DateTimeShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -907,11 +907,11 @@ func (s *DateTimeOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateTimeOnlyShape) clone(history []Shape) Shape {
+func (s *DateTimeOnlyShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *DateTimeOnlyShape) Validate(v interface{}, ctxPath string) error {
+func (s *DateTimeOnlyShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -964,11 +964,11 @@ func (s *DateOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *DateOnlyShape) clone(history []Shape) Shape {
+func (s *DateOnlyShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *DateOnlyShape) Validate(v interface{}, ctxPath string) error {
+func (s *DateOnlyShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -1021,11 +1021,11 @@ func (s *TimeOnlyShape) Clone() Shape {
 	return &c
 }
 
-func (s *TimeOnlyShape) clone(history []Shape) Shape {
+func (s *TimeOnlyShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *TimeOnlyShape) Validate(v interface{}, ctxPath string) error {
+func (s *TimeOnlyShape) Validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -1078,12 +1078,12 @@ func (s *AnyShape) Clone() Shape {
 	return &c
 }
 
-func (s *AnyShape) clone(history []Shape) Shape {
+func (s *AnyShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
 // Validate checks if the value is nil, implements Shape interface
-func (s *AnyShape) Validate(v interface{}, ctxPath string) error {
+func (s *AnyShape) Validate(_ interface{}, _ string) error {
 	return nil
 }
 
@@ -1128,12 +1128,12 @@ func (s *NilShape) Clone() Shape {
 }
 
 // clone returns a copy of the shape
-func (s *NilShape) clone(history []Shape) Shape {
+func (s *NilShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
 // Validate checks if the value is nil, implements Shape interface
-func (s *NilShape) Validate(v interface{}, ctxPath string) error {
+func (s *NilShape) Validate(v interface{}, _ string) error {
 	if v != nil {
 		return fmt.Errorf("invalid type, got %T, expected nil", v)
 	}

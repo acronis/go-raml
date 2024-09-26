@@ -203,6 +203,40 @@ type ObjectShape struct {
 	ObjectFacets
 }
 
+func (s *ObjectShape) unmarshalPatternProperties(
+	nodeName, propertyName string, data *yaml.Node, hasImplicitOptional bool) error {
+	if s.PatternProperties == nil {
+		s.PatternProperties = orderedmap.New[string, PatternProperty]()
+	}
+	property, err := s.raml.makePatternProperty(nodeName, propertyName, data, s.Location,
+		hasImplicitOptional)
+	if err != nil {
+		return StacktraceNewWrapped("make pattern property", err, s.Location,
+			WithNodePosition(data))
+	}
+	s.PatternProperties.Set(propertyName, property)
+	s.raml.PutShapePtr(property.Shape)
+	return nil
+}
+
+func (s *ObjectShape) unmarshalProperty(nodeName string, data *yaml.Node) error {
+	propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
+	if len(propertyName) > 1 && propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
+		return s.unmarshalPatternProperties(nodeName, propertyName, data, hasImplicitOptional)
+	}
+
+	if s.Properties == nil {
+		s.Properties = orderedmap.New[string, Property]()
+	}
+	property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
+	if err != nil {
+		return StacktraceNewWrapped("make property", err, s.Location, WithNodePosition(data))
+	}
+	s.Properties.Set(property.Name, property)
+	s.raml.PutShapePtr(property.Shape)
+	return nil
+}
+
 // UnmarshalYAMLNodes unmarshals the object shape from YAML nodes.
 func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
@@ -245,29 +279,8 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 				nodeName := valueNode.Content[j].Value
 				data := valueNode.Content[j+1]
 
-				propertyName, hasImplicitOptional := s.raml.chompImplicitOptional(nodeName)
-				if len(propertyName) > 1 && propertyName[0] == '/' && propertyName[len(propertyName)-1] == '/' {
-					if s.PatternProperties == nil {
-						s.PatternProperties = orderedmap.New[string, PatternProperty]()
-					}
-					property, err := s.raml.makePatternProperty(nodeName, propertyName, data, s.Location,
-						hasImplicitOptional)
-					if err != nil {
-						return StacktraceNewWrapped("make pattern property", err, s.Location,
-							WithNodePosition(data))
-					}
-					s.PatternProperties.Set(propertyName, property)
-					s.raml.PutShapePtr(property.Shape)
-				} else {
-					if s.Properties == nil {
-						s.Properties = orderedmap.New[string, Property]()
-					}
-					property, err := s.raml.makeProperty(nodeName, propertyName, data, s.Location, hasImplicitOptional)
-					if err != nil {
-						return StacktraceNewWrapped("make property", err, s.Location, WithNodePosition(data))
-					}
-					s.Properties.Set(property.Name, property)
-					s.raml.PutShapePtr(property.Shape)
+				if err := s.unmarshalProperty(nodeName, data); err != nil {
+					return fmt.Errorf("unmarshal property: %w", err)
 				}
 			}
 		default:
@@ -321,21 +334,9 @@ func (s *ObjectShape) clone(history []Shape) Shape {
 	return ptr
 }
 
-func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
-	i, ok := v.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("invalid type, got %T, expected map[string]interface{}", v)
-	}
-
-	mapLen := uint64(len(i))
-	if s.MinProperties != nil && mapLen < *s.MinProperties {
-		return fmt.Errorf("object must have at least %d properties", *s.MinProperties)
-	}
-	if s.MaxProperties != nil && mapLen > *s.MaxProperties {
-		return fmt.Errorf("object must have not more than %d properties", *s.MaxProperties)
-	}
+func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interface{}) error {
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
-	for k, item := range i {
+	for k, item := range props {
 		// Explicitly defined properties have priority over pattern properties.
 		ctxPathK := ctxPath + "." + k
 		if s.Properties != nil {
@@ -371,7 +372,110 @@ func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
 			return fmt.Errorf("unexpected additional property \"%s\"", k)
 		}
 	}
+	return nil
+}
 
+func (s *ObjectShape) Validate(v interface{}, ctxPath string) error {
+	props, ok := v.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("invalid type, got %T, expected map[string]interface{}", v)
+	}
+
+	if err := s.validateProperties(ctxPath, props); err != nil {
+		return fmt.Errorf("validate properties: %w", err)
+	}
+
+	mapLen := uint64(len(props))
+	if s.MinProperties != nil && mapLen < *s.MinProperties {
+		return fmt.Errorf("object must have at least %d properties", *s.MinProperties)
+	}
+	if s.MaxProperties != nil && mapLen > *s.MaxProperties {
+		return fmt.Errorf("object must have not more than %d properties", *s.MaxProperties)
+	}
+
+	return nil
+}
+
+func (s *ObjectShape) inheritMinProperties(source *ObjectShape) error {
+	if s.MinProperties == nil {
+		s.MinProperties = source.MinProperties
+	} else if source.MinProperties != nil && *s.MinProperties > *source.MinProperties {
+		return stacktrace.New("minProperties constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *source.MinProperties),
+			stacktrace.WithInfo("target", *s.MinProperties))
+	}
+	return nil
+}
+
+func (s *ObjectShape) inheritMaxProperties(source *ObjectShape) error {
+	if s.MaxProperties == nil {
+		s.MaxProperties = source.MaxProperties
+	} else if source.MaxProperties != nil && *s.MaxProperties < *source.MaxProperties {
+		return stacktrace.New("maxProperties constraint violation", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", *source.MaxProperties),
+			stacktrace.WithInfo("target", *s.MaxProperties))
+	}
+	return nil
+}
+
+func (s *ObjectShape) inheritProperties(source *ObjectShape) error {
+	if s.Properties == nil {
+		s.Properties = source.Properties
+		return nil
+	}
+
+	if source.Properties == nil {
+		return nil
+	}
+
+	for pair := source.Properties.Oldest(); pair != nil; pair = pair.Next() {
+		k, sourceProp := pair.Key, pair.Value
+		if targetProp, present := s.Properties.Get(k); present {
+			if sourceProp.Required && !targetProp.Required {
+				return stacktrace.New("cannot make required property optional", s.Location,
+					stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
+					stacktrace.WithInfo("property", k),
+					stacktrace.WithInfo("source", sourceProp.Required),
+					stacktrace.WithInfo("target", targetProp.Required),
+					stacktrace.WithType(stacktrace.TypeUnwrapping))
+			}
+			_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
+			if err != nil {
+				return StacktraceNewWrapped("inherit property", err, s.Location,
+					stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
+					stacktrace.WithInfo("property", k),
+					stacktrace.WithType(stacktrace.TypeUnwrapping))
+			}
+		} else {
+			s.Properties.Set(k, sourceProp)
+		}
+	}
+	return nil
+}
+
+func (s *ObjectShape) inheritPatternProperties(source *ObjectShape) error {
+	if s.PatternProperties == nil {
+		s.PatternProperties = source.PatternProperties
+		return nil
+	}
+	if source.PatternProperties != nil {
+		for pair := source.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			k, sourceProp := pair.Key, pair.Value
+			if targetProp, present := s.PatternProperties.Get(k); present {
+				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
+				if err != nil {
+					return StacktraceNewWrapped("inherit pattern property", err, s.Location,
+						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
+						stacktrace.WithInfo("property", k),
+						stacktrace.WithType(stacktrace.TypeUnwrapping))
+				}
+			} else {
+				s.PatternProperties.Set(k, sourceProp)
+			}
+		}
+	}
 	return nil
 }
 
@@ -393,68 +497,84 @@ func (s *ObjectShape) Inherit(source Shape) (Shape, error) {
 		s.Discriminator = ss.Discriminator
 	}
 
-	if s.MinProperties == nil {
-		s.MinProperties = ss.MinProperties
-	} else if ss.MinProperties != nil && *s.MinProperties < *ss.MinProperties {
-		return nil, stacktrace.New("minProperties constraint violation", s.Location,
-			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MinProperties),
-			stacktrace.WithInfo("target", *s.MinProperties))
-	}
-	if s.MaxProperties == nil {
-		s.MaxProperties = ss.MaxProperties
-	} else if ss.MaxProperties != nil && *s.MaxProperties > *ss.MaxProperties {
-		return nil, stacktrace.New("maxProperties constraint violation", s.Location,
-			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithInfo("source", *ss.MaxProperties),
-			stacktrace.WithInfo("target", *s.MaxProperties))
+	if err := s.inheritMinProperties(ss); err != nil {
+		return nil, fmt.Errorf("inherit minProperties: %w", err)
 	}
 
-	if s.Properties == nil {
-		s.Properties = ss.Properties
-	} else if ss.Properties != nil {
-		for pair := ss.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			k, sourceProp := pair.Key, pair.Value
-			if targetProp, present := s.Properties.Get(k); present {
-				if sourceProp.Required && !targetProp.Required {
-					return nil, stacktrace.New("cannot make required property optional", s.Location,
-						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
-						stacktrace.WithInfo("property", k),
-						stacktrace.WithInfo("source", sourceProp.Required),
-						stacktrace.WithInfo("target", targetProp.Required),
-						stacktrace.WithType(stacktrace.TypeUnwrapping))
-				}
-				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
-				if err != nil {
-					return nil, StacktraceNewWrapped("inherit property", err, s.Base().Location,
-						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
-						stacktrace.WithInfo("property", k),
-						stacktrace.WithType(stacktrace.TypeUnwrapping))
-				}
-			} else {
-				s.Properties.Set(k, sourceProp)
-			}
-		}
+	if err := s.inheritMaxProperties(ss); err != nil {
+		return nil, fmt.Errorf("inherit maxProperties: %w", err)
 	}
-	if s.PatternProperties == nil {
-		s.PatternProperties = ss.PatternProperties
-	} else if ss.PatternProperties != nil {
-		for pair := ss.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-			k, sourceProp := pair.Key, pair.Value
-			if targetProp, present := s.PatternProperties.Get(k); present {
-				_, err := s.raml.Inherit(*sourceProp.Shape, *targetProp.Shape)
-				if err != nil {
-					return nil, StacktraceNewWrapped("inherit pattern property", err, s.Base().Location,
-						stacktrace.WithPosition(&(*targetProp.Shape).Base().Position),
-						stacktrace.WithInfo("property", k),
-						stacktrace.WithType(stacktrace.TypeUnwrapping))
-				}
-			} else {
-				s.PatternProperties.Set(k, sourceProp)
-			}
-		}
+
+	if err := s.inheritProperties(ss); err != nil {
+		return nil, fmt.Errorf("inherit properties: %w", err)
 	}
+
+	if err := s.inheritPatternProperties(ss); err != nil {
+		return nil, fmt.Errorf("inherit pattern properties: %w", err)
+	}
+
 	return s, nil
+}
+
+func (s *ObjectShape) checkPatternProperties() error {
+	if s.PatternProperties == nil {
+		return nil
+	}
+	if s.AdditionalProperties != nil && !*s.AdditionalProperties {
+		// TODO: We actually can allow pattern properties with "additionalProperties: false" for stricter
+		// 	validation.
+		// This will contradict RAML 1.0 spec, but JSON Schema allows that.
+		// https://json-schema.org/understanding-json-schema/reference/object#additionalproperties
+		return stacktrace.New("pattern properties are not allowed with \"additionalProperties: false\"",
+			s.Location, stacktrace.WithPosition(&s.Position))
+	}
+	for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+		prop := pair.Value
+		if err := (*prop.Shape).Check(); err != nil {
+			return StacktraceNewWrapped("check pattern property", err, s.Location,
+				stacktrace.WithPosition(&(*prop.Shape).Base().Position),
+				stacktrace.WithInfo("property", prop.Pattern.String()))
+		}
+	}
+	return nil
+}
+
+func (s *ObjectShape) checkProperties() error {
+	if s.Properties == nil {
+		return nil
+	}
+
+	for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+		prop := pair.Value
+		if err := (*prop.Shape).Check(); err != nil {
+			return StacktraceNewWrapped("check property", err, s.Location,
+				stacktrace.WithPosition(&(*prop.Shape).Base().Position),
+				stacktrace.WithInfo("property", prop.Name))
+		}
+	}
+	// FIXME: Need to validate on which level the discriminator is applied to avoid potential false positives.
+	// Inline definitions with discriminator are not allowed.
+	// TODO: Setting discriminator should be allowed only on scalar shapes.
+	if s.Discriminator != nil {
+		prop, ok := s.Properties.Get(*s.Discriminator)
+		if !ok {
+			return stacktrace.New("discriminator property not found", s.Location,
+				stacktrace.WithPosition(&s.Position),
+				stacktrace.WithInfo("discriminator", *s.Discriminator))
+		}
+		discriminatorValue := s.DiscriminatorValue
+		if discriminatorValue == nil {
+			discriminatorValue = s.Base().Name
+		}
+		ps := *prop.Shape
+		if err := ps.Validate(discriminatorValue, "$"); err != nil {
+			return StacktraceNewWrapped("validate discriminator value", err, s.Location,
+				stacktrace.WithPosition(&s.Base().Position),
+				stacktrace.WithInfo("discriminator", *s.Discriminator))
+		}
+	}
+
+	return nil
 }
 
 func (s *ObjectShape) Check() error {
@@ -462,55 +582,13 @@ func (s *ObjectShape) Check() error {
 		return stacktrace.New("minProperties must be less than or equal to maxProperties",
 			s.Location, stacktrace.WithPosition(&s.Position))
 	}
-	if s.PatternProperties != nil {
-		if s.AdditionalProperties != nil && !*s.AdditionalProperties {
-			// TODO: We actually can allow pattern properties with "additionalProperties: false" for stricter
-			// 	validation.
-			// This will contradict RAML 1.0 spec, but JSON Schema allows that.
-			// https://json-schema.org/understanding-json-schema/reference/object#additionalproperties
-			return stacktrace.New("pattern properties are not allowed with \"additionalProperties: false\"",
-				s.Location, stacktrace.WithPosition(&s.Position))
-		}
-		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-			prop := pair.Value
-			if err := (*prop.Shape).Check(); err != nil {
-				return StacktraceNewWrapped("check pattern property", err, s.Location,
-					stacktrace.WithPosition(&(*prop.Shape).Base().Position),
-					stacktrace.WithInfo("property", prop.Pattern.String()))
-			}
-		}
+	if err := s.checkPatternProperties(); err != nil {
+		return fmt.Errorf("check pattern properties: %w", err)
 	}
-	if s.Properties != nil {
-		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			prop := pair.Value
-			if err := (*prop.Shape).Check(); err != nil {
-				return StacktraceNewWrapped("check property", err, s.Location,
-					stacktrace.WithPosition(&(*prop.Shape).Base().Position),
-					stacktrace.WithInfo("property", prop.Name))
-			}
-		}
-		// FIXME: Need to validate on which level the discriminator is applied to avoid potential false positives.
-		// Inline definitions with discriminator are not allowed.
-		// TODO: Setting discriminator should be allowed only on scalar shapes.
-		if s.Discriminator != nil {
-			prop, ok := s.Properties.Get(*s.Discriminator)
-			if !ok {
-				return stacktrace.New("discriminator property not found", s.Location,
-					stacktrace.WithPosition(&s.Position),
-					stacktrace.WithInfo("discriminator", *s.Discriminator))
-			}
-			discriminatorValue := s.DiscriminatorValue
-			if discriminatorValue == nil {
-				discriminatorValue = s.Base().Name
-			}
-			ps := *prop.Shape
-			if err := ps.Validate(discriminatorValue, "$"); err != nil {
-				return StacktraceNewWrapped("validate discriminator value", err, s.Location,
-					stacktrace.WithPosition(&s.Base().Position),
-					stacktrace.WithInfo("discriminator", *s.Discriminator))
-			}
-		}
-	} else if s.Discriminator != nil {
+	if err := s.checkProperties(); err != nil {
+		return fmt.Errorf("check properties: %w", err)
+	}
+	if s.Discriminator != nil && s.Properties == nil {
 		return stacktrace.New("discriminator without properties", s.Location,
 			stacktrace.WithPosition(&s.Position))
 	}
@@ -609,7 +687,7 @@ type UnionShape struct {
 }
 
 // UnmarshalYAMLNodes unmarshals the union shape from YAML nodes.
-func (s *UnionShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *UnionShape) unmarshalYAMLNodes(_ []*yaml.Node) error {
 	return nil
 }
 
@@ -720,16 +798,16 @@ func (s *JSONShape) Clone() Shape {
 	return &c
 }
 
-func (s *JSONShape) clone(history []Shape) Shape {
+func (s *JSONShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *JSONShape) Validate(v interface{}, ctxPath string) error {
+func (s *JSONShape) Validate(_ interface{}, _ string) error {
 	// TODO: Implement validation with JSON Schema
 	return nil
 }
 
-func (s *JSONShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *JSONShape) unmarshalYAMLNodes(_ []*yaml.Node) error {
 	return nil
 }
 
@@ -769,11 +847,11 @@ func (s *UnknownShape) Clone() Shape {
 	return &c
 }
 
-func (s *UnknownShape) clone(history []Shape) Shape {
+func (s *UnknownShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
-func (s *UnknownShape) Validate(v interface{}, ctxPath string) error {
+func (s *UnknownShape) Validate(_ interface{}, _ string) error {
 	return fmt.Errorf("cannot validate against unknown shape")
 }
 
@@ -782,7 +860,7 @@ func (s *UnknownShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	return nil
 }
 
-func (s *UnknownShape) Inherit(source Shape) (Shape, error) {
+func (s *UnknownShape) Inherit(_ Shape) (Shape, error) {
 	return nil, stacktrace.New("cannot inherit from unknown shape", s.Location, stacktrace.WithPosition(&s.Position))
 }
 
@@ -796,7 +874,7 @@ type RecursiveShape struct {
 	Head *Shape
 }
 
-func (s *RecursiveShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+func (s *RecursiveShape) unmarshalYAMLNodes(_ []*yaml.Node) error {
 	return nil
 }
 
@@ -810,7 +888,7 @@ func (s *RecursiveShape) Clone() Shape {
 	return &c
 }
 
-func (s *RecursiveShape) clone(history []Shape) Shape {
+func (s *RecursiveShape) clone(_ []Shape) Shape {
 	return s.Clone()
 }
 
@@ -821,7 +899,8 @@ func (s *RecursiveShape) Validate(v interface{}, ctxPath string) error {
 	return nil
 }
 
-func (s *RecursiveShape) Inherit(source Shape) (Shape, error) {
+// Inherit merges the source shape into the target shape.
+func (s *RecursiveShape) Inherit(_ Shape) (Shape, error) {
 	return nil, stacktrace.New("cannot inherit from recursive shape", s.Location, stacktrace.WithPosition(&s.Position))
 }
 
