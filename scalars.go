@@ -192,10 +192,19 @@ func (s *IntegerShape) Check() error {
 			}
 		}
 	}
+	// invalid format, found by copilot =)
+	if s.Format != nil {
+		if _, ok := SetOfIntegerFormats[*s.Format]; !ok {
+			return stacktrace.New("invalid format", s.Location, stacktrace.WithPosition(&s.Position))
+		}
+	}
 	return nil
 }
 
 func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -380,6 +389,9 @@ func (s *NumberShape) Check() error {
 }
 
 func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -539,6 +551,9 @@ func (s *StringShape) Check() error {
 }
 
 func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -649,7 +664,7 @@ func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	if s.FileTypes == nil {
 		s.FileTypes = ss.FileTypes
 	} else if ss.FileTypes != nil && !isCompatibleEnum(ss.FileTypes, s.FileTypes) {
-		return nil, stacktrace.New("enum constraint violation", s.Location,
+		return nil, stacktrace.New("file types are incompatible", s.Location,
 			stacktrace.WithPosition(&s.Position),
 			stacktrace.WithInfo("source", ss.FileTypes.String()),
 			stacktrace.WithInfo("target", s.FileTypes.String()))
@@ -674,6 +689,9 @@ func (s *FileShape) Check() error {
 }
 
 func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -872,6 +890,9 @@ func (s *DateTimeShape) Check() error {
 
 func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
+		if i+1 >= len(v) {
+			return stacktrace.New("missing value", s.Location)
+		}
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "format" {
@@ -938,6 +959,9 @@ func (s *DateTimeOnlyShape) Check() error {
 }
 
 func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -1052,6 +1076,9 @@ func (s *TimeOnlyShape) Check() error {
 }
 
 func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -1101,6 +1128,9 @@ func (s *AnyShape) Check() error {
 }
 
 func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -1154,6 +1184,9 @@ func (s *NilShape) Check() error {
 }
 
 func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location)
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
