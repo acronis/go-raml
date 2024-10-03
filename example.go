@@ -1,6 +1,7 @@
 package raml
 
 import (
+	"errors"
 	"fmt"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -8,6 +9,8 @@ import (
 
 	"github.com/acronis/go-stacktrace"
 )
+
+var ErrValueKeyNotFound = errors.New("value key not found")
 
 func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string) error {
 	switch node.Value {
@@ -35,7 +38,7 @@ func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string
 	return nil
 }
 
-func (ex *Example) fill(location string, value *yaml.Node) (*Node, error) {
+func (ex *Example) fill(location string, value *yaml.Node) error {
 	var valueKey *yaml.Node
 	// First lookup for the "value" key.
 	for i := 0; i != len(value.Content); i += 2 {
@@ -46,23 +49,25 @@ func (ex *Example) fill(location string, value *yaml.Node) (*Node, error) {
 			break
 		}
 	}
-	// If "value" key is found, then the example is considered as a map with additional properties
-	if valueKey != nil {
-		for i := 0; i != len(value.Content); i += 2 {
-			node := value.Content[i]
-			valueNode := value.Content[i+1]
-			if err := ex.decode(node, valueNode, location); err != nil {
-				return nil, fmt.Errorf("decode example: %w", err)
-			}
-		}
-		n, err := ex.raml.makeRootNode(valueKey, location)
-		if err != nil {
-			return nil, StacktraceNewWrapped("make node", err, location, WithNodePosition(valueKey))
-		}
-		return n, nil
+
+	if valueKey == nil {
+		return ErrValueKeyNotFound
 	}
 
-	return nil, nil
+	// If "value" key is found, then the example is considered as a map with additional properties
+	for i := 0; i != len(value.Content); i += 2 {
+		node := value.Content[i]
+		valueNode := value.Content[i+1]
+		if err := ex.decode(node, valueNode, location); err != nil {
+			return fmt.Errorf("decode example: %w", err)
+		}
+	}
+	n, err := ex.raml.makeRootNode(valueKey, location)
+	if err != nil {
+		return StacktraceNewWrapped("make node", err, location, WithNodePosition(valueKey))
+	}
+	ex.Data = n
+	return nil
 }
 
 // makeExample creates an example from the given value node
@@ -79,13 +84,11 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 	// 1. A value with an example of ObjectShape.
 	// 2. A map with the required "value" key that contains the actual example and additional properties of Example.
 	if value.Kind == yaml.MappingNode {
-		n, err := ex.fill(location, value)
-		if err != nil {
-			return nil, fmt.Errorf("fill example from mapping node: %w", err)
-		}
-		if n != nil {
-			ex.Data = n
+		err := ex.fill(location, value)
+		if err == nil {
 			return ex, nil
+		} else if !errors.Is(err, ErrValueKeyNotFound) {
+			return nil, fmt.Errorf("fill example from mapping node: %w", err)
 		}
 	}
 	// In all other cases, the example is considered as a value node
