@@ -7,7 +7,11 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func (r *RAML) unwrapTypes(types *orderedmap.OrderedMap[string, *Shape], f *Library) *stacktrace.StackTrace {
+func (r *RAML) unwrapTypes(
+	types *orderedmap.OrderedMap[string, *Shape],
+	f *Library,
+	isAnnotationType bool,
+) *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
 	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
 		k, shape := pair.Key, pair.Value
@@ -35,15 +39,19 @@ func (r *RAML) unwrapTypes(types *orderedmap.OrderedMap[string, *Shape], f *Libr
 		}
 		ptr := &us
 		types.Set(k, ptr)
-		r.PutAnnotationTypeIntoFragment(us.Base().Name, f.Location, ptr)
+		if isAnnotationType {
+			r.PutAnnotationTypeIntoFragment(us.Base().Name, f.Location, ptr)
+		} else {
+			r.PutTypeIntoFragment(us.Base().Name, f.Location, ptr)
+		}
 		r.PutShapePtr(ptr)
 	}
 	return st
 }
 
 func (r *RAML) unwrapLibrary(f *Library) *stacktrace.StackTrace {
-	st := r.unwrapTypes(f.AnnotationTypes, f)
-	se := r.unwrapTypes(f.Types, f)
+	st := r.unwrapTypes(f.AnnotationTypes, f, true)
+	se := r.unwrapTypes(f.Types, f, false)
 	if se != nil {
 		if st == nil {
 			st = se
