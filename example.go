@@ -35,7 +35,7 @@ func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string
 	return nil
 }
 
-func (ex *Example) fill(location string, value *yaml.Node) error {
+func (ex *Example) fill(location string, value *yaml.Node) (*Node, error) {
 	var valueKey *yaml.Node
 	// First lookup for the "value" key.
 	for i := 0; i != len(value.Content); i += 2 {
@@ -52,18 +52,17 @@ func (ex *Example) fill(location string, value *yaml.Node) error {
 			node := value.Content[i]
 			valueNode := value.Content[i+1]
 			if err := ex.decode(node, valueNode, location); err != nil {
-				return fmt.Errorf("decode example: %w", err)
+				return nil, fmt.Errorf("decode example: %w", err)
 			}
 		}
 		n, err := ex.raml.makeRootNode(valueKey, location)
 		if err != nil {
-			return StacktraceNewWrapped("make node", err, location, WithNodePosition(valueKey))
+			return nil, StacktraceNewWrapped("make node", err, location, WithNodePosition(valueKey))
 		}
-		ex.Data = n
-		return nil
+		return n, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // makeExample creates an example from the given value node
@@ -80,8 +79,13 @@ func (r *RAML) makeExample(value *yaml.Node, name string, location string) (*Exa
 	// 1. A value with an example of ObjectShape.
 	// 2. A map with the required "value" key that contains the actual example and additional properties of Example.
 	if value.Kind == yaml.MappingNode {
-		if err := ex.fill(location, value); err != nil {
+		n, err := ex.fill(location, value)
+		if err != nil {
 			return nil, fmt.Errorf("fill example from mapping node: %w", err)
+		}
+		if n != nil {
+			ex.Data = n
+			return ex, nil
 		}
 	}
 	// In all other cases, the example is considered as a value node
