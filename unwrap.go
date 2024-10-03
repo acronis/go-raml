@@ -362,6 +362,7 @@ func (r *RAML) unwrapParents(base *BaseShape, history []Shape) (Shape, error) {
 		base.Link = nil
 	case len(base.Inherits) > 0:
 		inherits := base.Inherits
+		unwrappedInherits := make([]*Shape, len(inherits))
 		// TODO: Fix multiple inheritance unwrap.
 		// Multiple inheritance members must be checked for compatibility with each other before unwrapping.
 		ss, err := r.UnwrapShape(inherits[0], history)
@@ -369,20 +370,21 @@ func (r *RAML) unwrapParents(base *BaseShape, history []Shape) (Shape, error) {
 			return nil, StacktraceNewWrapped("parent unwrap", err, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
-		inherits[0] = &ss
+		unwrappedInherits[0] = &ss
 		for i := 1; i < len(inherits); i++ {
 			us, errUnwrap := r.UnwrapShape(inherits[i], history)
 			if errUnwrap != nil {
 				return nil, errUnwrap
 			}
-			is, errUnwrap := ss.Inherit(us)
+			unwrappedInherits[i] = &us
+			_, errUnwrap = ss.Inherit(us)
 			if errUnwrap != nil {
 				return nil, StacktraceNewWrapped("multiple parents unwrap", errUnwrap, base.Location,
 					stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
-			inherits[i] = &is
 		}
 		source = ss
+		base.Inherits = unwrappedInherits
 	}
 	return source, nil
 }
