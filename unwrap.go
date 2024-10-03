@@ -436,6 +436,7 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 			return nil, StacktraceNewWrapped("alias unwrap", err, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
+		us.Base().Name = base.Name
 		return us, nil
 	}
 
