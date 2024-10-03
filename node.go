@@ -192,6 +192,10 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 		return scalarNodeToDataNode(node, location, isInclude)
 	case yaml.MappingNode:
 		properties := make(map[string]any, len(node.Content)/2)
+		if len(node.Content)%2 != 0 {
+			return nil, stacktrace.New("mapping node should have even number of children", location,
+				WithNodePosition(node))
+		}
 		for i := 0; i != len(node.Content); i += 2 {
 			key := node.Content[i].Value
 			value := node.Content[i+1]
