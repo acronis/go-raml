@@ -194,21 +194,21 @@ func (r *RAML) inheritBase(sourceBase *BaseShape, targetBase *BaseShape) {
 	//  But maybe they can be inheritable in other context?
 }
 
-func (r *RAML) inheritUnionsToSrc(target Shape, sourceUnion *UnionShape) (Shape, error) {
+func (r *RAML) inheritUnionSource(sourceUnion *UnionShape, target Shape) (Shape, error) {
 	var filtered []*Shape
 	var st *stacktrace.StackTrace
-	for _, item := range sourceUnion.AnyOf {
-		i := *item
+	for _, source := range sourceUnion.AnyOf {
+		ss := *source
 		// If at least one union member has any type, the whole union is considered as any type.
-		if _, ok := i.(*AnyShape); ok {
+		if _, ok := ss.(*AnyShape); ok {
 			return target, nil
 		}
-		if i.Base().Type == target.Base().Type {
+		if ss.Base().Type == target.Base().Type {
 			// Deep copy with ID change is required since we create new union members from source members
 			cs := target.Clone()
 			// TODO: Probably all copied shapes must change IDs since these are actually new shapes.
 			cs.Base().ID = generateShapeID()
-			ms, err := cs.Inherit(i)
+			is, err := cs.Inherit(ss)
 			if err != nil {
 				se := StacktraceNewWrapped("merge shapes", err, target.Base().Location,
 					stacktrace.WithPosition(&target.Base().Position))
@@ -220,7 +220,7 @@ func (r *RAML) inheritUnionsToSrc(target Shape, sourceUnion *UnionShape) (Shape,
 				// Skip shapes that didn't pass inheritance check
 				continue
 			}
-			filtered = append(filtered, &ms)
+			filtered = append(filtered, &is)
 		}
 	}
 	if len(filtered) == 0 {
@@ -285,18 +285,18 @@ func (r *RAML) Inherit(source Shape, target Shape) (Shape, error) {
 
 	switch {
 	case isSourceUnion && !isTargetUnion:
-		return r.inheritUnionsToSrc(target, sourceUnion)
+		return r.inheritUnionSource(sourceUnion, target)
 
 	case isTargetUnion && !isSourceUnion:
-		return r.inheritUnionsToTarget(target, source, targetUnion)
+		return r.inheritUnionTarget(source, targetUnion)
 	}
 	// Homogenous types produce same type
-	ms, err := target.Inherit(source)
+	is, err := target.Inherit(source)
 	if err != nil {
 		return nil, StacktraceNewWrapped("merge shapes", err, target.Base().Location,
 			stacktrace.WithPosition(&target.Base().Position))
 	}
-	return ms, nil
+	return is, nil
 }
 
 func (r *RAML) unwrapObjShape(base *BaseShape, objShape *ObjectShape, history []Shape) error {
@@ -325,6 +325,19 @@ func (r *RAML) unwrapObjShape(base *BaseShape, objShape *ObjectShape, history []
 
 	return nil
 }
+
+func (r *RAML) unwrapArrayShape(base *BaseShape, trg *ArrayShape, history []Shape) error {
+	if trg.Items != nil {
+		us, err := r.UnwrapShape(trg.Items, history)
+		if err != nil {
+			return StacktraceNewWrapped("array item unwrap", err, base.Location,
+				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
+		}
+		*trg.Items = us
+	}
+	return nil
+}
+
 func (r *RAML) unwrapUnionShape(base *BaseShape, unionShape *UnionShape, history []Shape) error {
 	for _, item := range unionShape.AnyOf {
 		us, err := r.UnwrapShape(item, history)
@@ -337,18 +350,9 @@ func (r *RAML) unwrapUnionShape(base *BaseShape, unionShape *UnionShape, history
 	return nil
 }
 
-func (r *RAML) unwrapSource(base *BaseShape, history []Shape) (Shape, error) {
+func (r *RAML) unwrapParents(base *BaseShape, history []Shape) (Shape, error) {
 	var source Shape
 	switch {
-	case base.Alias != nil:
-		us, err := r.UnwrapShape(base.Alias, history)
-		if err != nil {
-			return nil, StacktraceNewWrapped("alias unwrap", err, base.Location,
-				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
-		}
-		// Alias simply points to another shape, so we just change the name and return it as is.
-		us.Base().Name = base.Name
-		return us, nil
 	case base.Link != nil:
 		us, err := r.UnwrapShape(base.Link.Shape, history)
 		if err != nil {
@@ -359,7 +363,6 @@ func (r *RAML) unwrapSource(base *BaseShape, history []Shape) (Shape, error) {
 		base.Link = nil
 	case len(base.Inherits) > 0:
 		inherits := base.Inherits
-		unwrappedInherits := make([]*Shape, len(inherits))
 		// TODO: Fix multiple inheritance unwrap.
 		// Multiple inheritance members must be checked for compatibility with each other before unwrapping.
 		ss, err := r.UnwrapShape(inherits[0], history)
@@ -367,21 +370,20 @@ func (r *RAML) unwrapSource(base *BaseShape, history []Shape) (Shape, error) {
 			return nil, StacktraceNewWrapped("parent unwrap", err, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
-		unwrappedInherits[0] = &ss
+		inherits[0] = &ss
 		for i := 1; i < len(inherits); i++ {
 			us, errUnwrap := r.UnwrapShape(inherits[i], history)
 			if errUnwrap != nil {
 				return nil, errUnwrap
 			}
-			unwrappedInherits[i] = &us
-			_, errUnwrap = ss.Inherit(us)
+			is, errUnwrap := ss.Inherit(us)
 			if errUnwrap != nil {
 				return nil, StacktraceNewWrapped("multiple parents unwrap", errUnwrap, base.Location,
 					stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
+			inherits[i] = &is
 		}
 		source = ss
-		base.Inherits = unwrappedInherits
 	}
 	return source, nil
 }
@@ -389,13 +391,8 @@ func (r *RAML) unwrapSource(base *BaseShape, history []Shape) (Shape, error) {
 func (r *RAML) unwrapTarget(target Shape, history []Shape) error {
 	switch trg := target.(type) {
 	case *ArrayShape:
-		if trg.Items != nil {
-			us, err := r.UnwrapShape(trg.Items, history)
-			if err != nil {
-				return StacktraceNewWrapped("array item unwrap", err, target.Base().Location,
-					stacktrace.WithPosition(&target.Base().Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
-			}
-			*trg.Items = us
+		if err := r.unwrapArrayShape(target.Base(), trg, history); err != nil {
+			return fmt.Errorf("unwrap array shape: %w", err)
 		}
 	case *ObjectShape:
 		if err := r.unwrapObjShape(target.Base(), trg, history); err != nil {
@@ -419,22 +416,33 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	target := (*s).Clone()
 
 	base := target.Base()
+	// TODO: A more efficient way may be used.
+	// FIXME: Detection with base.shapeVisited is not reliable and probably is not reset in some cases.
+	for _, item := range history {
+		if item.Base().ID == base.ID {
+			return target, nil
+		}
+	}
+	history = append(history, target)
+
 	// Skip already unwrapped shapes
 	if base.IsUnwrapped() {
 		return target, nil
 	}
 
-	for _, item := range history {
-		if item.Base().ID == base.ID {
-			base.Inherits = nil
-			return &RecursiveShape{BaseShape: *base, Head: &item}, nil
+	// NOTE: Type aliasing is not inheritance and is not used as a source. It must be unwrapped and returned as is.
+	if base.Alias != nil {
+		us, err := r.UnwrapShape(base.Alias, history)
+		if err != nil {
+			return nil, StacktraceNewWrapped("alias unwrap", err, base.Location,
+				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
+		return us, nil
 	}
-	history = append(history, target)
 
-	source, err := r.unwrapSource(base, history)
+	source, err := r.unwrapParents(base, history)
 	if err != nil {
-		return nil, StacktraceNewWrapped("unwrap source if obj", err, base.Location,
+		return nil, StacktraceNewWrapped("unwrap parents", err, base.Location,
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 	}
 
@@ -454,13 +462,13 @@ func (r *RAML) UnwrapShape(s *Shape, history []Shape) (Shape, error) {
 	}
 
 	if source != nil {
-		ms, errInherit := r.Inherit(source, target)
+		is, errInherit := r.Inherit(source, target)
 		if errInherit != nil {
 			return nil, StacktraceNewWrapped("merge shapes", errInherit, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
-		ms.Base().unwrapped = true
-		return ms, nil
+		is.Base().unwrapped = true
+		return is, nil
 	}
 	base.unwrapped = true
 	return target, nil
