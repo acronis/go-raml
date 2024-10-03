@@ -245,15 +245,14 @@ func (r *RAML) inheritUnionSource(sourceUnion *UnionShape, target Shape) (Shape,
 	}, nil
 }
 
-func (r *RAML) inheritUnionsToTarget(
-	target, source Shape, targetUnion *UnionShape) (Shape, error) {
+func (r *RAML) inheritUnionTarget(source Shape, targetUnion *UnionShape) (Shape, error) {
 	var st *stacktrace.StackTrace
 	for _, item := range targetUnion.AnyOf {
 		// Merge will raise an error in case any of union members has incompatible type
 		_, err := (*item).Inherit(source)
 		if err != nil {
-			se := StacktraceNewWrapped("merge shapes", err, target.Base().Location,
-				stacktrace.WithPosition(&target.Base().Position))
+			se := StacktraceNewWrapped("merge shapes", err, targetUnion.Base().Location,
+				stacktrace.WithPosition(&targetUnion.Base().Position))
 			if st == nil {
 				st = se
 			} else {
