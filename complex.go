@@ -142,6 +142,9 @@ func (s *ArrayShape) Check() error {
 
 // UnmarshalYAMLNodes unmarshals the array shape from YAML nodes.
 func (s *ArrayShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return stacktrace.New("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
