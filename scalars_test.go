@@ -1862,10 +1862,7 @@ func TestStringShape_Validate(t *testing.T) {
 				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{Pattern: func() *regexp.Regexp {
-					p, err := regexp.Compile("^[a-z]+$")
-					if err != nil {
-						t.Error(err)
-					}
+					p := regexp.MustCompile("^[a-z]+$")
 					return p
 				}()},
 			},
@@ -1881,10 +1878,7 @@ func TestStringShape_Validate(t *testing.T) {
 				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{Pattern: func() *regexp.Regexp {
-					p, err := regexp.Compile("^[a-z]+$")
-					if err != nil {
-						t.Error(err)
-					}
+					p := regexp.MustCompile("^[a-z]+$")
 					return p
 				}()},
 			},
@@ -3807,7 +3801,6 @@ func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 				}
 				if gotDateTime.Type != "datetime-only" {
 					return "unexpected type", false
-
 				}
 				return "", true
 			},

@@ -104,3 +104,8 @@ const (
 	FacetDiscriminator        = "discriminator"
 	FacetDiscriminatorValue   = "discriminatorValue"
 )
+
+const (
+	DateTimeFormatRFC3339 = "rfc3339"
+	DateTimeFormatRFC2616 = "rfc2616"
+)

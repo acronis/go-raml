@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"context"
 	"fmt"
-	"strings"
 )
 
 // RAML is a store for all fragments and shapes.
@@ -138,92 +137,25 @@ func (r *RAML) PutFragment(location string, fragment Fragment) {
 }
 
 func (r *RAML) GetReferencedType(refName string, location string) (*BaseShape, error) {
-	// External ref - <fragment>.<identifier>
-	// Local ref - <identifier>
-	before, after, found := strings.Cut(refName, ".")
-
-	var ref *BaseShape
-	// TODO: Rework using Fragment interface.
-	switch frag := r.GetFragment(location).(type) {
-	case *Library:
-		if !found {
-			r, ok := frag.Types.Get(refName)
-			if !ok {
-				return nil, fmt.Errorf("reference \"%s\" not found", refName)
-			}
-			ref = r
-		} else {
-			lib, ok := frag.Uses.Get(before)
-			if !ok {
-				return nil, fmt.Errorf("library \"%s\" not found", before)
-			}
-			r, ok := lib.Link.Types.Get(after)
-			if !ok {
-				return nil, fmt.Errorf("reference \"%s\" not found", after)
-			}
-			ref = r
-		}
-	case *DataType:
-		// DataType cannot have local reference to annotation type.
-		if !found {
-			return nil, fmt.Errorf("invalid reference %s", refName)
-		}
-		lib, ok := frag.Uses.Get(before)
-		if !ok {
-			return nil, fmt.Errorf("library \"%s\" not found", before)
-		}
-		ref, ok = lib.Link.Types.Get(after)
-		if !ok {
-			return nil, fmt.Errorf("reference \"%s\" not found", after)
-		}
-	default:
-		return nil, fmt.Errorf("invalid fragment type: %T", frag)
+	frag := r.GetFragment(location)
+	if frag == nil {
+		return nil, fmt.Errorf("fragment not found")
+	}
+	ref, err := frag.GetReferenceType(refName)
+	if err != nil {
+		return nil, fmt.Errorf("get reference type: %s: %w", refName, err)
 	}
 	return ref, nil
 }
 
 func (r *RAML) GetReferencedAnnotationType(refName string, location string) (*BaseShape, error) {
-	// TODO: Maybe can be merged with GetReferencedType.
-	// External ref - <fragment>.<identifier>
-	// Local ref - <identifier>
-	before, after, found := strings.Cut(refName, ".")
-
-	var ref *BaseShape
-	// TODO: Rework using Fragment interface.
-	switch frag := r.GetFragment(location).(type) {
-	case *Library:
-		if !found {
-			r, ok := frag.AnnotationTypes.Get(refName)
-			if !ok {
-				return nil, fmt.Errorf("reference \"%s\" not found", refName)
-			}
-			ref = r
-		} else {
-			lib, ok := frag.Uses.Get(before)
-			if !ok {
-				return nil, fmt.Errorf("library \"%s\" not found", before)
-			}
-			r, ok := lib.Link.AnnotationTypes.Get(after)
-			if !ok {
-				return nil, fmt.Errorf("reference \"%s\" not found", after)
-			}
-			ref = r
-		}
-	case *DataType:
-		// DataType cannot have local reference to annotation type.
-		if !found {
-			return nil, fmt.Errorf("invalid reference %s", refName)
-		}
-		lib, ok := frag.Uses.Get(before)
-		if !ok {
-			return nil, fmt.Errorf("library \"%s\" not found", before)
-		}
-		ref, ok = lib.Link.AnnotationTypes.Get(after)
-		if !ok {
-			return nil, fmt.Errorf("reference \"%s\" not found", after)
-		}
-	default:
-		return nil, fmt.Errorf("invalid fragment type: %T", frag)
+	frag := r.GetFragment(location)
+	if frag == nil {
+		return nil, fmt.Errorf("fragment not found")
+	}
+	ref, err := frag.GetReferenceAnnotationType(refName)
+	if err != nil {
+		return nil, fmt.Errorf("get reference annotation type: %s: %w", refName, err)
 	}
 	return ref, nil
 }

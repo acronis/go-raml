@@ -31,7 +31,10 @@ func Test_ParseFromPath(t *testing.T) {
 		case *Library:
 			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
 				s := pair.Value
-				conv.Convert(s.Shape)
+				_, errConv := conv.Convert(s.Shape)
+				if errConv != nil {
+					t.Errorf("Convert shape: %s", errConv)
+				}
 				// b, err := json.MarshalIndent(schema, "", "  ")
 				// if err != nil {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
@@ -41,7 +44,10 @@ func Test_ParseFromPath(t *testing.T) {
 			}
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
 				s := pair.Value
-				conv.Convert(s.Shape)
+				_, errConv := conv.Convert(s.Shape)
+				if errConv != nil {
+					t.Errorf("Convert shape: %s", errConv)
+				}
 				// if err != nil {
 				// 	t.Errorf("StackTrace converting shape: %s", err)
 				// }
@@ -53,7 +59,10 @@ func Test_ParseFromPath(t *testing.T) {
 				// fmt.Println(string(b))
 			}
 		case *DataType:
-			conv.Convert(f.Shape.Shape)
+			_, errConv := conv.Convert(f.Shape.Shape)
+			if errConv != nil {
+				t.Errorf("Convert shape: %s", errConv)
+			}
 			// b, err := json.MarshalIndent(schema, "", "  ")
 			// if err != nil {
 			// 	t.Errorf("StackTrace marshalling schema: %s", err)

@@ -75,7 +75,7 @@ func (s *IntegerShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *IntegerShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *IntegerShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -198,6 +198,54 @@ func (s *IntegerShape) check() error {
 	return nil
 }
 
+func (s *IntegerShape) unmarshalYAMLNode(node, valueNode *yaml.Node) error {
+	switch node.Value {
+	case FacetMinimum:
+		if valueNode.Tag != TagInt {
+			return stacktrace.New("minimum must be integer", s.Location, WithNodePosition(valueNode))
+		}
+		num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
+		if !ok {
+			return stacktrace.New("invalid minimum value", s.Location, WithNodePosition(valueNode))
+		}
+		s.Minimum = num
+	case FacetMaximum:
+		if valueNode.Tag != TagInt {
+			return stacktrace.New("maximum must be integer", s.Location, WithNodePosition(valueNode))
+		}
+		num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
+		if !ok {
+			return stacktrace.New("invalid maximum value", s.Location, WithNodePosition(valueNode))
+		}
+		s.Maximum = num
+	case FacetMultipleOf:
+		if err := valueNode.Decode(&s.MultipleOf); err != nil {
+			return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
+		}
+	case FacetFormat:
+		if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
+			return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode),
+				stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
+		}
+		if err := valueNode.Decode(&s.Format); err != nil {
+			return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
+		}
+	case FacetEnum:
+		enums, err := s.raml.MakeEnum(valueNode, s.Location)
+		if err != nil {
+			return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.Enum = enums
+	default:
+		n, err := s.raml.makeRootNode(valueNode, s.Location)
+		if err != nil {
+			return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
+		}
+		s.CustomShapeFacets.Set(node.Value, n)
+	}
+	return nil
+}
+
 func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
 		return stacktrace.New("odd number of nodes", s.Location)
@@ -205,49 +253,8 @@ func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
-		switch node.Value {
-		case FacetMinimum:
-			if valueNode.Tag != TagInt {
-				return stacktrace.New("minimum must be integer", s.Location, WithNodePosition(valueNode))
-			}
-			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
-			if !ok {
-				return stacktrace.New("invalid minimum value", s.Location, WithNodePosition(valueNode))
-			}
-			s.Minimum = num
-		case FacetMaximum:
-			if valueNode.Tag != TagInt {
-				return stacktrace.New("maximum must be integer", s.Location, WithNodePosition(valueNode))
-			}
-			num, ok := big.NewInt(0).SetString(valueNode.Value, 10)
-			if !ok {
-				return stacktrace.New("invalid maximum value", s.Location, WithNodePosition(valueNode))
-			}
-			s.Maximum = num
-		case FacetMultipleOf:
-			if err := valueNode.Decode(&s.MultipleOf); err != nil {
-				return StacktraceNewWrapped("decode multipleOf", err, s.Location, WithNodePosition(valueNode))
-			}
-		case FacetFormat:
-			if _, ok := SetOfIntegerFormats[valueNode.Value]; !ok {
-				return stacktrace.New("invalid format", s.Location, WithNodePosition(valueNode),
-					stacktrace.WithInfo("allowed_formats", SetOfIntegerFormats))
-			}
-			if err := valueNode.Decode(&s.Format); err != nil {
-				return StacktraceNewWrapped("decode format", err, s.Location, WithNodePosition(valueNode))
-			}
-		case FacetEnum:
-			enums, err := s.raml.MakeEnum(valueNode, s.Location)
-			if err != nil {
-				return StacktraceNewWrapped("make enum", err, s.Location, WithNodePosition(valueNode))
-			}
-			s.Enum = enums
-		default:
-			n, err := s.raml.makeRootNode(valueNode, s.Location)
-			if err != nil {
-				return StacktraceNewWrapped("make node", err, s.Location, WithNodePosition(valueNode))
-			}
-			s.CustomShapeFacets.Set(node.Value, n)
+		if err := s.unmarshalYAMLNode(node, valueNode); err != nil {
+			return fmt.Errorf("unmarshal %v: %v: %w", node, valueNode, err)
 		}
 	}
 	return nil
@@ -272,7 +279,7 @@ func (s *NumberShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *NumberShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *NumberShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -448,7 +455,7 @@ func (s *StringShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *StringShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *StringShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -600,7 +607,7 @@ func (s *FileShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *FileShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *FileShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -730,7 +737,7 @@ func (s *BooleanShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *BooleanShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *BooleanShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -817,7 +824,7 @@ func (s *DateTimeShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *DateTimeShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *DateTimeShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -835,12 +842,12 @@ func (s *DateTimeShape) validate(v interface{}, _ string) error {
 		}
 	} else {
 		switch *s.Format {
-		case "rfc3339":
+		case DateTimeFormatRFC3339:
 			if _, err := time.Parse(time.RFC3339, i); err != nil {
 				return fmt.Errorf("value must match format %s", time.RFC3339)
 			}
 		// TODO: https://www.rfc-editor.org/rfc/rfc7231#section-7.1.1.1
-		case "rfc2616":
+		case DateTimeFormatRFC2616:
 			if _, err := time.Parse(RFC2616, i); err != nil {
 				return fmt.Errorf("value must match format %s", RFC2616)
 			}
@@ -905,7 +912,7 @@ func (s *DateTimeOnlyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *DateTimeOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *DateTimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -962,7 +969,7 @@ func (s *DateOnlyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *DateOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *DateOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -1016,7 +1023,7 @@ func (s *TimeOnlyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *TimeOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *TimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -1073,7 +1080,7 @@ func (s *AnyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *AnyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *AnyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -1122,7 +1129,7 @@ func (s *NilShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *NilShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *NilShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c

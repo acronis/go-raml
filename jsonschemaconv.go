@@ -261,9 +261,9 @@ func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 
 	if s.Format != nil {
 		switch *s.Format {
-		case "rfc3339":
+		case DateTimeFormatRFC3339:
 			schema.Format = "date-time"
-		case "rfc2616":
+		case DateTimeFormatRFC2616:
 			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) " +
 				"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4})" +
 				" ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] GMT$"
@@ -316,10 +316,10 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 	// TODO: Type name is not unique, need pretty naming to avoid collisions.
 	definition := baseHead.Name
 	if c.definitions[definition] == nil {
-		schema := &JSONSchema{}
-		// NOTE: Assign empty schema before traversing to definitions to occupy the name.
-		c.definitions[definition] = schema
-		*schema = *c.Visit(head)
+		defSchema := &JSONSchema{}
+		// NOTE: Assign empty defSchema before traversing to definitions to occupy the name.
+		c.definitions[definition] = defSchema
+		*defSchema = *c.Visit(head)
 	}
 	schema.Ref = "#/definitions/" + definition
 
