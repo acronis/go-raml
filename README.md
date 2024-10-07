@@ -28,7 +28,7 @@ modularity and flexibility. Combined with a powerful type system with inheritanc
 it also allows the developers to easily define complex data type schemas by leveraging
 both inheritance mechanism (by referencing a parent type with common properties) and modularity (by referencing common data type fragments).
 
-Since RAML uses YAML as a markup language which also contributes to readability, especially in complex definitions.
+RAML uses YAML as a markup language which also contributes to readability, especially in complex definitions.
 
 For comparison, an example of a simple data type schema in RAML would be the following:
 
