@@ -21,6 +21,119 @@ This package aims to achieve the following:
     1. A linter that may provide additional validations or style enforcement.
     1. Conversion of parsed structure into JSON Schema and back to RAML.
 
+## Why RAML?
+
+RAML is a powerful modelling language that encourages design-first approach to API definitions by offering
+modularity and flexibility. Combined with a powerful type system with inheritance support that it offers,
+it also allows the developers to easily define complex data type schemas by leveraging
+both inheritance mechanism (by referencing a parent type with common properties) and modularity (by referencing common data type fragments).
+
+Since RAML uses YAML as a markup language which also contributes to readability, especially in complex definitions.
+
+For comparison, an example of a simple data type schema in RAML would be the following:
+
+```yaml
+#%RAML 1.0 Library
+
+types:
+  CommonType:
+    additionalProperties: false
+    properties:
+      id: string
+      content: object
+    example:
+      id: sample.message
+      content: {}
+
+  DerivedType:
+    type: CommonType # inherits from "CommonType"
+    properties:
+      content:
+        properties:
+          value: integer
+    example:
+      id: "metrics.message"
+      content:
+        value: 0
+```
+
+Where `DerivedType` would translate into the following JSON Schema using Draft-7 specification due to the lack
+of the inheritance support:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/DerivedType",
+  "definitions": {
+    "DerivedType": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": ["value"]
+        }
+      },
+      "required": ["id", "content"]
+    }
+  }
+}
+```
+
+## What you can do with it
+
+### Creating API definitions
+
+RAML's primary objective is to provide a specification for maintainable, design-driven API definitions.
+
+By using RAML, you can make a well-structured API definition that would be easy to read, maintain
+and use.
+
+### Data structures validation
+
+Given a powerful type definition system, you can declaratively define your data schema and validate
+data instances against that schema.
+
+### Defining static configuration
+
+On top of the type definition system, RAML allows defining metadata using custom typed annotations.
+One of the ways that a custom annotation may be used by processors is to create a static configuration.
+that is validated against a specific schema. For example:
+
+```yaml
+#%RAML 1.0 Library
+
+types:
+  # Define a data type for configuration
+  Config:
+    additionalProperties: false
+    properties:
+      host: string
+      port: integer
+
+annotationTypes:
+  # Define a custom annotation that would be used to create an instance of a type
+  ConfigInstance: Config
+
+# Create an instance of a type.
+(ConfigInstance):
+  host: example.com
+  port: 8080
+```
+
+### And more
+
+With all the features, there can be more creative cases that can be covered
+and are not limited to the mentioned use cases.
+
 ## Supported features of RAML 1.0 specification
 
 The following sections are currently implemented. See notes for each point:
@@ -51,7 +164,7 @@ The following sections are currently implemented. See notes for each point:
     - [x] User-defined Facets
     - [x] Determine Default Types
     - [x] Type Expressions
-        - [x] Inheritance
+    - [x] Type Inheritance
     - [ ] Multiple Inheritance (supported, but not fully compliant)
     - [x] Inline Type Declarations
     - [x] Defining Examples in RAML
