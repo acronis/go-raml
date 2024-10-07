@@ -375,52 +375,31 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 			stacktrace.WithInfo("head", head), stacktrace.WithType(stacktrace.TypeParsing))
 	}
 
-	var st *stacktrace.StackTrace
-
 	err = r.resolveShapes()
 	if err != nil {
-		st = StacktraceNewWrapped("resolve shapes", err, fragmentPath,
+		return StacktraceNewWrapped("resolve shapes", err, fragmentPath,
 			stacktrace.WithType(stacktrace.TypeParsing))
 	}
 	err = r.resolveDomainExtensions()
 	if err != nil {
-		se := StacktraceNewWrapped("resolve domain extensions", err, fragmentPath,
+		return StacktraceNewWrapped("resolve domain extensions", err, fragmentPath,
 			stacktrace.WithType(stacktrace.TypeParsing))
-		if st == nil {
-			st = se
-		} else {
-			st = st.Append(se)
-		}
 	}
 
 	if pOpts.withUnwrapOpt {
 		err = r.UnwrapShapes()
 		if err != nil {
-			se := StacktraceNewWrapped("unwrap shapes", err, fragmentPath,
+			return StacktraceNewWrapped("unwrap shapes", err, fragmentPath,
 				stacktrace.WithType(stacktrace.TypeParsing))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
-			}
 		}
 	}
 
 	if pOpts.withValidateOpt {
 		err = r.ValidateShapes()
 		if err != nil {
-			se := StacktraceNewWrapped("validate shapes", err, fragmentPath,
+			return StacktraceNewWrapped("validate shapes", err, fragmentPath,
 				stacktrace.WithType(stacktrace.TypeParsing))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
-			}
 		}
-	}
-
-	if st != nil {
-		return st
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package raml
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/antlr4-go/antlr/v4"
 
@@ -28,13 +27,13 @@ func (r *RAML) resolveShapes() error {
 	var st *stacktrace.StackTrace
 	for r.unresolvedShapes.Len() > 0 {
 		v := r.unresolvedShapes.Front()
-		s, ok := v.Value.(*Shape)
+		base, ok := v.Value.(*BaseShape)
 		if !ok {
-			return fmt.Errorf("invalid unresolved shape: Value is not *Shape: %T", v.Value)
+			return fmt.Errorf("invalid unresolved shape: Value is not *BaseShape: %T", v.Value)
 		}
-		if err := r.resolveShape(s); err != nil {
-			se := StacktraceNewWrapped("resolve shape", err, (*s).Base().Location,
-				stacktrace.WithPosition(&(*s).Base().Position),
+		if err := r.resolveShape(base); err != nil {
+			se := StacktraceNewWrapped("resolve shape", err, base.Location,
+				stacktrace.WithPosition(&base.Position),
 				stacktrace.WithType(stacktrace.TypeResolving))
 			if st == nil {
 				st = se
@@ -74,108 +73,76 @@ func (r *RAML) resolveDomainExtensions() error {
 }
 
 func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
-	// TODO: Maybe fuse resolution and value validation stage?
-	parts := strings.Split(de.Name, ".")
-
-	var ref *Shape
-	// TODO: Probably can be done prettier. Needs refactor.
-	switch frag := r.GetFragment(de.Location).(type) {
-	case *Library:
-		switch len(parts) {
-		case 1:
-			r, ok := frag.AnnotationTypes.Get(parts[0])
-			if !ok {
-				return fmt.Errorf("reference \"%s\" not found", parts[0])
-			}
-			ref = r
-		case 2:
-			lib, ok := frag.Uses.Get(parts[0])
-			if !ok {
-				return fmt.Errorf("library \"%s\" not found", parts[0])
-			}
-			ref, ok = lib.Link.AnnotationTypes.Get(parts[1])
-			if !ok {
-				return fmt.Errorf("reference \"%s\" not found", parts[1])
-			}
-		default:
-			return fmt.Errorf("invalid reference %s", de.Name)
-		}
-	case *DataType:
-		// DataType cannot have local reference to annotation type.
-		if len(parts) == 2 {
-			lib, ok := frag.Uses.Get(parts[0])
-			if !ok {
-				return fmt.Errorf("library \"%s\" not found", parts[0])
-			}
-			ref, ok = lib.Link.AnnotationTypes.Get(parts[1])
-			if !ok {
-				return fmt.Errorf("reference \"%s\" not found", parts[1])
-			}
-		} else {
-			return fmt.Errorf("invalid reference %s", de.Name)
-		}
+	ref, err := r.GetReferencedAnnotationType(de.Name, de.Location)
+	if err != nil {
+		return fmt.Errorf("get referenced shape: %w", err)
 	}
+
 	de.DefinedBy = ref
 
 	return nil
 }
 
-func (r *RAML) resolveMultipleInheritance(target Shape) (*Shape, error) {
-	inherits := target.Base().Inherits
+func (r *RAML) resolveMultipleInheritance(base *BaseShape, shape *UnknownShape) (Shape, error) {
+	inherits := base.Inherits
 	for _, inherit := range inherits {
 		if err := r.resolveShape(inherit); err != nil {
 			return nil, fmt.Errorf("resolve inherit: %w", err)
 		}
 	}
 	// Multiple inheritance validation to be performed in a separate validation stage
-	s, err := r.MakeConcreteShape(target.Base(), (*inherits[0]).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.MakeConcreteShapeYAML(base, inherits[0].Type, shape.facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
-	return &s, nil
+	return s, nil
 }
 
-func (r *RAML) resolveLink(target Shape) (*Shape, error) {
-	link := target.Base().Link
-	if err := r.resolveShape(link.Shape); err != nil {
+func (r *RAML) resolveLink(base *BaseShape, shape *UnknownShape) (Shape, error) {
+	linkShape := base.Link.Shape
+	if err := r.resolveShape(linkShape); err != nil {
 		return nil, fmt.Errorf("resolve link shape: %w", err)
 	}
-	s, err := r.MakeConcreteShape(target.Base(), (*link.Shape).Base().Type, target.(*UnknownShape).facets)
+	s, err := r.MakeConcreteShapeYAML(base, linkShape.Type, shape.facets)
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape: %w", err)
 	}
-	return &s, nil
+	return s, nil
 }
 
 // resolveShape resolves an unknown shape in-place.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before resolving if necessary.
-func (r *RAML) resolveShape(shape *Shape) error {
-	target := *shape
+func (r *RAML) resolveShape(base *BaseShape) error {
+	shape := base.Shape
+	if shape == nil {
+		return fmt.Errorf("shape is nil")
+	}
+
 	// Skip already resolved shapes
-	if _, ok := target.(*UnknownShape); !ok {
+	unknownShape, ok := shape.(*UnknownShape)
+	if !ok {
 		return nil
 	}
 
-	link := target.Base().Link
-	if link != nil {
-		s, err := r.resolveLink(target)
+	if base.Link != nil {
+		s, err := r.resolveLink(base, unknownShape)
 		if err != nil {
-			return StacktraceNewWrapped("resolve link", err, target.Base().Location,
-				stacktrace.WithPosition(&target.Base().Position))
+			return StacktraceNewWrapped("resolve link", err, base.Location,
+				stacktrace.WithPosition(&base.Position))
 		}
-		*shape = *s
+		base.SetShape(s)
 		return nil
 	}
 
-	shapeType := target.Base().Type
+	shapeType := base.Type
 	if shapeType == TypeComposite {
 		// Special case for multiple inheritance
-		s, err := r.resolveMultipleInheritance(target)
+		s, err := r.resolveMultipleInheritance(base, unknownShape)
 		if err != nil {
-			return StacktraceNewWrapped("resolve multiple inheritance", err, target.Base().Location,
-				stacktrace.WithPosition(&target.Base().Position))
+			return StacktraceNewWrapped("resolve multiple inheritance", err, base.Location,
+				stacktrace.WithPosition(&base.Position))
 		}
-		*shape = *s
+		base.SetShape(s)
 		return nil
 	}
 
@@ -186,11 +153,11 @@ func (r *RAML) resolveShape(shape *Shape) error {
 	visitor := NewRdtVisitor(r)
 	tree := rdtParser.Entrypoint()
 
-	s, err := visitor.Visit(tree, target.(*UnknownShape))
+	s, err := visitor.Visit(tree, unknownShape)
 	if err != nil {
-		return StacktraceNewWrapped("visit type expression", err, target.Base().Location,
-			stacktrace.WithPosition(&target.Base().Position))
+		return StacktraceNewWrapped("visit type expression", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
 	}
-	*shape = *s
+	base.SetShape(s)
 	return nil
 }

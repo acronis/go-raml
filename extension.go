@@ -10,7 +10,7 @@ type DomainExtension struct {
 	ID        string
 	Name      string
 	Extension *Node
-	DefinedBy *Shape
+	DefinedBy *BaseShape
 
 	Location string
 	stacktrace.Position

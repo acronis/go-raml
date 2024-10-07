@@ -72,6 +72,7 @@ const (
 	TypeUnion     = "union"     // Can be used in RAML
 	TypeJSON      = "json"      // Cannot be used in RAML
 	TypeComposite = "composite" // Cannot be used in RAML
+	TypeRecursive = "recursive" // Cannot be used in RAML
 )
 
 const (

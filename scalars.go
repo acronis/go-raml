@@ -64,7 +64,7 @@ type IntegerFacets struct {
 }
 
 type IntegerShape struct {
-	BaseShape
+	*BaseShape
 
 	EnumFacets
 	FormatFacets
@@ -72,19 +72,16 @@ type IntegerShape struct {
 }
 
 func (s *IntegerShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *IntegerShape) Clone() Shape {
+func (s *IntegerShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *IntegerShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *IntegerShape) Validate(v interface{}, _ string) error {
+func (s *IntegerShape) validate(v interface{}, _ string) error {
 	var val big.Int
 	switch v := v.(type) {
 	case int:
@@ -129,7 +126,7 @@ func (s *IntegerShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
+func (s *IntegerShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*IntegerShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location,
@@ -177,7 +174,7 @@ func (s *IntegerShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *IntegerShape) Check() error {
+func (s *IntegerShape) check() error {
 	if s.Minimum != nil && s.Maximum != nil && s.Minimum.Cmp(s.Maximum) > 0 {
 		return stacktrace.New("minimum must be less than or equal to maximum", s.Location,
 			stacktrace.WithPosition(&s.Position))
@@ -264,7 +261,7 @@ type NumberFacets struct {
 }
 
 type NumberShape struct {
-	BaseShape
+	*BaseShape
 
 	EnumFacets
 	FormatFacets
@@ -272,19 +269,16 @@ type NumberShape struct {
 }
 
 func (s *NumberShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *NumberShape) Clone() Shape {
+func (s *NumberShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *NumberShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *NumberShape) Validate(v interface{}, _ string) error {
+func (s *NumberShape) validate(v interface{}, _ string) error {
 	var val float64
 	switch v := v.(type) {
 	// go-yaml unmarshals integers as int
@@ -322,7 +316,7 @@ func (s *NumberShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *NumberShape) Inherit(source Shape) (Shape, error) {
+func (s *NumberShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*NumberShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location,
@@ -370,7 +364,7 @@ func (s *NumberShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *NumberShape) Check() error {
+func (s *NumberShape) check() error {
 	if s.Minimum != nil && s.Maximum != nil && *s.Minimum > *s.Maximum {
 		return stacktrace.New("minimum must be less than or equal to maximum", s.Location,
 			stacktrace.WithPosition(&s.Position))
@@ -444,26 +438,23 @@ type StringFacets struct {
 }
 
 type StringShape struct {
-	BaseShape
+	*BaseShape
 
 	EnumFacets
 	StringFacets
 }
 
 func (s *StringShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *StringShape) Clone() Shape {
+func (s *StringShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *StringShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *StringShape) Validate(v interface{}, _ string) error {
+func (s *StringShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -495,7 +486,7 @@ func (s *StringShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *StringShape) Inherit(source Shape) (Shape, error) {
+func (s *StringShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*StringShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location,
@@ -534,7 +525,7 @@ func (s *StringShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *StringShape) Check() error {
+func (s *StringShape) check() error {
 	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
 		return stacktrace.New("minLength must be less than or equal to maxLength",
 			s.Location, stacktrace.WithPosition(&s.Position))
@@ -599,26 +590,23 @@ type FileFacets struct {
 }
 
 type FileShape struct {
-	BaseShape
+	*BaseShape
 
 	LengthFacets
 	FileFacets
 }
 
 func (s *FileShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *FileShape) Clone() Shape {
+func (s *FileShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *FileShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *FileShape) Validate(v interface{}, _ string) error {
+func (s *FileShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -637,7 +625,7 @@ func (s *FileShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *FileShape) Inherit(source Shape) (Shape, error) {
+func (s *FileShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*FileShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location,
@@ -672,7 +660,7 @@ func (s *FileShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *FileShape) Check() error {
+func (s *FileShape) check() error {
 	if s.MinLength != nil && s.MaxLength != nil && *s.MinLength > *s.MaxLength {
 		return stacktrace.New("minLength must be less than or equal to maxLength", s.Location,
 			stacktrace.WithPosition(&s.Position))
@@ -733,25 +721,22 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type BooleanShape struct {
-	BaseShape
+	*BaseShape
 
 	EnumFacets
 }
 
 func (s *BooleanShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *BooleanShape) Clone() Shape {
+func (s *BooleanShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *BooleanShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *BooleanShape) Validate(v interface{}, _ string) error {
+func (s *BooleanShape) validate(v interface{}, _ string) error {
 	i, ok := v.(bool)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected bool", v)
@@ -773,7 +758,7 @@ func (s *BooleanShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
+func (s *BooleanShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*BooleanShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -788,7 +773,7 @@ func (s *BooleanShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *BooleanShape) Check() error {
+func (s *BooleanShape) check() error {
 	if s.Enum != nil {
 		for _, e := range s.Enum {
 			if _, ok := e.Value.(bool); !ok {
@@ -823,25 +808,22 @@ func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateTimeShape struct {
-	BaseShape
+	*BaseShape
 
 	FormatFacets
 }
 
 func (s *DateTimeShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *DateTimeShape) Clone() Shape {
+func (s *DateTimeShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *DateTimeShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *DateTimeShape) Validate(v interface{}, _ string) error {
+func (s *DateTimeShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -868,7 +850,7 @@ func (s *DateTimeShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
+func (s *DateTimeShape) inherit(source Shape) (Shape, error) {
 	ss, ok := source.(*DateTimeShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -884,7 +866,7 @@ func (s *DateTimeShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *DateTimeShape) Check() error {
+func (s *DateTimeShape) check() error {
 	return nil
 }
 
@@ -916,23 +898,20 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateTimeOnlyShape struct {
-	BaseShape
+	*BaseShape
 }
 
 func (s *DateTimeOnlyShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *DateTimeOnlyShape) Clone() Shape {
+func (s *DateTimeOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *DateTimeOnlyShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *DateTimeOnlyShape) Validate(v interface{}, _ string) error {
+func (s *DateTimeOnlyShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -945,7 +924,7 @@ func (s *DateTimeOnlyShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
+func (s *DateTimeOnlyShape) inherit(source Shape) (Shape, error) {
 	_, ok := source.(*DateTimeOnlyShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -954,7 +933,7 @@ func (s *DateTimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *DateTimeOnlyShape) Check() error {
+func (s *DateTimeOnlyShape) check() error {
 	return nil
 }
 
@@ -976,23 +955,20 @@ func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateOnlyShape struct {
-	BaseShape
+	*BaseShape
 }
 
 func (s *DateOnlyShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *DateOnlyShape) Clone() Shape {
+func (s *DateOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *DateOnlyShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *DateOnlyShape) Validate(v interface{}, _ string) error {
+func (s *DateOnlyShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -1005,7 +981,7 @@ func (s *DateOnlyShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
+func (s *DateOnlyShape) inherit(source Shape) (Shape, error) {
 	_, ok := source.(*DateOnlyShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -1014,7 +990,7 @@ func (s *DateOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *DateOnlyShape) Check() error {
+func (s *DateOnlyShape) check() error {
 	return nil
 }
 
@@ -1033,23 +1009,20 @@ func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type TimeOnlyShape struct {
-	BaseShape
+	*BaseShape
 }
 
 func (s *TimeOnlyShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *TimeOnlyShape) Clone() Shape {
+func (s *TimeOnlyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *TimeOnlyShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
-func (s *TimeOnlyShape) Validate(v interface{}, _ string) error {
+func (s *TimeOnlyShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected string", v)
@@ -1062,7 +1035,7 @@ func (s *TimeOnlyShape) Validate(v interface{}, _ string) error {
 	return nil
 }
 
-func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
+func (s *TimeOnlyShape) inherit(source Shape) (Shape, error) {
 	_, ok := source.(*TimeOnlyShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -1071,7 +1044,7 @@ func (s *TimeOnlyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *TimeOnlyShape) Check() error {
+func (s *TimeOnlyShape) check() error {
 	return nil
 }
 
@@ -1093,28 +1066,25 @@ func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type AnyShape struct {
-	BaseShape
+	*BaseShape
 }
 
 func (s *AnyShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *AnyShape) Clone() Shape {
+func (s *AnyShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-func (s *AnyShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
 // Validate checks if the value is nil, implements Shape interface
-func (s *AnyShape) Validate(_ interface{}, _ string) error {
+func (s *AnyShape) validate(_ interface{}, _ string) error {
 	return nil
 }
 
-func (s *AnyShape) Inherit(source Shape) (Shape, error) {
+func (s *AnyShape) inherit(source Shape) (Shape, error) {
 	_, ok := source.(*AnyShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -1123,7 +1093,7 @@ func (s *AnyShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *AnyShape) Check() error {
+func (s *AnyShape) check() error {
 	return nil
 }
 
@@ -1145,32 +1115,28 @@ func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type NilShape struct {
-	BaseShape
+	*BaseShape
 }
 
 func (s *NilShape) Base() *BaseShape {
-	return &s.BaseShape
+	return s.BaseShape
 }
 
-func (s *NilShape) Clone() Shape {
+func (s *NilShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
+	c.BaseShape = base
 	return &c
 }
 
-// clone returns a copy of the shape
-func (s *NilShape) clone(_ []Shape) Shape {
-	return s.Clone()
-}
-
 // Validate checks if the value is nil, implements Shape interface
-func (s *NilShape) Validate(v interface{}, _ string) error {
+func (s *NilShape) validate(v interface{}, _ string) error {
 	if v != nil {
 		return fmt.Errorf("invalid type, got %T, expected nil", v)
 	}
 	return nil
 }
 
-func (s *NilShape) Inherit(source Shape) (Shape, error) {
+func (s *NilShape) inherit(source Shape) (Shape, error) {
 	_, ok := source.(*NilShape)
 	if !ok {
 		return nil, stacktrace.New("cannot inherit from different type", s.Location, stacktrace.WithPosition(&s.Position),
@@ -1179,7 +1145,7 @@ func (s *NilShape) Inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
-func (s *NilShape) Check() error {
+func (s *NilShape) check() error {
 	return nil
 }
 

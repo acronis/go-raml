@@ -15,9 +15,9 @@ import (
 func TestRAML_MakeEnum(t *testing.T) {
 	type fields struct {
 		fragmentsCache          map[string]Fragment
-		fragmentTypes           map[string]map[string]*Shape
-		fragmentAnnotationTypes map[string]map[string]*Shape
-		shapes                  []*Shape
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		shapes                  []*BaseShape
 		entryPoint              Fragment
 		domainExtensions        []*DomainExtension
 		unresolvedShapes        list.List
@@ -38,7 +38,7 @@ func TestRAML_MakeEnum(t *testing.T) {
 			name: "valid enum",
 			fields: fields{
 				fragmentsCache: make(map[string]Fragment),
-				fragmentTypes:  make(map[string]map[string]*Shape),
+				fragmentTypes:  make(map[string]map[string]*BaseShape),
 			},
 			args: args{
 				v: &yaml.Node{
@@ -60,7 +60,7 @@ func TestRAML_MakeEnum(t *testing.T) {
 			name: "invalid enum kind",
 			fields: fields{
 				fragmentsCache: make(map[string]Fragment),
-				fragmentTypes:  make(map[string]map[string]*Shape),
+				fragmentTypes:  make(map[string]map[string]*BaseShape),
 			},
 			args: args{
 				v: &yaml.Node{
@@ -75,7 +75,7 @@ func TestRAML_MakeEnum(t *testing.T) {
 			name: "invalid node",
 			fields: fields{
 				fragmentsCache: make(map[string]Fragment),
-				fragmentTypes:  make(map[string]map[string]*Shape),
+				fragmentTypes:  make(map[string]map[string]*BaseShape),
 			},
 			args: args{
 				v: &yaml.Node{
@@ -178,7 +178,7 @@ func Test_isCompatibleEnum(t *testing.T) {
 
 func TestIntegerShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape     BaseShape
+		BaseShape     *BaseShape
 		EnumFacets    EnumFacets
 		FormatFacets  FormatFacets
 		IntegerFacets IntegerFacets
@@ -196,7 +196,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "valid integer",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -210,7 +210,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -224,7 +224,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "nil value",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -238,7 +238,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "negative integer",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -252,7 +252,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "zero value",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -266,7 +266,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "large integer",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -280,7 +280,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "integer as float",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -294,7 +294,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "integer as uint",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -308,7 +308,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "string integer",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -322,7 +322,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "boolean value",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -336,7 +336,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "empty string",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -350,7 +350,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "validate minimum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				IntegerFacets: IntegerFacets{Minimum: func() *big.Int {
@@ -368,7 +368,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "validate maximum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				IntegerFacets: IntegerFacets{Maximum: func() *big.Int {
@@ -386,7 +386,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "validate enum negative",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{Enum: []*Node{{Value: 1}, {Value: uint64(2)}}},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -400,7 +400,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 		{
 			name: "validate enum positive",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{Enum: []*Node{{Value: 1}, {Value: uint64(2)}}},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -420,7 +420,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 				FormatFacets:  tt.fields.FormatFacets,
 				IntegerFacets: tt.fields.IntegerFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -429,7 +429,7 @@ func TestIntegerShape_Validate(t *testing.T) {
 
 func TestIntegerShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape     BaseShape
+		BaseShape     *BaseShape
 		EnumFacets    EnumFacets
 		FormatFacets  FormatFacets
 		IntegerFacets IntegerFacets
@@ -447,21 +447,21 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:     BaseShape{},
+					BaseShape:     &BaseShape{},
 					EnumFacets:    EnumFacets{},
 					FormatFacets:  FormatFacets{},
 					IntegerFacets: IntegerFacets{},
 				},
 			},
 			want: &IntegerShape{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -471,14 +471,14 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					StringFacets: StringFacets{},
 				},
@@ -489,7 +489,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "minimum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				IntegerFacets: IntegerFacets{Minimum: func() *big.Int {
@@ -499,7 +499,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					IntegerFacets: IntegerFacets{Minimum: func() *big.Int {
@@ -513,7 +513,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "maximum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				IntegerFacets: IntegerFacets{Maximum: func() *big.Int {
@@ -524,7 +524,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					IntegerFacets: IntegerFacets{Maximum: func() *big.Int {
@@ -539,14 +539,14 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "enum constraint violation",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{Enum: []*Node{{Value: 1}, {Value: uint64(2)}}},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:     BaseShape{},
+					BaseShape:     &BaseShape{},
 					EnumFacets:    EnumFacets{Enum: []*Node{{Value: 3}}},
 					FormatFacets:  FormatFacets{},
 					IntegerFacets: IntegerFacets{},
@@ -557,7 +557,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 		{
 			name: "format constraint violation",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				FormatFacets: FormatFacets{Format: func() *string {
 					s := "int32"
@@ -567,7 +567,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:  BaseShape{},
+					BaseShape:  &BaseShape{},
 					EnumFacets: EnumFacets{},
 					FormatFacets: FormatFacets{Format: func() *string {
 						s := "int64"
@@ -587,7 +587,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 				FormatFacets:  tt.fields.FormatFacets,
 				IntegerFacets: tt.fields.IntegerFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -601,7 +601,7 @@ func TestIntegerShape_Inherit(t *testing.T) {
 
 func TestIntegerShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape     BaseShape
+		BaseShape     *BaseShape
 		EnumFacets    EnumFacets
 		FormatFacets  FormatFacets
 		IntegerFacets IntegerFacets
@@ -614,7 +614,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -624,7 +624,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "invalid minimum and maximum",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				IntegerFacets: IntegerFacets{
@@ -643,7 +643,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "valid enum",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{Enum: []*Node{{Value: 1}, {Value: 2}}},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -653,7 +653,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "invalid enum",
 			fields: fields{
-				BaseShape:     BaseShape{},
+				BaseShape:     &BaseShape{},
 				EnumFacets:    EnumFacets{Enum: []*Node{{Value: "a"}, {Value: "b"}}},
 				FormatFacets:  FormatFacets{},
 				IntegerFacets: IntegerFacets{},
@@ -663,7 +663,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "valid format",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				FormatFacets: FormatFacets{Format: func() *string {
 					s := "int32"
@@ -676,7 +676,7 @@ func TestIntegerShape_Check(t *testing.T) {
 		{
 			name: "invalid format",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				FormatFacets: FormatFacets{Format: func() *string {
 					s := "invalid"
@@ -695,8 +695,8 @@ func TestIntegerShape_Check(t *testing.T) {
 				FormatFacets:  tt.fields.FormatFacets,
 				IntegerFacets: tt.fields.IntegerFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -704,7 +704,7 @@ func TestIntegerShape_Check(t *testing.T) {
 
 func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape     BaseShape
+		BaseShape     *BaseShape
 		EnumFacets    EnumFacets
 		FormatFacets  FormatFacets
 		IntegerFacets IntegerFacets
@@ -721,7 +721,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -741,7 +741,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -759,7 +759,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "empty YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -774,7 +774,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -793,7 +793,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet minimum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -811,7 +811,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet minimum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -829,7 +829,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet maximum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -847,7 +847,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet maximum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -865,7 +865,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet multipleOf",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -883,7 +883,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet multipleOf",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -901,7 +901,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet format",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -919,7 +919,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet format",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -937,7 +937,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -958,7 +958,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:    EnumFacets{},
@@ -991,7 +991,7 @@ func TestIntegerShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestNumberShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		FormatFacets FormatFacets
 		NumberFacets NumberFacets
@@ -1009,7 +1009,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "valid number",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1023,7 +1023,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1037,7 +1037,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "nil value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1051,7 +1051,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "negative number",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1065,7 +1065,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "zero value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1079,7 +1079,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "large number",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1093,7 +1093,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "number as integer",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1107,7 +1107,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "boolean value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1121,7 +1121,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "empty string",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1135,7 +1135,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "validate minimum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{Minimum: func() *float64 {
@@ -1152,7 +1152,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "validate maximum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{Maximum: func() *float64 {
@@ -1169,7 +1169,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "validate enum negative",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: 1.0}, {Value: 2.0}}},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1183,7 +1183,7 @@ func TestNumberShape_Validate(t *testing.T) {
 		{
 			name: "validate enum positive",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: 1.0}, {Value: 2.0}}},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1203,7 +1203,7 @@ func TestNumberShape_Validate(t *testing.T) {
 				FormatFacets: tt.fields.FormatFacets,
 				NumberFacets: tt.fields.NumberFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -1212,7 +1212,7 @@ func TestNumberShape_Validate(t *testing.T) {
 
 func TestNumberShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		FormatFacets FormatFacets
 		NumberFacets NumberFacets
@@ -1230,21 +1230,21 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{},
 				},
 			},
 			want: &NumberShape{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
@@ -1254,14 +1254,14 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
 			},
 			args: args{
 				source: &IntegerShape{
-					BaseShape:     BaseShape{},
+					BaseShape:     &BaseShape{},
 					EnumFacets:    EnumFacets{},
 					FormatFacets:  FormatFacets{},
 					IntegerFacets: IntegerFacets{},
@@ -1273,7 +1273,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "minimum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{Minimum: func() *float64 {
@@ -1283,7 +1283,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{Minimum: func() *float64 {
@@ -1298,7 +1298,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "maximum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{Maximum: func() *float64 {
@@ -1308,7 +1308,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{Maximum: func() *float64 {
@@ -1323,14 +1323,14 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "enum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: 1.0}, {Value: 2.0}}},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{},
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{Enum: []*Node{{Value: 3.0}}},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{},
@@ -1342,7 +1342,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "format constraint violation",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				FormatFacets: FormatFacets{Format: func() *string {
 					s := "float"
@@ -1352,7 +1352,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:  BaseShape{},
+					BaseShape:  &BaseShape{},
 					EnumFacets: EnumFacets{},
 					FormatFacets: FormatFacets{Format: func() *string {
 						s := "double"
@@ -1367,7 +1367,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 		{
 			name: "multipleOf validation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{MultipleOf: func() *float64 {
@@ -1377,7 +1377,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{},
+					BaseShape:    &BaseShape{},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{MultipleOf: func() *float64 {
@@ -1387,7 +1387,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 				},
 			},
 			want: &NumberShape{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				FormatFacets: FormatFacets{},
 				NumberFacets: NumberFacets{MultipleOf: func() *float64 {
@@ -1406,7 +1406,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 				FormatFacets: tt.fields.FormatFacets,
 				NumberFacets: tt.fields.NumberFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1420,7 +1420,7 @@ func TestNumberShape_Inherit(t *testing.T) {
 
 func TestNumberShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		FormatFacets FormatFacets
 		NumberFacets NumberFacets
@@ -1433,6 +1433,7 @@ func TestNumberShape_Check(t *testing.T) {
 		{
 			name: "valid minimum and maximum",
 			fields: fields{
+				BaseShape: &BaseShape{},
 				NumberFacets: NumberFacets{
 					Minimum: func() *float64 {
 						f := 1.0
@@ -1449,6 +1450,7 @@ func TestNumberShape_Check(t *testing.T) {
 		{
 			name: "invalid minimum and maximum",
 			fields: fields{
+				BaseShape: &BaseShape{},
 				NumberFacets: NumberFacets{
 					Minimum: func() *float64 {
 						f := 2.0
@@ -1465,6 +1467,7 @@ func TestNumberShape_Check(t *testing.T) {
 		{
 			name: "valid enum values",
 			fields: fields{
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: Nodes{
 						{Value: 1.0},
@@ -1477,6 +1480,7 @@ func TestNumberShape_Check(t *testing.T) {
 		{
 			name: "invalid enum values",
 			fields: fields{
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: Nodes{
 						{Value: "invalid"},
@@ -1494,8 +1498,8 @@ func TestNumberShape_Check(t *testing.T) {
 				FormatFacets: tt.fields.FormatFacets,
 				NumberFacets: tt.fields.NumberFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -1503,7 +1507,7 @@ func TestNumberShape_Check(t *testing.T) {
 
 func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		FormatFacets FormatFacets
 		NumberFacets NumberFacets
@@ -1520,7 +1524,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1538,7 +1542,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1556,7 +1560,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "empty YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1571,7 +1575,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1588,7 +1592,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet minimum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1606,7 +1610,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet minimum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1624,7 +1628,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet maximum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1642,7 +1646,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet maximum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1660,7 +1664,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet multipleOf",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1678,7 +1682,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet multipleOf",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1696,7 +1700,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet format",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1714,7 +1718,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet format",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1732,7 +1736,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1753,7 +1757,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -1786,7 +1790,7 @@ func TestNumberShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestStringShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		StringFacets StringFacets
 	}
@@ -1803,7 +1807,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "valid string",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -1816,7 +1820,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -1829,7 +1833,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "valid enum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: "valid"}}},
 				StringFacets: StringFacets{},
 			},
@@ -1842,7 +1846,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "invalid enum value",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: "valid"}}},
 				StringFacets: StringFacets{},
 			},
@@ -1855,7 +1859,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "valid pattern",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{Pattern: func() *regexp.Regexp {
 					p, err := regexp.Compile("^[a-z]+$")
@@ -1874,7 +1878,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "invalid pattern",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{Pattern: func() *regexp.Regexp {
 					p, err := regexp.Compile("^[a-z]+$")
@@ -1893,7 +1897,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "valid min length",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -1913,7 +1917,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "invalid min length",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -1933,7 +1937,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "valid max length",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -1953,7 +1957,7 @@ func TestStringShape_Validate(t *testing.T) {
 		{
 			name: "invalid max length",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -1978,7 +1982,7 @@ func TestStringShape_Validate(t *testing.T) {
 				EnumFacets:   tt.fields.EnumFacets,
 				StringFacets: tt.fields.StringFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -1987,7 +1991,7 @@ func TestStringShape_Validate(t *testing.T) {
 
 func TestStringShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		StringFacets StringFacets
 	}
@@ -2004,19 +2008,19 @@ func TestStringShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape:    BaseShape{Type: "string"},
+				BaseShape:    &BaseShape{Type: "string"},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:    BaseShape{Type: "string"},
+					BaseShape:    &BaseShape{Type: "string"},
 					EnumFacets:   EnumFacets{},
 					StringFacets: StringFacets{},
 				},
 			},
 			want: &StringShape{
-				BaseShape:    BaseShape{Type: "string"},
+				BaseShape:    &BaseShape{Type: "string"},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -2025,13 +2029,13 @@ func TestStringShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape:    BaseShape{Type: "string"},
+				BaseShape:    &BaseShape{Type: "string"},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
 			args: args{
 				source: &NumberShape{
-					BaseShape:    BaseShape{Type: "number"},
+					BaseShape:    &BaseShape{Type: "number"},
 					EnumFacets:   EnumFacets{},
 					FormatFacets: FormatFacets{},
 					NumberFacets: NumberFacets{},
@@ -2043,7 +2047,7 @@ func TestStringShape_Inherit(t *testing.T) {
 		{
 			name: "min length constraint violation",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -2056,7 +2060,7 @@ func TestStringShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:  BaseShape{Type: "string"},
+					BaseShape:  &BaseShape{Type: "string"},
 					EnumFacets: EnumFacets{},
 					StringFacets: StringFacets{
 						LengthFacets: LengthFacets{
@@ -2073,7 +2077,7 @@ func TestStringShape_Inherit(t *testing.T) {
 		{
 			name: "max length constraint violation",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -2086,7 +2090,7 @@ func TestStringShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:  BaseShape{Type: "string"},
+					BaseShape:  &BaseShape{Type: "string"},
 					EnumFacets: EnumFacets{},
 					StringFacets: StringFacets{
 						LengthFacets: LengthFacets{
@@ -2103,13 +2107,13 @@ func TestStringShape_Inherit(t *testing.T) {
 		{
 			name: "enum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: "valid"}}},
 				StringFacets: StringFacets{},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:    BaseShape{Type: "string"},
+					BaseShape:    &BaseShape{Type: "string"},
 					EnumFacets:   EnumFacets{Enum: []*Node{{Value: "invalid"}}},
 					StringFacets: StringFacets{},
 				},
@@ -2124,7 +2128,7 @@ func TestStringShape_Inherit(t *testing.T) {
 				EnumFacets:   tt.fields.EnumFacets,
 				StringFacets: tt.fields.StringFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2138,7 +2142,7 @@ func TestStringShape_Inherit(t *testing.T) {
 
 func TestStringShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		StringFacets StringFacets
 	}
@@ -2150,7 +2154,7 @@ func TestStringShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -2159,7 +2163,7 @@ func TestStringShape_Check(t *testing.T) {
 		{
 			name: "min/max length constraint violation",
 			fields: fields{
-				BaseShape:  BaseShape{},
+				BaseShape:  &BaseShape{},
 				EnumFacets: EnumFacets{},
 				StringFacets: StringFacets{
 					LengthFacets: LengthFacets{
@@ -2179,7 +2183,7 @@ func TestStringShape_Check(t *testing.T) {
 		{
 			name: "enum constraint violation",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{Enum: []*Node{{Value: 1}}},
 				StringFacets: StringFacets{},
 			},
@@ -2193,8 +2197,8 @@ func TestStringShape_Check(t *testing.T) {
 				EnumFacets:   tt.fields.EnumFacets,
 				StringFacets: tt.fields.StringFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -2202,7 +2206,7 @@ func TestStringShape_Check(t *testing.T) {
 
 func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		EnumFacets   EnumFacets
 		StringFacets StringFacets
 	}
@@ -2218,7 +2222,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "empty YAML nodes",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -2230,7 +2234,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				EnumFacets:   EnumFacets{},
 				StringFacets: StringFacets{},
 			},
@@ -2245,7 +2249,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet minLength",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2261,7 +2265,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet minLength",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2277,7 +2281,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet maxLength",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2293,7 +2297,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet maxLength",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2309,7 +2313,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "valid facet pattern",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2325,7 +2329,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet pattern",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2341,7 +2345,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid facet pattern tag",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2357,7 +2361,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2373,7 +2377,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "unknown facet",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 				EnumFacets:   EnumFacets{},
@@ -2403,7 +2407,7 @@ func TestStringShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestFileShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		LengthFacets LengthFacets
 		FileFacets   FileFacets
 	}
@@ -2420,7 +2424,7 @@ func TestFileShape_Validate(t *testing.T) {
 		{
 			name: "valid file shape",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				LengthFacets: LengthFacets{},
 				FileFacets:   FileFacets{},
 			},
@@ -2433,7 +2437,7 @@ func TestFileShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				LengthFacets: LengthFacets{},
 				FileFacets:   FileFacets{},
 			},
@@ -2446,7 +2450,7 @@ func TestFileShape_Validate(t *testing.T) {
 		{
 			name: "valid length facets",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(10)
@@ -2468,7 +2472,7 @@ func TestFileShape_Validate(t *testing.T) {
 		{
 			name: "invalid length facets maxLength",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				LengthFacets: LengthFacets{
 					MaxLength: func() *uint64 {
 						i := uint64(5)
@@ -2486,7 +2490,7 @@ func TestFileShape_Validate(t *testing.T) {
 		{
 			name: "invalid length facets minLength",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2509,7 +2513,7 @@ func TestFileShape_Validate(t *testing.T) {
 				LengthFacets: tt.fields.LengthFacets,
 				FileFacets:   tt.fields.FileFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -2518,7 +2522,7 @@ func TestFileShape_Validate(t *testing.T) {
 
 func TestFileShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		LengthFacets LengthFacets
 		FileFacets   FileFacets
 	}
@@ -2535,19 +2539,19 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape:    BaseShape{Type: "file"},
+				BaseShape:    &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{},
 				FileFacets:   FileFacets{},
 			},
 			args: args{
 				source: &FileShape{
-					BaseShape:    BaseShape{Type: "file"},
+					BaseShape:    &BaseShape{Type: "file"},
 					LengthFacets: LengthFacets{},
 					FileFacets:   FileFacets{},
 				},
 			},
 			want: &FileShape{
-				BaseShape:    BaseShape{Type: "file"},
+				BaseShape:    &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{},
 				FileFacets:   FileFacets{},
 			},
@@ -2556,13 +2560,13 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape:    BaseShape{Type: "file"},
+				BaseShape:    &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{},
 				FileFacets:   FileFacets{},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape:    BaseShape{Type: "string"},
+					BaseShape:    &BaseShape{Type: "string"},
 					EnumFacets:   EnumFacets{},
 					StringFacets: StringFacets{},
 				},
@@ -2573,7 +2577,7 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "valid length facets",
 			fields: fields{
-				BaseShape: BaseShape{Type: "file"},
+				BaseShape: &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2588,7 +2592,7 @@ func TestFileShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &FileShape{
-					BaseShape: BaseShape{Type: "file"},
+					BaseShape: &BaseShape{Type: "file"},
 					LengthFacets: LengthFacets{
 						MinLength: func() *uint64 {
 							i := uint64(5)
@@ -2603,7 +2607,7 @@ func TestFileShape_Inherit(t *testing.T) {
 				},
 			},
 			want: &FileShape{
-				BaseShape: BaseShape{Type: "file"},
+				BaseShape: &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2621,7 +2625,7 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "min length constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{Type: "file"},
+				BaseShape: &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2632,7 +2636,7 @@ func TestFileShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &FileShape{
-					BaseShape: BaseShape{Type: "file"},
+					BaseShape: &BaseShape{Type: "file"},
 					LengthFacets: LengthFacets{
 						MinLength: func() *uint64 {
 							i := uint64(6)
@@ -2648,7 +2652,7 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "max length constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{Type: "file"},
+				BaseShape: &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{
 					MaxLength: func() *uint64 {
 						i := uint64(5)
@@ -2659,7 +2663,7 @@ func TestFileShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &FileShape{
-					BaseShape: BaseShape{Type: "file"},
+					BaseShape: &BaseShape{Type: "file"},
 					LengthFacets: LengthFacets{
 						MaxLength: func() *uint64 {
 							i := uint64(3)
@@ -2675,7 +2679,7 @@ func TestFileShape_Inherit(t *testing.T) {
 		{
 			name: "file types are incompatible",
 			fields: fields{
-				BaseShape:    BaseShape{Type: "file"},
+				BaseShape:    &BaseShape{Type: "file"},
 				LengthFacets: LengthFacets{},
 				FileFacets: FileFacets{
 					FileTypes: Nodes{
@@ -2685,7 +2689,7 @@ func TestFileShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &FileShape{
-					BaseShape:    BaseShape{Type: "file"},
+					BaseShape:    &BaseShape{Type: "file"},
 					LengthFacets: LengthFacets{},
 					FileFacets: FileFacets{
 						FileTypes: Nodes{
@@ -2705,7 +2709,7 @@ func TestFileShape_Inherit(t *testing.T) {
 				LengthFacets: tt.fields.LengthFacets,
 				FileFacets:   tt.fields.FileFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2719,7 +2723,7 @@ func TestFileShape_Inherit(t *testing.T) {
 
 func TestFileShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		LengthFacets LengthFacets
 		FileFacets   FileFacets
 	}
@@ -2731,7 +2735,7 @@ func TestFileShape_Check(t *testing.T) {
 		{
 			name: "valid file shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2753,7 +2757,7 @@ func TestFileShape_Check(t *testing.T) {
 		{
 			name: "minLength must be less than or equal to maxLength",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				LengthFacets: LengthFacets{
 					MinLength: func() *uint64 {
 						i := uint64(5)
@@ -2770,7 +2774,7 @@ func TestFileShape_Check(t *testing.T) {
 		{
 			name: "file type must be string",
 			fields: fields{
-				BaseShape:    BaseShape{},
+				BaseShape:    &BaseShape{},
 				LengthFacets: LengthFacets{},
 				FileFacets: FileFacets{
 					FileTypes: Nodes{
@@ -2788,8 +2792,8 @@ func TestFileShape_Check(t *testing.T) {
 				LengthFacets: tt.fields.LengthFacets,
 				FileFacets:   tt.fields.FileFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -2797,7 +2801,7 @@ func TestFileShape_Check(t *testing.T) {
 
 func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		LengthFacets LengthFacets
 		FileFacets   FileFacets
 	}
@@ -2813,7 +2817,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2843,8 +2847,10 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:   "decode minLength error",
-			fields: fields{},
+			name: "decode minLength error",
+			fields: fields{
+				BaseShape: &BaseShape{},
+			},
 			args: args{
 				v: []*yaml.Node{
 					{Value: "minLength"},
@@ -2854,8 +2860,10 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "decode maxLength error",
-			fields: fields{},
+			name: "decode maxLength error",
+			fields: fields{
+				BaseShape: &BaseShape{},
+			},
 			args: args{
 				v: []*yaml.Node{
 					{Value: "maxLength"},
@@ -2867,7 +2875,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "fileTypes must be sequence node",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2882,7 +2890,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "member of fileTypes must be string",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2901,7 +2909,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node fileTypes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2920,7 +2928,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2934,7 +2942,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "unknown facet error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -2962,7 +2970,7 @@ func TestFileShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestBooleanShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape  BaseShape
+		BaseShape  *BaseShape
 		EnumFacets EnumFacets
 	}
 	type args struct {
@@ -2978,7 +2986,7 @@ func TestBooleanShape_Validate(t *testing.T) {
 		{
 			name: "valid boolean shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: []*Node{
 						{Value: true},
@@ -2994,7 +3002,7 @@ func TestBooleanShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   123,
@@ -3005,7 +3013,7 @@ func TestBooleanShape_Validate(t *testing.T) {
 		{
 			name: "invalid enum",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: []*Node{
 						{Value: "true"},
@@ -3024,7 +3032,7 @@ func TestBooleanShape_Validate(t *testing.T) {
 				BaseShape:  tt.fields.BaseShape,
 				EnumFacets: tt.fields.EnumFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -3033,7 +3041,7 @@ func TestBooleanShape_Validate(t *testing.T) {
 
 func TestBooleanShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape  BaseShape
+		BaseShape  *BaseShape
 		EnumFacets EnumFacets
 	}
 	type args struct {
@@ -3049,7 +3057,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					Type: "boolean",
 				},
 				EnumFacets: EnumFacets{
@@ -3060,7 +3068,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &BooleanShape{
-					BaseShape: BaseShape{
+					BaseShape: &BaseShape{
 						Type: "boolean",
 					},
 					EnumFacets: EnumFacets{
@@ -3089,13 +3097,13 @@ func TestBooleanShape_Inherit(t *testing.T) {
 		{
 			name: "positive case with nil enum",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					Type: "boolean",
 				},
 			},
 			args: args{
 				source: &BooleanShape{
-					BaseShape: BaseShape{
+					BaseShape: &BaseShape{
 						Type: "boolean",
 					},
 					EnumFacets: EnumFacets{
@@ -3127,13 +3135,13 @@ func TestBooleanShape_Inherit(t *testing.T) {
 		{
 			name: "cannot inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					Type: "boolean",
 				},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{
+					BaseShape: &BaseShape{
 						Type: "string",
 					},
 				},
@@ -3144,7 +3152,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 		{
 			name: "enum constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					Type: "boolean",
 				},
 				EnumFacets: EnumFacets{
@@ -3155,7 +3163,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &BooleanShape{
-					BaseShape: BaseShape{
+					BaseShape: &BaseShape{
 						Type: "boolean",
 					},
 					EnumFacets: EnumFacets{
@@ -3175,7 +3183,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 				BaseShape:  tt.fields.BaseShape,
 				EnumFacets: tt.fields.EnumFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -3192,7 +3200,7 @@ func TestBooleanShape_Inherit(t *testing.T) {
 
 func TestBooleanShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape  BaseShape
+		BaseShape  *BaseShape
 		EnumFacets EnumFacets
 	}
 	tests := []struct {
@@ -3203,7 +3211,7 @@ func TestBooleanShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: []*Node{
 						{Value: true},
@@ -3215,7 +3223,7 @@ func TestBooleanShape_Check(t *testing.T) {
 		{
 			name: "enum value must be boolean",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				EnumFacets: EnumFacets{
 					Enum: []*Node{
 						{Value: 1},
@@ -3231,8 +3239,8 @@ func TestBooleanShape_Check(t *testing.T) {
 				BaseShape:  tt.fields.BaseShape,
 				EnumFacets: tt.fields.EnumFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -3240,7 +3248,7 @@ func TestBooleanShape_Check(t *testing.T) {
 
 func TestBooleanShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape  BaseShape
+		BaseShape  *BaseShape
 		EnumFacets EnumFacets
 	}
 	type args struct {
@@ -3255,7 +3263,7 @@ func TestBooleanShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3284,7 +3292,7 @@ func TestBooleanShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make enum error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3303,7 +3311,7 @@ func TestBooleanShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3335,7 +3343,7 @@ func TestBooleanShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestDateTimeShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		FormatFacets FormatFacets
 	}
 	type args struct {
@@ -3351,7 +3359,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "positive case with rfc3339",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				FormatFacets: FormatFacets{
 					Format: func() *string {
 						s := "rfc3339"
@@ -3368,7 +3376,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "positive case with rfc2616",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				FormatFacets: FormatFacets{
 					Format: func() *string {
 						s := "rfc2616"
@@ -3385,7 +3393,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "positive case without format",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "2021-01-01T00:00:00Z",
@@ -3396,7 +3404,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "invalid value",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "invalid",
@@ -3407,7 +3415,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "invalid case with rfc3339",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				FormatFacets: FormatFacets{
 					Format: func() *string {
 						s := "rfc3339"
@@ -3424,7 +3432,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "invalid case with rfc2616",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				FormatFacets: FormatFacets{
 					Format: func() *string {
 						s := "rfc2616"
@@ -3441,7 +3449,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   123,
@@ -3456,7 +3464,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 				BaseShape:    tt.fields.BaseShape,
 				FormatFacets: tt.fields.FormatFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -3465,7 +3473,7 @@ func TestDateTimeShape_Validate(t *testing.T) {
 
 func TestDateTimeShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		FormatFacets FormatFacets
 	}
 	type args struct {
@@ -3481,11 +3489,11 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "datetime"},
+				BaseShape: &BaseShape{Type: "datetime"},
 			},
 			args: args{
 				source: &DateTimeShape{
-					BaseShape: BaseShape{Type: "datetime"},
+					BaseShape: &BaseShape{Type: "datetime"},
 					FormatFacets: FormatFacets{
 						Format: func() *string {
 							s := "rfc3339"
@@ -3512,11 +3520,11 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "datetime"},
+				BaseShape: &BaseShape{Type: "datetime"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			want:    nil,
@@ -3525,7 +3533,7 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 		{
 			name: "format contraint violation",
 			fields: fields{
-				BaseShape: BaseShape{Type: "datetime"},
+				BaseShape: &BaseShape{Type: "datetime"},
 				FormatFacets: FormatFacets{
 					Format: func() *string {
 						s := "rfc3339"
@@ -3535,7 +3543,7 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &DateTimeShape{
-					BaseShape: BaseShape{Type: "datetime"},
+					BaseShape: &BaseShape{Type: "datetime"},
 					FormatFacets: FormatFacets{
 						Format: func() *string {
 							s := "rfc2616"
@@ -3554,7 +3562,7 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 				BaseShape:    tt.fields.BaseShape,
 				FormatFacets: tt.fields.FormatFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -3571,7 +3579,7 @@ func TestDateTimeShape_Inherit(t *testing.T) {
 
 func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		FormatFacets FormatFacets
 	}
 	type args struct {
@@ -3586,7 +3594,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3603,7 +3611,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid format",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3618,7 +3626,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "missing value",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3632,7 +3640,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid decode value",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3647,7 +3655,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3679,7 +3687,7 @@ func TestDateTimeShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestDateTimeShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape    BaseShape
+		BaseShape    *BaseShape
 		FormatFacets FormatFacets
 	}
 	tests := []struct {
@@ -3690,7 +3698,7 @@ func TestDateTimeShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			wantErr: false,
 		},
@@ -3701,8 +3709,8 @@ func TestDateTimeShape_Check(t *testing.T) {
 				BaseShape:    tt.fields.BaseShape,
 				FormatFacets: tt.fields.FormatFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -3710,7 +3718,7 @@ func TestDateTimeShape_Check(t *testing.T) {
 
 func TestDateTimeOnlyShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v   interface{}
@@ -3725,7 +3733,7 @@ func TestDateTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "2021-01-01T00:00:00",
@@ -3736,7 +3744,7 @@ func TestDateTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   123,
@@ -3747,7 +3755,7 @@ func TestDateTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid value",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "invalid",
@@ -3761,7 +3769,7 @@ func TestDateTimeOnlyShape_Validate(t *testing.T) {
 			s := &DateTimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -3770,7 +3778,7 @@ func TestDateTimeOnlyShape_Validate(t *testing.T) {
 
 func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		source Shape
@@ -3785,11 +3793,11 @@ func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "datetime-only"},
+				BaseShape: &BaseShape{Type: "datetime-only"},
 			},
 			args: args{
 				source: &DateTimeOnlyShape{
-					BaseShape: BaseShape{Type: "datetime-only"},
+					BaseShape: &BaseShape{Type: "datetime-only"},
 				},
 			},
 			want: func(got Shape) (string, bool) {
@@ -3808,11 +3816,11 @@ func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "datetime-only"},
+				BaseShape: &BaseShape{Type: "datetime-only"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			wantErr: true,
@@ -3823,7 +3831,7 @@ func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 			s := &DateTimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -3840,7 +3848,7 @@ func TestDateTimeOnlyShape_Inherit(t *testing.T) {
 
 func TestDateTimeOnlyShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	tests := []struct {
 		name    string
@@ -3850,7 +3858,7 @@ func TestDateTimeOnlyShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			wantErr: false,
 		},
@@ -3860,8 +3868,8 @@ func TestDateTimeOnlyShape_Check(t *testing.T) {
 			s := &DateTimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -3869,7 +3877,7 @@ func TestDateTimeOnlyShape_Check(t *testing.T) {
 
 func TestDateTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v []*yaml.Node
@@ -3883,7 +3891,7 @@ func TestDateTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3905,7 +3913,7 @@ func TestDateTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3919,7 +3927,7 @@ func TestDateTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -3950,7 +3958,7 @@ func TestDateTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestDateOnlyShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v   interface{}
@@ -3965,7 +3973,7 @@ func TestDateOnlyShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "2021-01-01",
@@ -3976,7 +3984,7 @@ func TestDateOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   123,
@@ -3987,7 +3995,7 @@ func TestDateOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid value",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "invalid",
@@ -4001,7 +4009,7 @@ func TestDateOnlyShape_Validate(t *testing.T) {
 			s := &DateOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -4010,7 +4018,7 @@ func TestDateOnlyShape_Validate(t *testing.T) {
 
 func TestDateOnlyShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		source Shape
@@ -4025,11 +4033,11 @@ func TestDateOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "date-only"},
+				BaseShape: &BaseShape{Type: "date-only"},
 			},
 			args: args{
 				source: &DateOnlyShape{
-					BaseShape: BaseShape{Type: "date-only"},
+					BaseShape: &BaseShape{Type: "date-only"},
 				},
 			},
 			want: func(got Shape) (string, bool) {
@@ -4047,11 +4055,11 @@ func TestDateOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "date-only"},
+				BaseShape: &BaseShape{Type: "date-only"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			wantErr: true,
@@ -4062,7 +4070,7 @@ func TestDateOnlyShape_Inherit(t *testing.T) {
 			s := &DateOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -4079,7 +4087,7 @@ func TestDateOnlyShape_Inherit(t *testing.T) {
 
 func TestDateOnlyShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	tests := []struct {
 		name    string
@@ -4089,7 +4097,7 @@ func TestDateOnlyShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			wantErr: false,
 		},
@@ -4099,8 +4107,8 @@ func TestDateOnlyShape_Check(t *testing.T) {
 			s := &DateOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -4108,7 +4116,7 @@ func TestDateOnlyShape_Check(t *testing.T) {
 
 func TestDateOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v []*yaml.Node
@@ -4122,7 +4130,7 @@ func TestDateOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4144,7 +4152,7 @@ func TestDateOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4175,7 +4183,7 @@ func TestDateOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestTimeOnlyShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v   interface{}
@@ -4190,7 +4198,7 @@ func TestTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "00:00:00",
@@ -4201,7 +4209,7 @@ func TestTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   123,
@@ -4212,7 +4220,7 @@ func TestTimeOnlyShape_Validate(t *testing.T) {
 		{
 			name: "invalid value",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "invalid",
@@ -4226,7 +4234,7 @@ func TestTimeOnlyShape_Validate(t *testing.T) {
 			s := &TimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -4235,7 +4243,7 @@ func TestTimeOnlyShape_Validate(t *testing.T) {
 
 func TestTimeOnlyShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		source Shape
@@ -4250,11 +4258,11 @@ func TestTimeOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "time-only"},
+				BaseShape: &BaseShape{Type: "time-only"},
 			},
 			args: args{
 				source: &TimeOnlyShape{
-					BaseShape: BaseShape{Type: "time-only"},
+					BaseShape: &BaseShape{Type: "time-only"},
 				},
 			},
 			want: func(got Shape) (string, bool) {
@@ -4272,11 +4280,11 @@ func TestTimeOnlyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "time-only"},
+				BaseShape: &BaseShape{Type: "time-only"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			wantErr: true,
@@ -4287,7 +4295,7 @@ func TestTimeOnlyShape_Inherit(t *testing.T) {
 			s := &TimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -4304,7 +4312,7 @@ func TestTimeOnlyShape_Inherit(t *testing.T) {
 
 func TestTimeOnlyShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	tests := []struct {
 		name    string
@@ -4314,7 +4322,7 @@ func TestTimeOnlyShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			wantErr: false,
 		},
@@ -4324,8 +4332,8 @@ func TestTimeOnlyShape_Check(t *testing.T) {
 			s := &TimeOnlyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -4333,7 +4341,7 @@ func TestTimeOnlyShape_Check(t *testing.T) {
 
 func TestTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v []*yaml.Node
@@ -4347,7 +4355,7 @@ func TestTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4369,7 +4377,7 @@ func TestTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4383,7 +4391,7 @@ func TestTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4414,7 +4422,7 @@ func TestTimeOnlyShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestAnyShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		in0 interface{}
@@ -4429,7 +4437,7 @@ func TestAnyShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				in0: "test",
@@ -4443,7 +4451,7 @@ func TestAnyShape_Validate(t *testing.T) {
 			s := &AnyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Validate(tt.args.in0, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.in0, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -4452,7 +4460,7 @@ func TestAnyShape_Validate(t *testing.T) {
 
 func TestAnyShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		source Shape
@@ -4467,11 +4475,11 @@ func TestAnyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from same type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "any"},
+				BaseShape: &BaseShape{Type: "any"},
 			},
 			args: args{
 				source: &AnyShape{
-					BaseShape: BaseShape{Type: "any"},
+					BaseShape: &BaseShape{Type: "any"},
 				},
 			},
 			want: func(got Shape) (string, bool) {
@@ -4488,11 +4496,11 @@ func TestAnyShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "any"},
+				BaseShape: &BaseShape{Type: "any"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			wantErr: true,
@@ -4503,7 +4511,7 @@ func TestAnyShape_Inherit(t *testing.T) {
 			s := &AnyShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -4522,7 +4530,7 @@ func TestAnyShape_Inherit(t *testing.T) {
 
 func TestAnyShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v []*yaml.Node
@@ -4536,7 +4544,7 @@ func TestAnyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case with all facets",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4558,7 +4566,7 @@ func TestAnyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4572,7 +4580,7 @@ func TestAnyShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4603,7 +4611,7 @@ func TestAnyShape_unmarshalYAMLNodes(t *testing.T) {
 
 func TestNilShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v   interface{}
@@ -4618,7 +4626,7 @@ func TestNilShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   nil,
@@ -4629,7 +4637,7 @@ func TestNilShape_Validate(t *testing.T) {
 		{
 			name: "invalid value",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v:   "invalid",
@@ -4643,7 +4651,7 @@ func TestNilShape_Validate(t *testing.T) {
 			s := &NilShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.in1); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -4652,7 +4660,7 @@ func TestNilShape_Validate(t *testing.T) {
 
 func TestNilShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		source Shape
@@ -4667,11 +4675,11 @@ func TestNilShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from nil",
 			fields: fields{
-				BaseShape: BaseShape{Type: "nil"},
+				BaseShape: &BaseShape{Type: "nil"},
 			},
 			args: args{
 				source: &NilShape{
-					BaseShape: BaseShape{Type: "nil"},
+					BaseShape: &BaseShape{Type: "nil"},
 				},
 			},
 			want: func(got Shape) (string, bool) {
@@ -4689,11 +4697,11 @@ func TestNilShape_Inherit(t *testing.T) {
 		{
 			name: "inherit from different type",
 			fields: fields{
-				BaseShape: BaseShape{Type: "nil"},
+				BaseShape: &BaseShape{Type: "nil"},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{Type: "string"},
+					BaseShape: &BaseShape{Type: "string"},
 				},
 			},
 			want:    nil,
@@ -4705,7 +4713,7 @@ func TestNilShape_Inherit(t *testing.T) {
 			s := &NilShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -4721,7 +4729,7 @@ func TestNilShape_Inherit(t *testing.T) {
 
 func TestNilShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	tests := []struct {
 		name    string
@@ -4731,7 +4739,7 @@ func TestNilShape_Check(t *testing.T) {
 		{
 			name: "valid shape",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			wantErr: false,
 		},
@@ -4741,8 +4749,8 @@ func TestNilShape_Check(t *testing.T) {
 			s := &NilShape{
 				BaseShape: tt.fields.BaseShape,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -4750,7 +4758,7 @@ func TestNilShape_Check(t *testing.T) {
 
 func TestNilShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape BaseShape
+		BaseShape *BaseShape
 	}
 	type args struct {
 		v []*yaml.Node
@@ -4764,7 +4772,7 @@ func TestNilShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4786,7 +4794,7 @@ func TestNilShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "odd number of YAML nodes error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},
@@ -4800,7 +4808,7 @@ func TestNilShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "make node error",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
 			},

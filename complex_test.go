@@ -9,11 +9,12 @@ import (
 
 func TestArrayShape_clone(t *testing.T) {
 	type fields struct {
-		BaseShape   BaseShape
+		BaseShape   *BaseShape
 		ArrayFacets ArrayFacets
 	}
 	type args struct {
-		history []Shape
+		base      *BaseShape
+		clonedMap map[int64]*BaseShape
 	}
 	tests := []struct {
 		name   string
@@ -24,11 +25,12 @@ func TestArrayShape_clone(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape:   BaseShape{},
+				BaseShape:   &BaseShape{},
 				ArrayFacets: ArrayFacets{},
 			},
 			args: args{
-				history: []Shape{},
+				base:      &BaseShape{},
+				clonedMap: make(map[int64]*BaseShape),
 			},
 			want: func(got Shape) (string, bool) {
 				if _, ok := got.(*ArrayShape); !ok {
@@ -40,20 +42,20 @@ func TestArrayShape_clone(t *testing.T) {
 		{
 			name: "positive case with history",
 			fields: fields{
-				BaseShape: BaseShape{
-					ID: "1",
+				BaseShape: &BaseShape{
+					ID: 1,
 				},
 				ArrayFacets: ArrayFacets{},
 			},
 			args: args{
-				history: []Shape{
-					&ArrayShape{
-						BaseShape: BaseShape{
-							ID: "1",
-						},
+				base: &BaseShape{
+					ID: 1,
+					Shape: &ArrayShape{
+						BaseShape:   &BaseShape{ID: 1},
 						ArrayFacets: ArrayFacets{},
 					},
 				},
+				clonedMap: make(map[int64]*BaseShape),
 			},
 			want: func(got Shape) (string, bool) {
 				if _, ok := got.(*ArrayShape); !ok {
@@ -65,27 +67,18 @@ func TestArrayShape_clone(t *testing.T) {
 		{
 			name: "positive case with items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{
-								ID: "1",
-							},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
-				},
-			},
-			args: args{
-				history: []Shape{
-					&StringShape{
-						BaseShape: BaseShape{
-							ID: "1",
+					Items: &BaseShape{
+						ID: 1,
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
 						},
 					},
 				},
+			},
+			args: args{
+				clonedMap: make(map[int64]*BaseShape),
 			},
 			want: func(got Shape) (string, bool) {
 				if _, ok := got.(*ArrayShape); !ok {
@@ -101,7 +94,7 @@ func TestArrayShape_clone(t *testing.T) {
 				BaseShape:   tt.fields.BaseShape,
 				ArrayFacets: tt.fields.ArrayFacets,
 			}
-			got := s.clone(tt.args.history)
+			got := s.clone(tt.args.base, tt.args.clonedMap)
 			if msg, ok := tt.want(got); !ok {
 				t.Errorf("Case hasn't been passed: %s", msg)
 			}
@@ -111,7 +104,7 @@ func TestArrayShape_clone(t *testing.T) {
 
 func TestArrayShape_Validate(t *testing.T) {
 	type fields struct {
-		BaseShape   BaseShape
+		BaseShape   *BaseShape
 		ArrayFacets ArrayFacets
 	}
 	type args struct {
@@ -127,15 +120,13 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 					UniqueItems: func() *bool {
 						b := true
 						return &b
@@ -150,7 +141,7 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "invalid type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 			},
 			args: args{
 				v: "test",
@@ -160,7 +151,7 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "array must have at least two items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MinItems: func() *uint64 {
 						i := uint64(2)
@@ -176,7 +167,7 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "array must have no more than two items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MaxItems: func() *uint64 {
 						i := uint64(2)
@@ -192,15 +183,13 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "invalid array item",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 				},
 			},
 			args: args{
@@ -212,15 +201,13 @@ func TestArrayShape_Validate(t *testing.T) {
 		{
 			name: "array must have unique items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 					UniqueItems: func() *bool {
 						b := true
 						return &b
@@ -240,7 +227,7 @@ func TestArrayShape_Validate(t *testing.T) {
 				BaseShape:   tt.fields.BaseShape,
 				ArrayFacets: tt.fields.ArrayFacets,
 			}
-			if err := s.Validate(tt.args.v, tt.args.ctxPath); (err != nil) != tt.wantErr {
+			if err := s.validate(tt.args.v, tt.args.ctxPath); (err != nil) != tt.wantErr {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -249,7 +236,7 @@ func TestArrayShape_Validate(t *testing.T) {
 
 func TestArrayShape_Inherit(t *testing.T) {
 	type fields struct {
-		BaseShape   BaseShape
+		BaseShape   *BaseShape
 		ArrayFacets ArrayFacets
 	}
 	type args struct {
@@ -265,24 +252,21 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "positive case without facets",
 			fields: fields{
-				BaseShape:   BaseShape{},
+				BaseShape:   &BaseShape{},
 				ArrayFacets: ArrayFacets{},
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{
-						ID: "1",
+					BaseShape: &BaseShape{
+						ID: 1,
 					},
 					ArrayFacets: ArrayFacets{
-						Items: func() *Shape {
-							s := &StringShape{
-								BaseShape: BaseShape{
-									ID: "1",
-								},
-							}
-							ss := Shape(s)
-							return &ss
-						}(),
+						Items: &BaseShape{
+							ID: 1,
+							Shape: &StringShape{
+								BaseShape: &BaseShape{ID: 2},
+							},
+						},
 						MinItems: func() *uint64 {
 							i := uint64(2)
 							return &i
@@ -312,7 +296,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 				if arr.UniqueItems == nil || *arr.UniqueItems != true {
 					return "UniqueItems hasn't been inherited", false
 				}
-				if arr.Items == nil || (*arr.Items).Base().ID != "1" {
+				if arr.Items == nil || arr.Items.ID != 1 {
 					return "Items hasn't been inherited", false
 				}
 				return "", true
@@ -321,17 +305,14 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "positive case with facets",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{
-								ID: "0",
-							},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						ID: 1,
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 					MinItems: func() *uint64 {
 						i := uint64(2)
 						return &i
@@ -348,19 +329,16 @@ func TestArrayShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{
-						ID: "1",
+					BaseShape: &BaseShape{
+						ID: 1,
 					},
 					ArrayFacets: ArrayFacets{
-						Items: func() *Shape {
-							s := &StringShape{
-								BaseShape: BaseShape{
-									ID: "1",
-								},
-							}
-							ss := Shape(s)
-							return &ss
-						}(),
+						Items: &BaseShape{
+							ID: 1,
+							Shape: &StringShape{
+								BaseShape: &BaseShape{ID: 2},
+							},
+						},
 						MinItems: func() *uint64 {
 							i := uint64(3)
 							return &i
@@ -390,7 +368,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 				if arr.UniqueItems == nil || *arr.UniqueItems != true {
 					return "UniqueItems hasn't been inherited", false
 				}
-				if arr.Items == nil || (*arr.Items).Base().ID != "1" {
+				if arr.Items == nil || arr.Items.ID != 1 {
 					return "Items hasn't been inherited", false
 				}
 				return "", true
@@ -399,12 +377,14 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "negative case different type",
 			fields: fields{
-				BaseShape:   BaseShape{},
+				BaseShape:   &BaseShape{},
 				ArrayFacets: ArrayFacets{},
 			},
 			args: args{
 				source: &StringShape{
-					BaseShape: BaseShape{},
+					BaseShape: &BaseShape{
+						ID: 1,
+					},
 				},
 			},
 			wantErr: true,
@@ -412,28 +392,26 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "negative case different items type",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						ID: 1,
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 				},
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{},
+					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
-						Items: func() *Shape {
-							s := &NumberShape{
-								BaseShape: BaseShape{},
-							}
-							ss := Shape(s)
-							return &ss
-						}(),
+						Items: &BaseShape{
+							ID: 1,
+							Shape: &NumberShape{
+								BaseShape: &BaseShape{ID: 2},
+							},
+						},
 					},
 				},
 			},
@@ -442,7 +420,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "minItems constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MinItems: func() *uint64 {
 						i := uint64(2)
@@ -452,7 +430,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{},
+					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
 						MinItems: func() *uint64 {
 							i := uint64(1)
@@ -466,7 +444,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "maxItems constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MaxItems: func() *uint64 {
 						i := uint64(1)
@@ -476,7 +454,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{},
+					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
 						MaxItems: func() *uint64 {
 							i := uint64(2)
@@ -490,7 +468,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 		{
 			name: "uniqueItems constraint violation",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					UniqueItems: func() *bool {
 						b := false
@@ -500,7 +478,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 			},
 			args: args{
 				source: &ArrayShape{
-					BaseShape: BaseShape{},
+					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
 						UniqueItems: func() *bool {
 							b := true
@@ -518,7 +496,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 				BaseShape:   tt.fields.BaseShape,
 				ArrayFacets: tt.fields.ArrayFacets,
 			}
-			got, err := s.Inherit(tt.args.source)
+			got, err := s.inherit(tt.args.source)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Inherit() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -534,7 +512,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 
 func TestArrayShape_Check(t *testing.T) {
 	type fields struct {
-		BaseShape   BaseShape
+		BaseShape   *BaseShape
 		ArrayFacets ArrayFacets
 	}
 	tests := []struct {
@@ -545,17 +523,14 @@ func TestArrayShape_Check(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{
-								ID: "0",
-							},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+					Items: &BaseShape{
+						ID: 1,
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
+						},
+					},
 					MinItems: func() *uint64 {
 						i := uint64(2)
 						return &i
@@ -574,7 +549,7 @@ func TestArrayShape_Check(t *testing.T) {
 		{
 			name: "invalid min and max items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MinItems: func() *uint64 {
 						i := uint64(4)
@@ -591,13 +566,12 @@ func TestArrayShape_Check(t *testing.T) {
 		{
 			name: "invalid items",
 			fields: fields{
-				BaseShape: BaseShape{},
+				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
-					Items: func() *Shape {
-						s := &StringShape{
-							BaseShape: BaseShape{
-								ID: "0",
-							},
+					Items: &BaseShape{
+						ID: 1,
+						Shape: &StringShape{
+							BaseShape: &BaseShape{ID: 2},
 							StringFacets: StringFacets{
 								LengthFacets: LengthFacets{
 									MinLength: func() *uint64 {
@@ -610,10 +584,8 @@ func TestArrayShape_Check(t *testing.T) {
 									}(),
 								},
 							},
-						}
-						ss := Shape(s)
-						return &ss
-					}(),
+						},
+					},
 				},
 			},
 			wantErr: true,
@@ -625,8 +597,8 @@ func TestArrayShape_Check(t *testing.T) {
 				BaseShape:   tt.fields.BaseShape,
 				ArrayFacets: tt.fields.ArrayFacets,
 			}
-			if err := s.Check(); (err != nil) != tt.wantErr {
-				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			if err := s.check(); (err != nil) != tt.wantErr {
+				t.Errorf("check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -634,7 +606,7 @@ func TestArrayShape_Check(t *testing.T) {
 
 func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 	type fields struct {
-		BaseShape   BaseShape
+		BaseShape   *BaseShape
 		ArrayFacets ArrayFacets
 	}
 	type args struct {
@@ -649,7 +621,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -712,7 +684,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid odd",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -729,7 +701,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid minItems",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -751,7 +723,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid maxItems",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -773,7 +745,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid uniqueItems",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -795,7 +767,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid items",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
@@ -827,7 +799,7 @@ func TestArrayShape_unmarshalYAMLNodes(t *testing.T) {
 		{
 			name: "invalid custom facet",
 			fields: fields{
-				BaseShape: BaseShape{
+				BaseShape: &BaseShape{
 					raml:              &RAML{},
 					CustomShapeFacets: orderedmap.New[string, *Node](0),
 				},
