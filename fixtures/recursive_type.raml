@@ -1,0 +1,26 @@
+#%RAML 1.0 Library
+
+types:
+  Parent:
+    additionalProperties: false
+    properties:
+      child?: Child
+    example:
+      child:
+        child:
+          child:
+            parent: {}
+
+  Child:
+    type: Parent
+    additionalProperties: false
+    properties:
+      parent?: Parent
+    example:
+      parent:
+        child:
+          parent: {}
+      child:
+        parent:
+          child:
+            parent: {}

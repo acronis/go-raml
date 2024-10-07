@@ -2,8 +2,6 @@ module github.com/acronis/go-raml
 
 go 1.22.6
 
-toolchain go1.23.0
-
 require (
 	github.com/acronis/go-stacktrace v0.2.0
 	github.com/antlr4-go/antlr/v4 v4.13.1
@@ -18,5 +16,5 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
+	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
 )
