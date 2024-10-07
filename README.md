@@ -90,19 +90,19 @@ of the inheritance support:
 
 ## What you can do with it
 
-### Creating API definitions
+### Create API definitions
 
 RAML's primary objective is to provide a specification for maintainable, design-driven API definitions.
 
 By using RAML, you can make a well-structured API definition that would be easy to read, maintain
 and use.
 
-### Data structures validation
+### Validate data
 
 Given a powerful type definition system, you can declaratively define your data schema and validate
 data instances against that schema.
 
-### Defining static configuration
+### Define static configuration
 
 On top of the type definition system, RAML allows defining metadata using custom typed annotations.
 One of the ways that a custom annotation may be used by processors is to create a static configuration.
