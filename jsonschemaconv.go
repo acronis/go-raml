@@ -2,6 +2,7 @@ package raml
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -31,7 +32,7 @@ type JSONSchemaConverter struct {
 	ShapeVisitor[JSONSchema]
 
 	definitions    Definitions
-	complexSchemas map[string]*JSONSchema
+	complexSchemas map[int64]*JSONSchema
 
 	opts JSONSchemaConverterOptions
 }
@@ -44,39 +45,30 @@ func NewJSONSchemaConverter(opts ...JSONSchemaConverterOpt) *JSONSchemaConverter
 	return c
 }
 
-func (c *JSONSchemaConverter) Convert(s Shape) *JSONSchema {
+func (c *JSONSchemaConverter) Convert(s Shape) (*JSONSchema, error) {
+	// TODO: Need to pass *BaseShape
+	// TODO: JSONSchema converter should also work with non-unwrapped shapes.
+	if !s.Base().IsUnwrapped() {
+		return nil, fmt.Errorf("entrypoint shape must be unwrapped")
+	}
+
 	entrypointName := s.Base().Name
-	c.complexSchemas = make(map[string]*JSONSchema)
+	c.complexSchemas = make(map[int64]*JSONSchema)
 	c.definitions = make(Definitions)
-	c.definitions[entrypointName] = c.Visit(s)
+	schema := &JSONSchema{}
+	// NOTE: Assign empty schema before traversing to definitions to occupy the name.
+	// TODO: Probably can be refactored in a better way.
+	c.definitions[entrypointName] = schema
+	*schema = *c.Visit(s)
 
 	return &JSONSchema{
 		Version:     JSONSchemaVersion,
 		Ref:         "#/definitions/" + entrypointName,
 		Definitions: c.definitions,
-	}
+	}, nil
 }
 
 func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
-	// TODO: Detect recursion
-	// if !s.Base().IsUnwrapped() {
-	// 	link := s.Base().Link
-	// 	if link != nil {
-	// 		return c.Visit(*link.Shape)
-	// 	}
-	// 	inherits := s.Base().Inherits
-	// 	if !c.opts.omitRefs && len(inherits) > 0 {
-	// 		// TODO: Multiple inheritance will not work with JSON Schema
-	// 		parent := *inherits[0]
-	// 		parentName := parent.Base().Name
-	// 		// TODO: Deduplicate parents
-	// 		c.definitions[parentName] = c.Visit(parent)
-	// 		return &JSONSchema{
-	// 			Ref: "#/definitions/" + parentName,
-	// 		}
-	// 	}
-	// }
-
 	switch s := s.(type) {
 	case *ObjectShape:
 		return c.VisitObjectShape(s)
@@ -128,7 +120,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		schema.Properties = orderedmap.New[string, *JSONSchema](s.Properties.Len())
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
-			schema.Properties.Set(k, c.Visit(*v.Shape))
+			schema.Properties.Set(k, c.Visit(v.Shape.Shape))
 			if v.Required {
 				schema.Required = append(schema.Required, k)
 			}
@@ -139,7 +131,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
 			k = k[1 : len(k)-1]
-			schema.PatternProperties.Set(k, c.Visit(*v.Shape))
+			schema.PatternProperties.Set(k, c.Visit(v.Shape.Shape))
 		}
 	}
 	return schema
@@ -155,7 +147,7 @@ func (c *JSONSchemaConverter) VisitArrayShape(s *ArrayShape) *JSONSchema {
 	schema.UniqueItems = s.UniqueItems
 
 	if s.Items != nil {
-		schema.Items = c.Visit(*s.Items)
+		schema.Items = c.Visit(s.Items.Shape)
 	}
 	return schema
 }
@@ -166,7 +158,7 @@ func (c *JSONSchemaConverter) VisitUnionShape(s *UnionShape) *JSONSchema {
 
 	schema.AnyOf = make([]*JSONSchema, len(s.AnyOf))
 	for i, item := range s.AnyOf {
-		schema.AnyOf[i] = c.Visit(*item)
+		schema.AnyOf[i] = c.Visit(item.Shape)
 	}
 	return schema
 }
@@ -314,23 +306,36 @@ func (c *JSONSchemaConverter) VisitNilShape(s *NilShape) *JSONSchema {
 }
 
 func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema {
+	// NOTE: Recursive schema will always produce ref.
+	// However, ref ignores all other keywords defined within the schema per JSON Schema spec.
+	// We keep the keywords just in case the schema is not used as a ref.
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schemaID := (*s.Head).Base().ID
 
-	schema.Ref = schemaID
-	c.complexSchemas[schemaID].ID = schemaID
+	head := s.Head.Shape
+	baseHead := head.Base()
+	// TODO: Type name is not unique, need pretty naming to avoid collisions.
+	definition := baseHead.Name
+	if c.definitions[definition] == nil {
+		schema := &JSONSchema{}
+		// NOTE: Assign empty schema before traversing to definitions to occupy the name.
+		c.definitions[definition] = schema
+		*schema = *c.Visit(head)
+	}
+	schema.Ref = "#/definitions/" + definition
 
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitJSONShape(s *JSONShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
-	schema = c.overrideSchema(schema, s.Schema)
+	// NOTE: RAML type may override common properties like title, description, etc.
+	schema = c.overrideCommonProperties(schema, s.Schema)
+	// NOTE: Nested JSON Schema may not have $schema keyword.
 	schema.Version = ""
 	return schema
 }
 
-func (c *JSONSchemaConverter) overrideSchema(parent *JSONSchema, child *JSONSchema) *JSONSchema {
+func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child *JSONSchema) *JSONSchema {
 	cs := *child
 	if parent.Title != "" {
 		cs.Title = parent.Title
@@ -394,7 +399,7 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 			panic("invalid shape extension definitions")
 		}
 		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(*v.Shape)
+		shapeExtDefs[k] = c.Visit(v.Shape.Shape)
 	}
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value

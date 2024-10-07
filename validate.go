@@ -7,17 +7,19 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func (r *RAML) validateTypes(types *orderedmap.OrderedMap[string, *Shape],
-	unwrapCache map[string]Shape) *stacktrace.StackTrace {
+func (r *RAML) validateTypes(
+	types *orderedmap.OrderedMap[string, *BaseShape],
+	unwrapCache map[int64]*BaseShape,
+) *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
 	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
 		shape := pair.Value
-		s := *shape
-		if !s.Base().unwrapped {
-			us, err := r.UnwrapShape(shape, make([]Shape, 0))
+		if !shape.unwrapped {
+			shape = shape.CloneDetached()
+			us, err := r.UnwrapShape(shape)
 			if err != nil {
-				se := StacktraceNewWrapped("unwrap shape", err, s.Base().Location,
-					stacktrace.WithPosition(&s.Base().Position),
+				se := StacktraceNewWrapped("unwrap shape", err, shape.Location,
+					stacktrace.WithPosition(&shape.Position),
 					stacktrace.WithType(stacktrace.TypeValidating))
 				if st == nil {
 					st = se
@@ -26,12 +28,24 @@ func (r *RAML) validateTypes(types *orderedmap.OrderedMap[string, *Shape],
 				}
 				continue
 			}
-			unwrapCache[s.Base().ID] = s
-			s = us
+			_, err = r.FindAndMarkRecursion(us)
+			if err != nil {
+				se := StacktraceNewWrapped("find recursion", err, shape.Location,
+					stacktrace.WithPosition(&shape.Position),
+					stacktrace.WithType(stacktrace.TypeValidating))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
+			}
+			unwrapCache[shape.ID] = us
+			shape = us
 		}
-		if err := s.Check(); err != nil {
-			se := StacktraceNewWrapped("check type", err, s.Base().Location,
-				stacktrace.WithPosition(&s.Base().Position),
+		if err := shape.Check(); err != nil {
+			se := StacktraceNewWrapped("check type", err, shape.Location,
+				stacktrace.WithPosition(&shape.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
 			if st == nil {
 				st = se
@@ -40,9 +54,9 @@ func (r *RAML) validateTypes(types *orderedmap.OrderedMap[string, *Shape],
 			}
 			continue
 		}
-		if err := r.validateShapeCommons(s); err != nil {
-			se := StacktraceNewWrapped("validate shape commons", err, s.Base().Location,
-				stacktrace.WithPosition(&s.Base().Position),
+		if err := r.validateShapeCommons(shape); err != nil {
+			se := StacktraceNewWrapped("validate shape commons", err, shape.Location,
+				stacktrace.WithPosition(&shape.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
 			if st == nil {
 				st = se
@@ -55,7 +69,7 @@ func (r *RAML) validateTypes(types *orderedmap.OrderedMap[string, *Shape],
 	return st
 }
 
-func (r *RAML) validateLibrary(f *Library, unwrapCache map[string]Shape) *stacktrace.StackTrace {
+func (r *RAML) validateLibrary(f *Library, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
 	st := r.validateTypes(f.AnnotationTypes, unwrapCache)
 
 	if se := r.validateTypes(f.Types, unwrapCache); se != nil {
@@ -68,32 +82,39 @@ func (r *RAML) validateLibrary(f *Library, unwrapCache map[string]Shape) *stackt
 	return st
 }
 
-func (r *RAML) validateDataType(f *DataType, unwrapCache map[string]Shape) *stacktrace.StackTrace {
-	s := *f.Shape
-	if !s.Base().unwrapped {
-		us, err := r.UnwrapShape(f.Shape, make([]Shape, 0))
+func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	s := f.Shape
+	if !s.unwrapped {
+		s = s.CloneDetached()
+		us, err := r.UnwrapShape(s)
 		if err != nil {
-			return StacktraceNewWrapped("unwrap shape", err, s.Base().Location,
-				stacktrace.WithPosition(&s.Base().Position),
+			return StacktraceNewWrapped("unwrap shape", err, s.Location,
+				stacktrace.WithPosition(&s.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
 		}
-		unwrapCache[s.Base().ID] = s
+		_, err = r.FindAndMarkRecursion(us)
+		if err != nil {
+			return StacktraceNewWrapped("find recursion", err, s.Location,
+				stacktrace.WithPosition(&s.Position),
+				stacktrace.WithType(stacktrace.TypeValidating))
+		}
+		unwrapCache[s.ID] = us
 		s = us
 	}
 	if err := s.Check(); err != nil {
-		return StacktraceNewWrapped("check data type", err, s.Base().Location,
-			stacktrace.WithPosition(&s.Base().Position),
+		return StacktraceNewWrapped("check data type", err, s.Location,
+			stacktrace.WithPosition(&s.Position),
 			stacktrace.WithType(stacktrace.TypeValidating))
 	}
 	if err := r.validateShapeCommons(s); err != nil {
-		return StacktraceNewWrapped("validate shape commons", err, s.Base().Location,
-			stacktrace.WithPosition(&s.Base().Position),
+		return StacktraceNewWrapped("validate shape commons", err, s.Location,
+			stacktrace.WithPosition(&s.Position),
 			stacktrace.WithType(stacktrace.TypeValidating))
 	}
 	return nil
 }
 
-func (r *RAML) validateFragments(unwrapCache map[string]Shape) *stacktrace.StackTrace {
+func (r *RAML) validateFragments(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
@@ -118,15 +139,15 @@ func (r *RAML) validateFragments(unwrapCache map[string]Shape) *stacktrace.Stack
 	return st
 }
 
-func (r *RAML) validateDomainExtensions(unwrapCache map[string]Shape) *stacktrace.StackTrace {
+func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
 	for _, item := range r.domainExtensions {
-		db := *item.DefinedBy
-		if !db.Base().unwrapped {
-			us, ok := unwrapCache[db.Base().ID]
+		db := item.DefinedBy
+		if !db.unwrapped {
+			us, ok := unwrapCache[db.ID]
 			if !ok {
-				se := stacktrace.New("unwrapped shape not found", db.Base().Location,
-					stacktrace.WithPosition(&db.Base().Position),
+				se := stacktrace.New("unwrapped shape not found", db.Location,
+					stacktrace.WithPosition(&db.Position),
 					stacktrace.WithType(stacktrace.TypeValidating))
 				if st == nil {
 					st = se
@@ -137,7 +158,7 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[string]Shape) *stacktrac
 			}
 			db = us
 		}
-		if err := db.Validate(item.Extension.Value, "$"); err != nil {
+		if err := db.Validate(item.Extension.Value); err != nil {
 			se := StacktraceNewWrapped("check domain extension", err, item.Extension.Location,
 				stacktrace.WithPosition(&item.Extension.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
@@ -156,7 +177,7 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[string]Shape) *stacktrac
 func (r *RAML) ValidateShapes() error {
 	// Unwrap cache stores the mapping of original IDs to unwrapped shapes
 	// to ensure the original references (aliases and links) match.
-	unwrapCache := make(map[string]Shape)
+	unwrapCache := make(map[int64]*BaseShape)
 
 	st := r.validateFragments(unwrapCache)
 
@@ -177,26 +198,24 @@ func (r *RAML) ValidateShapes() error {
 func (r *RAML) validateObjectShape(s *ObjectShape) error {
 	if s.Properties != nil {
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			k, prop := pair.Key, pair.Value
-			s := *prop.Shape
+			s := pair.Value.Shape
 			if err := r.validateShapeCommons(s); err != nil {
-				return StacktraceNewWrapped("validate property", err, s.Base().Location,
-					stacktrace.WithPosition(&s.Base().Position), stacktrace.WithInfo("property", k))
+				return StacktraceNewWrapped("validate property", err, s.Location,
+					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
 			}
 		}
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-			k, prop := pair.Key, pair.Value
-			s := *prop.Shape
+			s := pair.Value.Shape
 			if err := r.validateShapeCommons(s); err != nil {
-				return StacktraceNewWrapped("validate pattern property", err, s.Base().Location,
-					stacktrace.WithPosition(&s.Base().Position), stacktrace.WithInfo("property", k))
+				return StacktraceNewWrapped("validate pattern property", err, s.Location,
+					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
 			}
 		}
 	}
 	return nil
 }
 
-func (r *RAML) validateShapeCommons(s Shape) error {
+func (r *RAML) validateShapeCommons(s *BaseShape) error {
 	if err := r.validateShapeFacets(s); err != nil {
 		return err
 	}
@@ -204,21 +223,21 @@ func (r *RAML) validateShapeCommons(s Shape) error {
 		return err
 	}
 
-	switch s := s.(type) {
+	switch s := s.Shape.(type) {
 	case *ObjectShape:
 		if err := r.validateObjectShape(s); err != nil {
 			return fmt.Errorf("validate object shape: %w", err)
 		}
 	case *ArrayShape:
 		if s.Items != nil {
-			if err := r.validateShapeCommons(*s.Items); err != nil {
+			if err := r.validateShapeCommons(s.Items); err != nil {
 				return StacktraceNewWrapped("validate items", err, s.Base().Location,
 					stacktrace.WithPosition(&s.Base().Position))
 			}
 		}
 	case *UnionShape:
 		for _, item := range s.AnyOf {
-			if err := r.validateShapeCommons(*item); err != nil {
+			if err := r.validateShapeCommons(item); err != nil {
 				return StacktraceNewWrapped("validate union item", err, s.Base().Location,
 					stacktrace.WithPosition(&s.Base().Position))
 			}
@@ -227,10 +246,9 @@ func (r *RAML) validateShapeCommons(s Shape) error {
 	return nil
 }
 
-func (r *RAML) validateExamples(s Shape) error {
-	base := s.Base()
+func (r *RAML) validateExamples(base *BaseShape) error {
 	if base.Example != nil {
-		if err := s.Validate(base.Example.Data.Value, "$"); err != nil {
+		if err := base.Validate(base.Example.Data.Value); err != nil {
 			return StacktraceNewWrapped("validate example", err, base.Example.Location,
 				stacktrace.WithPosition(&base.Example.Position))
 		}
@@ -238,14 +256,14 @@ func (r *RAML) validateExamples(s Shape) error {
 	if base.Examples != nil {
 		for pair := base.Examples.Map.Oldest(); pair != nil; pair = pair.Next() {
 			ex := pair.Value
-			if err := s.Validate(ex.Data.Value, "$"); err != nil {
+			if err := base.Validate(ex.Data.Value); err != nil {
 				return StacktraceNewWrapped("validate example", err, ex.Location,
 					stacktrace.WithPosition(&ex.Position))
 			}
 		}
 	}
 	if base.Default != nil {
-		if err := s.Validate(base.Default.Value, "$"); err != nil {
+		if err := base.Validate(base.Default.Value); err != nil {
 			return StacktraceNewWrapped("validate default", err, base.Default.Location,
 				stacktrace.WithPosition(&base.Default.Position))
 		}
@@ -253,9 +271,8 @@ func (r *RAML) validateExamples(s Shape) error {
 	return nil
 }
 
-func (r *RAML) validateShapeFacets(s Shape) error {
+func (r *RAML) validateShapeFacets(base *BaseShape) error {
 	// TODO: Doesn't support multiple inheritance.
-	base := s.Base()
 	inherits := base.Inherits
 	shapeFacetDefs := base.CustomShapeFacetDefinitions
 	validationFacetDefs := make(map[string]Property)
@@ -263,17 +280,16 @@ func (r *RAML) validateShapeFacets(s Shape) error {
 		if len(inherits) == 0 {
 			break
 		}
-		parent := *inherits[0]
-		for pair := parent.Base().CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		parent := inherits[0]
+		for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 			f := pair.Value
 			if _, ok := shapeFacetDefs.Get(f.Name); ok {
-				shapeBase := (*f.Shape).Base()
-				return stacktrace.New("duplicate custom facet", shapeBase.Location,
-					stacktrace.WithPosition(&shapeBase.Position), stacktrace.WithInfo("facet", f.Name))
+				return stacktrace.New("duplicate custom facet", f.Shape.Location,
+					stacktrace.WithPosition(&f.Shape.Position), stacktrace.WithInfo("facet", f.Name))
 			}
 			validationFacetDefs[f.Name] = f
 		}
-		inherits = parent.Base().Inherits
+		inherits = parent.Inherits
 	}
 
 	shapeFacets := base.CustomShapeFacets
@@ -286,7 +302,7 @@ func (r *RAML) validateShapeFacets(s Shape) error {
 			}
 			continue
 		}
-		if err := (*facetDef.Shape).Validate(f.Value, "$"); err != nil {
+		if err := facetDef.Shape.Validate(f.Value); err != nil {
 			return StacktraceNewWrapped("validate custom facet", err, f.Location,
 				stacktrace.WithPosition(&f.Position), stacktrace.WithInfo("facet", k))
 		}

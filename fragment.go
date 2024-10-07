@@ -31,10 +31,10 @@ type Fragment interface {
 type Library struct {
 	ID              string
 	Usage           string
-	AnnotationTypes *orderedmap.OrderedMap[string, *Shape]
+	AnnotationTypes *orderedmap.OrderedMap[string, *BaseShape]
 	// TODO: Specific to API fragments. Not supported yet.
 	// ResourceTypes   map[string]interface{} `yaml:"resourceTypes"`
-	Types *orderedmap.OrderedMap[string, *Shape]
+	Types *orderedmap.OrderedMap[string, *BaseShape]
 	Uses  *orderedmap.OrderedMap[string, *LibraryLink]
 
 	CustomDomainProperties *orderedmap.OrderedMap[string, *DomainExtension]
@@ -80,18 +80,17 @@ func (l *Library) unmarshalTypes(valueNode *yaml.Node) {
 		return
 	}
 
-	l.Types = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
+	l.Types = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
 	// Map nodes come in pairs in order [key, value]
 	for j := 0; j != len(valueNode.Content); j += 2 {
 		name := valueNode.Content[j].Value
 		data := valueNode.Content[j+1]
-		shape, err := l.raml.makeShape(data, name, l.Location)
+		shape, err := l.raml.makeNewShapeYAML(data, name, l.Location)
 		if err != nil {
 			panic(StacktraceNewWrapped("parse types: make shape", err, l.Location, WithNodePosition(data)))
 		}
 		l.Types.Set(name, shape)
 		l.raml.PutTypeIntoFragment(name, l.Location, shape)
-		l.raml.PutShapePtr(shape)
 	}
 }
 
@@ -100,18 +99,17 @@ func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
 		return nil
 	}
 
-	l.AnnotationTypes = orderedmap.New[string, *Shape](len(valueNode.Content) / 2)
+	l.AnnotationTypes = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
 	// Map nodes come in pairs in order [key, value]
 	for j := 0; j != len(valueNode.Content); j += 2 {
 		name := valueNode.Content[j].Value
 		data := valueNode.Content[j+1]
-		shape, err := l.raml.makeShape(data, name, l.Location)
+		shape, err := l.raml.makeNewShapeYAML(data, name, l.Location)
 		if err != nil {
 			return StacktraceNewWrapped("parse annotation types: make shape", err, l.Location, WithNodePosition(data))
 		}
 		l.AnnotationTypes.Set(name, shape)
 		l.raml.PutAnnotationTypeIntoFragment(name, l.Location, shape)
-		l.raml.PutShapePtr(shape)
 	}
 
 	return nil
@@ -122,7 +120,6 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
 		return stacktrace.New("must be map", l.Location, WithNodePosition(value))
 	}
-	l.CustomDomainProperties = orderedmap.New[string, *DomainExtension](0)
 
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
@@ -156,6 +153,11 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 
 func (r *RAML) MakeLibrary(path string) *Library {
 	return &Library{
+		CustomDomainProperties: orderedmap.New[string, *DomainExtension](0),
+		Uses:                   orderedmap.New[string, *LibraryLink](0),
+		Types:                  orderedmap.New[string, *BaseShape](0),
+		AnnotationTypes:        orderedmap.New[string, *BaseShape](0),
+
 		Location: path,
 		raml:     r,
 	}
@@ -166,7 +168,7 @@ type DataType struct {
 	ID    string
 	Usage string
 	Uses  *orderedmap.OrderedMap[string, *LibraryLink]
-	Shape *Shape
+	Shape *BaseShape
 
 	Location string
 	raml     *RAML
@@ -210,7 +212,7 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 			shapeValue.Content = append(shapeValue.Content, node, valueNode)
 		}
 	}
-	shape, err := dt.raml.makeShape(shapeValue, filepath.Base(dt.Location), dt.Location)
+	shape, err := dt.raml.makeNewShapeYAML(shapeValue, filepath.Base(dt.Location), dt.Location)
 	if err != nil {
 		return StacktraceNewWrapped("parse types: make shape", err, dt.Location, WithNodePosition(shapeValue))
 	}
@@ -220,6 +222,8 @@ func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 
 func (r *RAML) MakeDataType(path string) *DataType {
 	return &DataType{
+		Uses: orderedmap.New[string, *LibraryLink](0),
+
 		Location: path,
 		raml:     r,
 	}

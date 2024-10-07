@@ -18,14 +18,20 @@ func Test_ParseFromPath(t *testing.T) {
 	slog.Info("ParseFromPath", "took ms", elapsed.Milliseconds(), "location",
 		rml.entryPoint.GetLocation(), "total shapes", len(shapesAll))
 
+	for _, base := range shapesAll {
+		shape := base.Shape
+		require.NotNil(t, shape)
+		_, ok := shape.(*UnknownShape)
+		require.False(t, ok)
+	}
+
 	conv := NewJSONSchemaConverter()
 	for _, frag := range rml.fragmentsCache {
 		switch f := frag.(type) {
 		case *Library:
 			for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
-				shape := pair.Value
-				s := *shape
-				conv.Convert(s)
+				s := pair.Value
+				conv.Convert(s.Shape)
 				// b, err := json.MarshalIndent(schema, "", "  ")
 				// if err != nil {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
@@ -34,19 +40,20 @@ func Test_ParseFromPath(t *testing.T) {
 				// fmt.Println(string(b))
 			}
 			for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
-				shape := pair.Value
-				s := *shape
-				conv.Convert(s)
+				s := pair.Value
+				conv.Convert(s.Shape)
+				// if err != nil {
+				// 	t.Errorf("StackTrace converting shape: %s", err)
+				// }
 				// b, err := json.MarshalIndent(schema, "", "  ")
 				// if err != nil {
 				// 	t.Errorf("StackTrace marshalling schema: %s", err)
 				// }
-				// os.WriteFile(fmt.Sprintf("./out/%s_%s.json", s.Base().Name, s.Base().ID), b, 0644)
+				// os.WriteFile(fmt.Sprintf("./out/%s_%d.json", s.Name, s.ID), b, 0644)
 				// fmt.Println(string(b))
 			}
 		case *DataType:
-			s := *f.Shape
-			conv.Convert(s)
+			conv.Convert(f.Shape.Shape)
 			// b, err := json.MarshalIndent(schema, "", "  ")
 			// if err != nil {
 			// 	t.Errorf("StackTrace marshalling schema: %s", err)
