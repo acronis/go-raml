@@ -7,44 +7,44 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
+func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (*BaseShape, *stacktrace.StackTrace) {
+	if !shape.unwrapped {
+		shape = shape.CloneDetached()
+		us, err := r.UnwrapShape(shape)
+		if err != nil {
+			return nil, StacktraceNewWrapped("unwrap shape", err, shape.Location,
+				stacktrace.WithPosition(&shape.Position),
+				stacktrace.WithType(stacktrace.TypeValidating))
+		}
+		_, err = r.FindAndMarkRecursion(us)
+		if err != nil {
+			return nil, StacktraceNewWrapped("find recursion", err, shape.Location,
+				stacktrace.WithPosition(&shape.Position),
+				stacktrace.WithType(stacktrace.TypeValidating))
+		}
+		unwrapCache[shape.ID] = us
+		shape = us
+	}
+	return shape, nil
+}
+
 func (r *RAML) validateTypes(
 	types *orderedmap.OrderedMap[string, *BaseShape],
 	unwrapCache map[int64]*BaseShape,
 ) *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
 	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
-		shape := pair.Value
-		if !shape.unwrapped {
-			shape = shape.CloneDetached()
-			us, err := r.UnwrapShape(shape)
-			if err != nil {
-				se := StacktraceNewWrapped("unwrap shape", err, shape.Location,
-					stacktrace.WithPosition(&shape.Position),
-					stacktrace.WithType(stacktrace.TypeValidating))
-				if st == nil {
-					st = se
-				} else {
-					st = st.Append(se)
-				}
-				continue
+		shape, se := r.unwrapShape(pair.Value, unwrapCache)
+		if se != nil {
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
 			}
-			_, err = r.FindAndMarkRecursion(us)
-			if err != nil {
-				se := StacktraceNewWrapped("find recursion", err, shape.Location,
-					stacktrace.WithPosition(&shape.Position),
-					stacktrace.WithType(stacktrace.TypeValidating))
-				if st == nil {
-					st = se
-				} else {
-					st = st.Append(se)
-				}
-				continue
-			}
-			unwrapCache[shape.ID] = us
-			shape = us
+			continue
 		}
 		if err := shape.Check(); err != nil {
-			se := StacktraceNewWrapped("check type", err, shape.Location,
+			se = StacktraceNewWrapped("check type", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
 			if st == nil {
@@ -55,7 +55,7 @@ func (r *RAML) validateTypes(
 			continue
 		}
 		if err := r.validateShapeCommons(shape); err != nil {
-			se := StacktraceNewWrapped("validate shape commons", err, shape.Location,
+			se = StacktraceNewWrapped("validate shape commons", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
 				stacktrace.WithType(stacktrace.TypeValidating))
 			if st == nil {

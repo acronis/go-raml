@@ -759,7 +759,7 @@ func (s *JSONShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *JSONShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *JSONShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -805,7 +805,7 @@ func (s *UnknownShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *UnknownShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *UnknownShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
@@ -842,7 +842,7 @@ func (s *RecursiveShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
-func (s *RecursiveShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
+func (s *RecursiveShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c

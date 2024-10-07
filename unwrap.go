@@ -172,14 +172,11 @@ func (r *RAML) markShapeRecursions() error {
 	return nil
 }
 
-// FindAndMarkRecursion finds and marks recursive shapes in the RAML.
-// Works only with unwrapped shapes and returns a recursive shape if found.
 func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
 	if !base.IsUnwrapped() {
 		return nil, fmt.Errorf("shape is not unwrapped")
 	}
 
-	// NOTE: Reusing flag for unwrap since this is a second step of this process.
 	if base.ShapeVisited {
 		s := r.MakeRecursiveShape(base)
 		s.unwrapped = true
@@ -187,57 +184,77 @@ func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
 	}
 	base.ShapeVisited = true
 
+	var err error
 	switch t := base.Shape.(type) {
 	case *ArrayShape:
-		if t.Items != nil {
-			rs, err := r.FindAndMarkRecursion(t.Items)
-			if err != nil {
-				return nil, fmt.Errorf("find and mark recursion: %w", err)
-			}
-			if rs != nil {
-				t.Items = rs
-			}
-		}
+		err = r.findAndMarkRecursionInArrayShape(t)
 	case *ObjectShape:
-		if t.Properties != nil {
-			for pair := t.Properties.Oldest(); pair != nil; pair = pair.Next() {
-				prop := pair.Value
-				rs, err := r.FindAndMarkRecursion(prop.Shape)
-				if err != nil {
-					return nil, fmt.Errorf("find and mark recursion: %w", err)
-				}
-				if rs != nil {
-					prop.Shape = rs
-					t.Properties.Set(pair.Key, prop)
-				}
-			}
-		}
-		if t.PatternProperties != nil {
-			for pair := t.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-				prop := pair.Value
-				rs, err := r.FindAndMarkRecursion(prop.Shape)
-				if err != nil {
-					return nil, fmt.Errorf("find and mark recursion: %w", err)
-				}
-				if rs != nil {
-					prop.Shape = rs
-					t.PatternProperties.Set(pair.Key, prop)
-				}
-			}
-		}
+		err = r.findAndMarkRecursionInObjectShape(t)
 	case *UnionShape:
-		for i, item := range t.AnyOf {
-			rs, err := r.FindAndMarkRecursion(item)
+		err = r.findAndMarkRecursionInUnionShape(t)
+	}
+
+	base.ShapeVisited = false
+	if err != nil {
+		return nil, err
+	}
+	return nil, ErrNil
+}
+
+func (r *RAML) findAndMarkRecursionInArrayShape(t *ArrayShape) error {
+	if t.Items != nil {
+		rs, err := r.FindAndMarkRecursion(t.Items)
+		if err != nil {
+			return fmt.Errorf("find and mark recursion: %w", err)
+		}
+		if rs != nil {
+			t.Items = rs
+		}
+	}
+	return nil
+}
+
+func (r *RAML) findAndMarkRecursionInObjectShape(t *ObjectShape) error {
+	if t.Properties != nil {
+		for pair := t.Properties.Oldest(); pair != nil; pair = pair.Next() {
+			prop := pair.Value
+			rs, err := r.FindAndMarkRecursion(prop.Shape)
 			if err != nil {
-				return nil, fmt.Errorf("find and mark recursion: %w", err)
+				return fmt.Errorf("find and mark recursion: %w", err)
 			}
 			if rs != nil {
-				t.AnyOf[i] = rs
+				prop.Shape = rs
+				t.Properties.Set(pair.Key, prop)
 			}
 		}
 	}
-	base.ShapeVisited = false
-	return nil, nil
+	if t.PatternProperties != nil {
+		for pair := t.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+			prop := pair.Value
+			rs, err := r.FindAndMarkRecursion(prop.Shape)
+			if err != nil {
+				return fmt.Errorf("find and mark recursion: %w", err)
+			}
+			if rs != nil {
+				prop.Shape = rs
+				t.PatternProperties.Set(pair.Key, prop)
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RAML) findAndMarkRecursionInUnionShape(t *UnionShape) error {
+	for i, item := range t.AnyOf {
+		rs, err := r.FindAndMarkRecursion(item)
+		if err != nil {
+			return fmt.Errorf("find and mark recursion: %w", err)
+		}
+		if rs != nil {
+			t.AnyOf[i] = rs
+		}
+	}
+	return nil
 }
 
 func (r *RAML) unwrapObjShape(objShape *ObjectShape) error {

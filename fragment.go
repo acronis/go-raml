@@ -3,6 +3,7 @@ package raml
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
@@ -19,12 +20,29 @@ const (
 	FragmentNamedExample
 )
 
+// CutReferenceName cuts a reference name into two parts: before and after the dot.
+func CutReferenceName(refName string) (string, string, bool) {
+	// External ref - <fragment>.<identifier>
+	// Local ref - <identifier>
+	return strings.Cut(refName, ".")
+}
+
 type LocationGetter interface {
 	GetLocation() string
 }
 
+type ReferenceTypeGetter interface {
+	GetReferenceType(refName string) (*BaseShape, error)
+}
+
+type ReferenceAnnotationTypeGetter interface {
+	GetReferenceAnnotationType(refName string) (*BaseShape, error)
+}
+
 type Fragment interface {
 	LocationGetter
+	ReferenceTypeGetter
+	ReferenceAnnotationTypeGetter
 }
 
 // Library is the RAML 1.0 Library
@@ -41,6 +59,61 @@ type Library struct {
 
 	Location string
 	raml     *RAML
+}
+
+// GetReferenceType returns a reference type by name, implementing the ReferenceTypeGetter interface
+func (l *Library) GetReferenceType(refName string) (*BaseShape, error) {
+	before, after, found := CutReferenceName(refName)
+
+	var ref *BaseShape
+
+	if !found {
+		rr, ok := l.Types.Get(refName)
+		if !ok {
+			return nil, fmt.Errorf("reference \"%s\" not found", refName)
+		}
+		ref = rr
+	} else {
+		lib, ok := l.Uses.Get(before)
+		if !ok {
+			return nil, fmt.Errorf("library \"%s\" not found", before)
+		}
+		rr, ok := lib.Link.Types.Get(after)
+		if !ok {
+			return nil, fmt.Errorf("reference \"%s\" not found", after)
+		}
+		ref = rr
+	}
+
+	return ref, nil
+}
+
+// GetReferenceAnnotationType returns a reference annotation type by name,
+// implementing the ReferenceAnnotationTypeGetter interface
+func (l *Library) GetReferenceAnnotationType(refName string) (*BaseShape, error) {
+	before, after, found := CutReferenceName(refName)
+
+	var ref *BaseShape
+
+	if !found {
+		rr, ok := l.AnnotationTypes.Get(refName)
+		if !ok {
+			return nil, fmt.Errorf("reference \"%s\" not found", refName)
+		}
+		ref = rr
+	} else {
+		lib, ok := l.Uses.Get(before)
+		if !ok {
+			return nil, fmt.Errorf("library \"%s\" not found", before)
+		}
+		rr, ok := lib.Link.AnnotationTypes.Get(after)
+		if !ok {
+			return nil, fmt.Errorf("reference \"%s\" not found", after)
+		}
+		ref = rr
+	}
+
+	return ref, nil
 }
 
 func (l *Library) GetLocation() string {
@@ -174,6 +247,49 @@ type DataType struct {
 	raml     *RAML
 }
 
+// GetReferenceType returns a reference type by name, implementing the ReferenceTypeGetter interface
+func (dt *DataType) GetReferenceType(refName string) (*BaseShape, error) {
+	before, after, found := CutReferenceName(refName)
+
+	var ref *BaseShape
+
+	if !found {
+		return nil, fmt.Errorf("invalid reference %s", refName)
+	}
+	lib, ok := dt.Uses.Get(before)
+	if !ok {
+		return nil, fmt.Errorf("library \"%s\" not found", before)
+	}
+	ref, ok = lib.Link.Types.Get(after)
+	if !ok {
+		return nil, fmt.Errorf("reference \"%s\" not found", after)
+	}
+
+	return ref, nil
+}
+
+// GetReferenceAnnotationType returns a reference annotation type by name,
+// implementing the ReferenceAnnotationTypeGetter interface
+func (dt *DataType) GetReferenceAnnotationType(refName string) (*BaseShape, error) {
+	before, after, found := CutReferenceName(refName)
+
+	var ref *BaseShape
+
+	if !found {
+		return nil, fmt.Errorf("invalid reference %s", refName)
+	}
+	lib, ok := dt.Uses.Get(before)
+	if !ok {
+		return nil, fmt.Errorf("library \"%s\" not found", before)
+	}
+	ref, ok = lib.Link.AnnotationTypes.Get(after)
+	if !ok {
+		return nil, fmt.Errorf("reference \"%s\" not found", after)
+	}
+
+	return ref, nil
+}
+
 func (dt *DataType) GetLocation() string {
 	return dt.Location
 }
@@ -260,6 +376,17 @@ type NamedExample struct {
 
 	Location string
 	raml     *RAML
+}
+
+// GetReferenceAnnotationType returns a reference annotation type by name,
+// implementing the ReferenceAnnotationTypeGetter interface
+func (ne *NamedExample) GetReferenceAnnotationType(_ string) (*BaseShape, error) {
+	return nil, fmt.Errorf("named example does not have references")
+}
+
+// GetReferenceType returns a reference type by name, implementing the ReferenceTypeGetter interface
+func (ne *NamedExample) GetReferenceType(_ string) (*BaseShape, error) {
+	return nil, fmt.Errorf("named example does not have references")
 }
 
 func (ne *NamedExample) GetLocation() string {

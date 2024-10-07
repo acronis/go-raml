@@ -575,7 +575,12 @@ func (r *RAML) makeShapeType(
 	return shapeType, nil, nil
 }
 
-func (r *RAML) MakeNewShape(name string, shapeType string, location string, position *stacktrace.Position) (*BaseShape, Shape, error) {
+func (r *RAML) MakeNewShape(
+	name string,
+	shapeType string,
+	location string,
+	position *stacktrace.Position,
+) (*BaseShape, Shape, error) {
 	base := r.MakeBaseShape(name, location, position)
 	s, err := r.MakeConcreteShapeYAML(base, shapeType, nil)
 	if err != nil {

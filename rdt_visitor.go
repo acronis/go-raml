@@ -157,8 +157,8 @@ func (visitor *RdtVisitor) VisitReference(ctx *rdt.ReferenceContext, target *Unk
 	if ref.ID == target.ID {
 		return nil, fmt.Errorf("self recursion %s", shapeType)
 	}
-	if err := visitor.raml.resolveShape(ref); err != nil {
-		return nil, fmt.Errorf("resolve: %w", err)
+	if errResolveShape := visitor.raml.resolveShape(ref); errResolveShape != nil {
+		return nil, fmt.Errorf("resolve: %w", errResolveShape)
 	}
 	s, err := visitor.raml.MakeConcreteShapeYAML(target.Base(), ref.Type, target.facets)
 	if err != nil {

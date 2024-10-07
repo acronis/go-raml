@@ -8,3 +8,5 @@ type Value[T any] struct {
 	Value T
 	stacktrace.Position
 }
+
+var ErrNil error
