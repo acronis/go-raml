@@ -247,20 +247,23 @@ make install
 
 ### Parser options
 
-By default, parser outputs the resulting model as is. This means that information about all links and inheritance chains
+By default, parser outputs the resulting model as is and without validation. This means that information about all links and inheritance chains
 is unmodified. Be aware
 that the parser may generate recursive structures, depending on your definition, and you may need to implement recursion
-detection with the model.
+detection when traversing the model.
 
 The parser currently provides two options:
 
 * `raml.OptWithValidate()` - performs validation of the resulting model (types inheritance validation, types facet
   validations, annotation types and instances validation, examples, defaults, instances, etc.). Also performs unwrap if
-  `raml.OptWithUnwrap()` was not specified, but leaves the original model untouched.
+  `raml.OptWithUnwrap()` was not specified, but leaves the original types untouched.
 
 * `raml.OptWithUnwrap()` - performs an unwrap of the resulting model and replaces all definitions with unwrapped
   structures. Unwrap resolves the inheritance chain and links and compiles a complete type, with all properties of its
   parents/links.
+
+> [!NOTE]
+> In most cases, the use of both flags is advised. If you need to access unmodified types, use only `OptWithValidate()`. Note that memory consumption may be higher and processing time may be longer since `OptWithValidate()` performs a dedicated copy and unwrap for each type.
 
 ### Parsing from string
 
@@ -295,25 +298,26 @@ types:
 `
 
 	// Parse with validation
+	// Here we omit OptWithUnwrap to show the difference between child and parent.
 	r, err := raml.ParseFromString(content, "library.raml", workDir, raml.OptWithValidate())
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Cast type to Library since our fragment is RAML 1.0 Library
 	lib, _ := r.EntryPoint().(*raml.Library)
-	typPtr, _ := lib.Types.Get("ChildType")
+	base, _ := lib.Types.Get("ChildType")
 	// Cast type to StringShape since child type inherits from a string type
-	typ := (*typPtr).(*raml.StringShape)
+	typ := base.Shape.(*raml.StringShape)
 	fmt.Printf(
 		"Type name: %s, type: %s, minLength: %d, location: %s\n",
-		typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
+		typ.Name, typ.Type, *typ.MinLength, typ.Location,
 	)
 	// Cast type to StringShape since parent type is string
-	parentTyp := (*typ.Base().Inherits[0]).(*raml.StringShape)
+	parentTyp := base.Inherits[0].Shape.(*raml.StringShape)
 	fmt.Printf("Inherits from:\n")
 	fmt.Printf(
 		"Type name: %s, type: %s, minLength: %d, location: %s\n",
-		parentTyp.Base().Name, parentTyp.Base().Type, parentTyp.MinLength, parentTyp.Base().Location,
+		parentTyp.Name, parentTyp.Type, parentTyp.MinLength, parentTyp.Location,
 	)
 }
 ```
@@ -337,21 +341,20 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/acronis/go-raml"
 )
 
 func main() {
 	filePath := "<path_to_your_file>"
-	r, err := raml.ParseFromPath(content, "library.raml", workDir, raml.OptWithValidate())
+	r, err := raml.ParseFromPath(filePath, raml.OptWithValidate(), raml.OptWithUnwrap())
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Assuming that the parsed fragment is a RAML Library
 	lib, _ := r.EntryPoint().(*raml.Library)
-	typPtr, _ := lib.Types.Get("BasicType")
-	typ := *typPtr
-	fmt.Printf("Type name: %s, type: %s, location: %s", typ.Base().Name, typ.Base().Type, typ.Base().Location)
+	base, _ := lib.Types.Get("BasicType")
+	fmt.Printf("Type name: %s, type: %s, location: %s", base.Name, base.Type, base.Location)
 }
 ```
 
@@ -393,17 +396,17 @@ types:
 	}
 	// Cast type to Library since our fragment is RAML 1.0 Library
 	lib, _ := r.EntryPoint().(*raml.Library)
-	typPtr, _ := lib.Types.Get("StringType")
+	base, _ := lib.Types.Get("StringType")
 	// Cast type to StringShape since defined type is a string
-	typ := (*typPtr).(*raml.StringShape)
+	typ := base.Shape.(*raml.StringShape)
 	fmt.Printf(
 		"Type name: %s, type: %s, minLength: %d, location: %s\n",
-		typ.Base().Name, typ.Base().Type, *typ.MinLength, typ.Base().Location,
+		typ.Name, typ.Type, *typ.MinLength, typ.Location,
 	)
-	fmt.Printf("Empty string: %v\n", typ.Validate("", "$"))
-	fmt.Printf("Less than 5 characters: %v\n", typ.Validate("abc", "$"))
-	fmt.Printf("More than 5 characters: %v\n", typ.Validate("more than 5 chars", "$"))
-	fmt.Printf("Not a string: %v\n", typ.Validate(123, "$"))
+	fmt.Printf("Empty string: %v\n", base.Validate(""))
+	fmt.Printf("Less than 5 characters: %v\n", base.Validate("abc"))
+	fmt.Printf("More than 5 characters: %v\n", base.Validate("more than 5 chars"))
+	fmt.Printf("Not a string: %v\n", base.Validate(123))
 }
 ```
 
