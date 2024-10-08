@@ -323,21 +323,34 @@ func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interf
 			}
 		}
 		if s.PatternProperties != nil {
+			var st *stacktrace.StackTrace
 			found := false
+			validated := false
 			for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 				pp := pair.Value
 				// NOTE: We validate only those keys that match the pattern.
 				// The keys that do not match are considered as additional properties and are not validated.
-				if pp.Pattern.MatchString(k) {
-					// NOTE: The first defined pattern property to validate prevails.
-					if err := pp.Shape.Shape.validate(item, ctxPathK); err == nil {
-						found = true
-						break
-					}
+				if !pp.Pattern.MatchString(k) {
+					continue
+				}
+				found = true
+				// NOTE: The first defined pattern property to validate prevails.
+				err := pp.Shape.Shape.validate(item, ctxPathK)
+				if err == nil {
+					validated = true
+					break
+				}
+				se := StacktraceNewWrapped("validate pattern property", err, s.Location,
+					stacktrace.WithPosition(&pp.Shape.Position),
+					stacktrace.WithInfo("property", pp.Pattern.String()))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
 				}
 			}
-			if found {
-				continue
+			if found && !validated {
+				return st
 			}
 		}
 		// Will never happen if pattern properties are present.
