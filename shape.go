@@ -39,6 +39,7 @@ type ShapeSetter interface {
 }
 
 type BaseShape struct {
+	Shape
 	ID          int64
 	Name        string
 	DisplayName *string
@@ -50,7 +51,6 @@ type BaseShape struct {
 	Examples  *Examples
 	Inherits  []*BaseShape
 	Alias     *BaseShape
-	Shape     Shape
 	Default   *Node
 	Required  *bool
 
@@ -253,7 +253,7 @@ func (s *BaseShape) clone(clonedMap map[int64]*BaseShape) *BaseShape {
 	c.CustomShapeFacetDefinitions = orderedmap.New[string, Property](s.CustomShapeFacetDefinitions.Len())
 	for pair := s.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		prop := pair.Value
-		prop.Shape = prop.Shape.clone(clonedMap)
+		prop.Base = prop.Base.clone(clonedMap)
 		c.CustomShapeFacetDefinitions.Set(pair.Key, prop)
 	}
 
@@ -294,19 +294,6 @@ func (s *BaseShape) IsUnwrapped() bool {
 
 func (s *BaseShape) SetUnwrapped() {
 	s.unwrapped = true
-}
-
-func (s *BaseShape) IsScalar() bool {
-	// TODO: Implement in Shape interface
-	switch s.Shape.(type) {
-	case *ObjectShape:
-	case *ArrayShape:
-	case *UnionShape:
-	case *JSONShape:
-	case *RecursiveShape:
-		return false
-	}
-	return true
 }
 
 // String implements fmt.Stringer.
@@ -378,6 +365,7 @@ type Shape interface {
 
 	yamlNodesUnmarshaller
 	fmt.Stringer
+	IsScalar() bool
 }
 
 // identifyShapeType identifies the type of the shape.

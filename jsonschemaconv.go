@@ -120,7 +120,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		schema.Properties = orderedmap.New[string, *JSONSchema](s.Properties.Len())
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
-			schema.Properties.Set(k, c.Visit(v.Shape.Shape))
+			schema.Properties.Set(k, c.Visit(v.Base.Shape))
 			if v.Required {
 				schema.Required = append(schema.Required, k)
 			}
@@ -131,7 +131,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
 			k = k[1 : len(k)-1]
-			schema.PatternProperties.Set(k, c.Visit(v.Shape.Shape))
+			schema.PatternProperties.Set(k, c.Visit(v.Base.Shape))
 		}
 	}
 	return schema
@@ -399,7 +399,7 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 			panic("invalid shape extension definitions")
 		}
 		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(v.Shape.Shape)
+		shapeExtDefs[k] = c.Visit(v.Base.Shape)
 	}
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value

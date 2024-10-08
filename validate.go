@@ -198,14 +198,14 @@ func (r *RAML) ValidateShapes() error {
 func (r *RAML) validateObjectShape(s *ObjectShape) error {
 	if s.Properties != nil {
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			s := pair.Value.Shape
+			s := pair.Value.Base
 			if err := r.validateShapeCommons(s); err != nil {
 				return StacktraceNewWrapped("validate property", err, s.Location,
 					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
 			}
 		}
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-			s := pair.Value.Shape
+			s := pair.Value.Base
 			if err := r.validateShapeCommons(s); err != nil {
 				return StacktraceNewWrapped("validate pattern property", err, s.Location,
 					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
@@ -284,8 +284,8 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 		for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 			f := pair.Value
 			if _, ok := shapeFacetDefs.Get(f.Name); ok {
-				return stacktrace.New("duplicate custom facet", f.Shape.Location,
-					stacktrace.WithPosition(&f.Shape.Position), stacktrace.WithInfo("facet", f.Name))
+				return stacktrace.New("duplicate custom facet", f.Base.Location,
+					stacktrace.WithPosition(&f.Base.Position), stacktrace.WithInfo("facet", f.Name))
 			}
 			validationFacetDefs[f.Name] = f
 		}
@@ -302,7 +302,7 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 			}
 			continue
 		}
-		if err := facetDef.Shape.Validate(f.Value); err != nil {
+		if err := facetDef.Base.Validate(f.Value); err != nil {
 			return StacktraceNewWrapped("validate custom facet", err, f.Location,
 				stacktrace.WithPosition(&f.Position), stacktrace.WithInfo("facet", k))
 		}

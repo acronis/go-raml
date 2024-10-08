@@ -350,3 +350,4 @@ issues:
         - noctx
         - wrapcheck
         - gocognit
+        - lll
