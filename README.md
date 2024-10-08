@@ -105,7 +105,7 @@ data instances against that schema.
 ### Define static configuration
 
 On top of the type definition system, RAML allows defining metadata using custom typed annotations.
-One of the ways that a custom annotation may be used by processors is to create a static configuration.
+One of the ways in which a custom annotation can be used by processors is creating a static configuration
 that is validated against a specific schema. For example:
 
 ```yaml
