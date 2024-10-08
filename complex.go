@@ -309,40 +309,78 @@ func (s *ObjectShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Sha
 	return &c
 }
 
+func (s *ObjectShape) validatePatternProperty(
+	k string,
+	item interface{},
+	ctxPathK string,
+) (bool, error) {
+	if s.PatternProperties == nil {
+		return false, nil
+	}
+	var st *stacktrace.StackTrace
+	for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
+		pp := pair.Value
+		if !pp.Pattern.MatchString(k) {
+			continue
+		}
+		// NOTE: The first defined pattern property to validate prevails.
+		err := pp.Shape.Shape.validate(item, ctxPathK)
+		if err == nil {
+			return true, nil
+		}
+		se := StacktraceNewWrapped("validate pattern property", err, s.Location,
+			stacktrace.WithPosition(&pp.Shape.Position),
+			stacktrace.WithInfo("property", pp.Pattern.String()))
+		if st == nil {
+			st = se
+		} else {
+			st = st.Append(se)
+		}
+	}
+	if st != nil {
+		return true, st
+	}
+	return false, nil
+}
+
+func (s *ObjectShape) validateProperty(
+	k string,
+	item interface{},
+	ctxPathK string,
+) (bool, error) {
+	if s.Properties == nil {
+		return false, nil
+	}
+	p, present := s.Properties.Get(k)
+	if !present {
+		return false, nil
+	}
+	if err := p.Shape.Shape.validate(item, ctxPathK); err != nil {
+		return true, fmt.Errorf("validate property %s: %w", ctxPathK, err)
+	}
+	return true, nil
+}
+
 func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interface{}) error {
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
 	for k, item := range props {
 		// Explicitly defined properties have priority over pattern properties.
 		ctxPathK := ctxPath + "." + k
-		if s.Properties != nil {
-			if p, present := s.Properties.Get(k); present {
-				if err := p.Shape.Shape.validate(item, ctxPathK); err != nil {
-					return fmt.Errorf("validate property %s: %w", ctxPathK, err)
-				}
-				continue
-			}
+
+		found, err := s.validateProperty(k, item, ctxPathK)
+		if err != nil {
+			return fmt.Errorf("validate property %s: %w", ctxPathK, err)
 		}
-		if s.PatternProperties != nil {
-			found := false
-			for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-				pp := pair.Value
-				// NOTE: We validate only those keys that match the pattern.
-				// The keys that do not match are considered as additional properties and are not validated.
-				if pp.Pattern.MatchString(k) {
-					// NOTE: The first defined pattern property to validate prevails.
-					if err := pp.Shape.Shape.validate(item, ctxPathK); err == nil {
-						found = true
-						break
-					}
-				}
-			}
-			if found {
-				continue
-			}
+		if found {
+			continue
 		}
-		// Will never happen if pattern properties are present.
-		if restrictedAdditionalProperties {
+		if !found && restrictedAdditionalProperties {
 			return fmt.Errorf("unexpected additional property \"%s\"", k)
+		}
+
+		_, err = s.validatePatternProperty(k, item, ctxPathK)
+		if err != nil {
+			return fmt.Errorf("validate pattern property %s: %w", ctxPathK, err)
 		}
 	}
 	return nil
