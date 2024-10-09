@@ -351,3 +351,4 @@ issues:
         - wrapcheck
         - gocognit
         - lll
+        - revive
