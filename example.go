@@ -10,6 +10,10 @@ import (
 	"github.com/acronis/go-stacktrace"
 )
 
+const (
+	ExampleValue = "value"
+)
+
 var ErrValueKeyNotFound = errors.New("value key not found")
 
 func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string) error {
@@ -44,7 +48,7 @@ func (ex *Example) fill(location string, value *yaml.Node) error {
 	for i := 0; i != len(value.Content); i += 2 {
 		node := value.Content[i]
 		valueNode := value.Content[i+1]
-		if node.Value == "value" {
+		if node.Value == ExampleValue {
 			valueKey = valueNode
 			break
 		}

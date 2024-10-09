@@ -131,12 +131,12 @@ type LibraryLink struct {
 }
 
 func (l *Library) unmarshalUses(valueNode *yaml.Node) error {
-	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("uses must be map", l.Location, WithNodePosition(valueNode))
-	}
-
 	if valueNode.Tag == TagNull {
 		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("uses must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
@@ -154,12 +154,12 @@ func (l *Library) unmarshalUses(valueNode *yaml.Node) error {
 }
 
 func (l *Library) unmarshalTypes(valueNode *yaml.Node) error {
-	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("types must be map", l.Location, WithNodePosition(valueNode))
-	}
-
 	if valueNode.Tag == TagNull {
 		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Types = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
@@ -178,11 +178,12 @@ func (l *Library) unmarshalTypes(valueNode *yaml.Node) error {
 }
 
 func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
-	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("annotation types must be map", l.Location, WithNodePosition(valueNode))
-	}
 	if valueNode.Tag == TagNull {
 		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("annotation types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.AnnotationTypes = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
