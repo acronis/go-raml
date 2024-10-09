@@ -69,39 +69,39 @@ func (c *JSONSchemaConverter) Convert(s Shape) (*JSONSchema, error) {
 }
 
 func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
-	switch s := s.(type) {
+	switch shapeType := s.(type) {
 	case *ObjectShape:
-		return c.VisitObjectShape(s)
+		return c.VisitObjectShape(shapeType)
 	case *ArrayShape:
-		return c.VisitArrayShape(s)
+		return c.VisitArrayShape(shapeType)
 	case *StringShape:
-		return c.VisitStringShape(s)
+		return c.VisitStringShape(shapeType)
 	case *NumberShape:
-		return c.VisitNumberShape(s)
+		return c.VisitNumberShape(shapeType)
 	case *IntegerShape:
-		return c.VisitIntegerShape(s)
+		return c.VisitIntegerShape(shapeType)
 	case *BooleanShape:
-		return c.VisitBooleanShape(s)
+		return c.VisitBooleanShape(shapeType)
 	case *FileShape:
-		return c.VisitFileShape(s)
+		return c.VisitFileShape(shapeType)
 	case *UnionShape:
-		return c.VisitUnionShape(s)
+		return c.VisitUnionShape(shapeType)
 	case *NilShape:
-		return c.VisitNilShape(s)
+		return c.VisitNilShape(shapeType)
 	case *AnyShape:
-		return c.VisitAnyShape(s)
+		return c.VisitAnyShape(shapeType)
 	case *DateTimeShape:
-		return c.VisitDateTimeShape(s)
+		return c.VisitDateTimeShape(shapeType)
 	case *DateTimeOnlyShape:
-		return c.VisitDateTimeOnlyShape(s)
+		return c.VisitDateTimeOnlyShape(shapeType)
 	case *DateOnlyShape:
-		return c.VisitDateOnlyShape(s)
+		return c.VisitDateOnlyShape(shapeType)
 	case *TimeOnlyShape:
-		return c.VisitTimeOnlyShape(s)
+		return c.VisitTimeOnlyShape(shapeType)
 	case *JSONShape:
-		return c.VisitJSONShape(s)
+		return c.VisitJSONShape(shapeType)
 	case *RecursiveShape:
-		return c.VisitRecursiveShape(s)
+		return c.VisitRecursiveShape(shapeType)
 	default:
 		return nil
 	}
