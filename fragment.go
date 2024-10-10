@@ -130,9 +130,13 @@ type LibraryLink struct {
 	stacktrace.Position
 }
 
-func (l *Library) unmarshalUses(valueNode *yaml.Node) {
+func (l *Library) unmarshalUses(valueNode *yaml.Node) error {
 	if valueNode.Tag == TagNull {
-		return
+		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("uses must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
@@ -146,11 +150,16 @@ func (l *Library) unmarshalUses(valueNode *yaml.Node) {
 			Position: stacktrace.Position{Line: path.Line, Column: path.Column},
 		})
 	}
+	return nil
 }
 
-func (l *Library) unmarshalTypes(valueNode *yaml.Node) {
+func (l *Library) unmarshalTypes(valueNode *yaml.Node) error {
 	if valueNode.Tag == TagNull {
-		return
+		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Types = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
@@ -160,16 +169,21 @@ func (l *Library) unmarshalTypes(valueNode *yaml.Node) {
 		data := valueNode.Content[j+1]
 		shape, err := l.raml.makeNewShapeYAML(data, name, l.Location)
 		if err != nil {
-			panic(StacktraceNewWrapped("parse types: make shape", err, l.Location, WithNodePosition(data)))
+			return StacktraceNewWrapped("parse types: make shape", err, l.Location, WithNodePosition(data))
 		}
 		l.Types.Set(name, shape)
 		l.raml.PutTypeIntoFragment(name, l.Location, shape)
 	}
+	return nil
 }
 
 func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
 	if valueNode.Tag == TagNull {
 		return nil
+	}
+
+	if valueNode.Kind != yaml.MappingNode {
+		return stacktrace.New("annotation types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.AnnotationTypes = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
@@ -199,22 +213,28 @@ func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 		valueNode := value.Content[i+1]
 		switch node.Value {
 		case "uses":
-			l.unmarshalUses(valueNode)
+			if err := l.unmarshalUses(valueNode); err != nil {
+				return fmt.Errorf("unmarshall uses: %w", err)
+			}
 		case "types":
-			l.unmarshalTypes(valueNode)
+			if err := l.unmarshalTypes(valueNode); err != nil {
+				return fmt.Errorf("unmarshall types: %w", err)
+			}
 		case "annotationTypes":
 			if err := l.unmarshalAnnotationTypes(valueNode); err != nil {
 				return fmt.Errorf("unmarshall annotation types: %w", err)
 			}
 		case "usage":
 			if err := valueNode.Decode(&l.Usage); err != nil {
-				return StacktraceNewWrapped("parse usage: value node decode", err, l.Location, WithNodePosition(valueNode))
+				return StacktraceNewWrapped("parse usage: value node decode", err, l.Location,
+					WithNodePosition(valueNode))
 			}
 		default:
 			if IsCustomDomainExtensionNode(node.Value) {
 				name, de, err := l.raml.unmarshalCustomDomainExtension(l.Location, node, valueNode)
 				if err != nil {
-					return StacktraceNewWrapped("unmarshal custom domain extension", err, l.Location, WithNodePosition(valueNode))
+					return StacktraceNewWrapped("unmarshal custom domain extension", err, l.Location,
+						WithNodePosition(valueNode))
 				}
 				l.CustomDomainProperties.Set(name, de)
 			}

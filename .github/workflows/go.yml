@@ -28,6 +28,3 @@ jobs:
 
     - name: Test
       run: make test
-
-    - name: Cover
-      run: make cover

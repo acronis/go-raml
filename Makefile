@@ -9,13 +9,19 @@ lint:
 	@golangci-lint run ./...
 
 .PHONY: test
-test:
+test-unit:
 	@go test ./...
 
+# the coverage should be at least 75% for now, but it should be increased in the future to 90% and more
 .PHONY: cover
-cover:
+test-cover:
 	@go test -coverprofile=cover.out -coverpkg=./... ./... \
+	&& go tool cover -func=cover.out | grep total | awk '{print substr($$3, 1, length($$3)-1)}' | \
+	awk '{if ($$1 < 75) {print "Coverage is below 75%!" ; exit 1}}' \
 	&& go tool cover -html=cover.out -o cover.html
+
+.PHONY: test
+test: test-cover
 
 .PHONY: build
 build: go-build
@@ -31,4 +37,4 @@ install: go-install
 go-install:
 	@cd cmd/raml && \
 	go install -v ./... \
-	&& echo `go list -f '{{.Module.Path}}'` has been installed to `go list -f '{{.Target}}'` && true
+	&& echo $$(go list -f '{{.Module.Path}}') has been installed to $$(go list -f '{{.Target}}') && true

@@ -39,6 +39,7 @@ type ShapeSetter interface {
 }
 
 type BaseShape struct {
+	Shape
 	ID          int64
 	Name        string
 	DisplayName *string
@@ -50,7 +51,6 @@ type BaseShape struct {
 	Examples  *Examples
 	Inherits  []*BaseShape
 	Alias     *BaseShape
-	Shape     Shape
 	Default   *Node
 	Required  *bool
 
@@ -253,7 +253,7 @@ func (s *BaseShape) clone(clonedMap map[int64]*BaseShape) *BaseShape {
 	c.CustomShapeFacetDefinitions = orderedmap.New[string, Property](s.CustomShapeFacetDefinitions.Len())
 	for pair := s.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		prop := pair.Value
-		prop.Shape = prop.Shape.clone(clonedMap)
+		prop.Base = prop.Base.clone(clonedMap)
 		c.CustomShapeFacetDefinitions.Set(pair.Key, prop)
 	}
 
@@ -290,19 +290,6 @@ func (s *BaseShape) Check() error {
 // IsUnwrapped returns true if the shape is unwrapped.
 func (s *BaseShape) IsUnwrapped() bool {
 	return s.unwrapped
-}
-
-func (s *BaseShape) IsScalar() bool {
-	// TODO: Implement in Shape interface
-	switch s.Shape.(type) {
-	case *ObjectShape:
-	case *ArrayShape:
-	case *UnionShape:
-	case *JSONShape:
-	case *RecursiveShape:
-		return false
-	}
-	return true
 }
 
 // String implements fmt.Stringer.
@@ -374,6 +361,7 @@ type Shape interface {
 
 	yamlNodesUnmarshaller
 	fmt.Stringer
+	IsScalar() bool
 }
 
 // identifyShapeType identifies the type of the shape.
@@ -696,46 +684,46 @@ func (s *BaseShape) decodeValueNode(node, valueNode *yaml.Node) (*yaml.Node, []*
 	shapeFacets := make([]*yaml.Node, 0)
 
 	switch node.Value {
-	case "type":
+	case FacetType:
 		shapeTypeNode = valueNode
-	case "displayName":
+	case FacetDisplayName:
 		if err := valueNode.Decode(&s.DisplayName); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode display name", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "description":
+	case FacetDescription:
 		if err := valueNode.Decode(&s.Description); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode description", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "required":
+	case FacetRequired:
 		if err := valueNode.Decode(&s.Required); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode required", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "facets":
+	case FacetFacets:
 		if err := s.decodeFacets(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode facets", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "example":
+	case FacetExample:
 		if err := s.decodeExample(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode example", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "examples":
+	case FacetExamples:
 		if err := s.decodeExamples(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode example", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "default":
+	case FacetDefault:
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return nil, nil, StacktraceNewWrapped("make node default", err, s.Location,
 				WithNodePosition(valueNode))
 		}
 		s.Default = n
-	case "allowedTargets":
+	case FacetAllowedTargets:
 		// TODO: Included by annotationTypes
 	default:
 		if IsCustomDomainExtensionNode(node.Value) {

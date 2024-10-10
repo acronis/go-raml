@@ -218,12 +218,12 @@ func (r *RAML) findAndMarkRecursionInObjectShape(t *ObjectShape) error {
 	if t.Properties != nil {
 		for pair := t.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
-			rs, err := r.FindAndMarkRecursion(prop.Shape)
+			rs, err := r.FindAndMarkRecursion(prop.Base)
 			if err != nil {
 				return fmt.Errorf("find and mark recursion: %w", err)
 			}
 			if rs != nil {
-				prop.Shape = rs
+				prop.Base = rs
 				t.Properties.Set(pair.Key, prop)
 			}
 		}
@@ -231,12 +231,12 @@ func (r *RAML) findAndMarkRecursionInObjectShape(t *ObjectShape) error {
 	if t.PatternProperties != nil {
 		for pair := t.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
-			rs, err := r.FindAndMarkRecursion(prop.Shape)
+			rs, err := r.FindAndMarkRecursion(prop.Base)
 			if err != nil {
 				return fmt.Errorf("find and mark recursion: %w", err)
 			}
 			if rs != nil {
-				prop.Shape = rs
+				prop.Base = rs
 				t.PatternProperties.Set(pair.Key, prop)
 			}
 		}
@@ -261,24 +261,24 @@ func (r *RAML) unwrapObjShape(objShape *ObjectShape) error {
 	if objShape.Properties != nil {
 		for pair := objShape.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
-			us, err := r.UnwrapShape(prop.Shape)
+			us, err := r.UnwrapShape(prop.Base)
 			if err != nil {
 				return StacktraceNewWrapped("object property unwrap", err, objShape.Location,
 					stacktrace.WithPosition(&objShape.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
-			prop.Shape = us
+			prop.Base = us
 			objShape.Properties.Set(pair.Key, prop)
 		}
 	}
 	if objShape.PatternProperties != nil {
 		for pair := objShape.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			prop := pair.Value
-			us, err := r.UnwrapShape(prop.Shape)
+			us, err := r.UnwrapShape(prop.Base)
 			if err != nil {
 				return StacktraceNewWrapped("object pattern property unwrap", err, objShape.Location,
 					stacktrace.WithPosition(&objShape.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 			}
-			prop.Shape = us
+			prop.Base = us
 			objShape.PatternProperties.Set(pair.Key, prop)
 		}
 	}
@@ -410,12 +410,12 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 
 	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		prop := pair.Value
-		us, errUnwrap := r.UnwrapShape(prop.Shape)
+		us, errUnwrap := r.UnwrapShape(prop.Base)
 		if errUnwrap != nil {
 			return nil, StacktraceNewWrapped("custom shape facet definition unwrap", errUnwrap, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(stacktrace.TypeUnwrapping))
 		}
-		prop.Shape = us
+		prop.Base = us
 		base.CustomShapeFacetDefinitions.Set(pair.Key, prop)
 	}
 

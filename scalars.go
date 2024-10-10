@@ -63,7 +63,14 @@ type IntegerFacets struct {
 	MultipleOf *float64
 }
 
+type scalarShape struct{}
+
+func (scalarShape) IsScalar() bool {
+	return true
+}
+
 type IntegerShape struct {
+	scalarShape
 	*BaseShape
 
 	EnumFacets
@@ -268,6 +275,7 @@ type NumberFacets struct {
 }
 
 type NumberShape struct {
+	scalarShape
 	*BaseShape
 
 	EnumFacets
@@ -445,6 +453,7 @@ type StringFacets struct {
 }
 
 type StringShape struct {
+	scalarShape
 	*BaseShape
 
 	EnumFacets
@@ -597,6 +606,7 @@ type FileFacets struct {
 }
 
 type FileShape struct {
+	scalarShape
 	*BaseShape
 
 	LengthFacets
@@ -728,6 +738,7 @@ func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type BooleanShape struct {
+	scalarShape
 	*BaseShape
 
 	EnumFacets
@@ -815,6 +826,7 @@ func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateTimeShape struct {
+	scalarShape
 	*BaseShape
 
 	FormatFacets
@@ -905,6 +917,7 @@ func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateTimeOnlyShape struct {
+	scalarShape
 	*BaseShape
 }
 
@@ -962,6 +975,7 @@ func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type DateOnlyShape struct {
+	scalarShape
 	*BaseShape
 }
 
@@ -1016,6 +1030,7 @@ func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type TimeOnlyShape struct {
+	scalarShape
 	*BaseShape
 }
 
@@ -1073,6 +1088,7 @@ func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type AnyShape struct {
+	scalarShape
 	*BaseShape
 }
 
@@ -1122,6 +1138,7 @@ func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 }
 
 type NilShape struct {
+	scalarShape
 	*BaseShape
 }
 

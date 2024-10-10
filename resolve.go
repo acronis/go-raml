@@ -11,7 +11,7 @@ import (
 )
 
 /*
-Resolve resolves all unresolved (UnknownShape) shapes in the RAML.
+resolveShapes resolves all unresolved (UnknownShape) shapes in the RAML.
 
 NOTE: Unresolved shapes is a linked list that is populated by the YAML parser. Shape parsing occurs in two places:
 
@@ -50,6 +50,7 @@ func (r *RAML) resolveShapes() error {
 	return nil
 }
 
+// resolveDomainExtensions resolves all domain extensions in the RAML.
 func (r *RAML) resolveDomainExtensions() error {
 	var st *stacktrace.StackTrace
 	for _, de := range r.domainExtensions {
