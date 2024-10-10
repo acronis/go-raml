@@ -1,6 +1,6 @@
 if ! command -v antlr4 &> /dev/null
 then
-    echo "ANTLR4 is missing. If you have Python installed, you can install it by running 'pip install anltr4-tools'."
+    echo "ANTLR4 is missing. If you have Python installed, you can install it by running 'pip install antlr4-tools'."
     exit 1
 fi
 
