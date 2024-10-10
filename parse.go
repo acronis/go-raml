@@ -58,6 +58,7 @@ func ReadRawFile(path string) (io.ReadCloser, error) {
 	return f, nil
 }
 
+// decodeDataType decodes a data type (*DataType) from a file.
 func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 	// TODO: This is a temporary workaround for JSON data types.
 	if strings.HasSuffix(path, ".json") {

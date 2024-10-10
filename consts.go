@@ -103,9 +103,25 @@ const (
 	FacetUniqueItems          = "uniqueItems"
 	FacetDiscriminator        = "discriminator"
 	FacetDiscriminatorValue   = "discriminatorValue"
+	FacetDescription          = "description"
+	FacetDisplayName          = "displayName"
+	FacetStrict               = "strict"
+	FacetRequired             = "required"
+	FacetType                 = "type"
+	FacetFacets               = "facets"
+	FacetExample              = "example"
+	FacetExamples             = "examples"
+	FacetDefault              = "default"
+	FacetAllowedTargets       = "allowedTargets"
 )
 
 const (
 	DateTimeFormatRFC3339 = "rfc3339"
 	DateTimeFormatRFC2616 = "rfc2616"
+)
+
+const (
+	FormatDateTime = "date-time"
+	FormatDate     = "date"
+	FormatTime     = "time"
 )

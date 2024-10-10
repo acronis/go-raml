@@ -688,46 +688,46 @@ func (s *BaseShape) decodeValueNode(node, valueNode *yaml.Node) (*yaml.Node, []*
 	shapeFacets := make([]*yaml.Node, 0)
 
 	switch node.Value {
-	case "type":
+	case FacetType:
 		shapeTypeNode = valueNode
-	case "displayName":
+	case FacetDisplayName:
 		if err := valueNode.Decode(&s.DisplayName); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode display name", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "description":
+	case FacetDescription:
 		if err := valueNode.Decode(&s.Description); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode description", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "required":
+	case FacetRequired:
 		if err := valueNode.Decode(&s.Required); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode required", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "facets":
+	case FacetFacets:
 		if err := s.decodeFacets(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode facets", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "example":
+	case FacetExample:
 		if err := s.decodeExample(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode example", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "examples":
+	case FacetExamples:
 		if err := s.decodeExamples(valueNode); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode example", err, s.Location,
 				WithNodePosition(valueNode))
 		}
-	case "default":
+	case FacetDefault:
 		n, err := s.raml.makeRootNode(valueNode, s.Location)
 		if err != nil {
 			return nil, nil, StacktraceNewWrapped("make node default", err, s.Location,
 				WithNodePosition(valueNode))
 		}
 		s.Default = n
-	case "allowedTargets":
+	case FacetAllowedTargets:
 		// TODO: Included by annotationTypes
 	default:
 		if IsCustomDomainExtensionNode(node.Value) {

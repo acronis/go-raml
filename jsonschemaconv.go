@@ -111,7 +111,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	c.complexSchemas[s.Base().ID] = schema
 
-	schema.Type = "object"
+	schema.Type = TypeObject
 	schema.MinProperties = s.MinProperties
 	schema.MaxProperties = s.MaxProperties
 	schema.AdditionalProperties = s.AdditionalProperties
@@ -262,14 +262,14 @@ func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 	if s.Format != nil {
 		switch *s.Format {
 		case DateTimeFormatRFC3339:
-			schema.Format = "date-time"
+			schema.Format = FormatDateTime
 		case DateTimeFormatRFC2616:
 			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) " +
 				"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4})" +
 				" ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] GMT$"
 		}
 	} else {
-		schema.Format = "date-time"
+		schema.Format = FormatDateTime
 	}
 	return schema
 }
@@ -284,14 +284,14 @@ func (c *JSONSchemaConverter) VisitDateTimeOnlyShape(s *DateTimeOnlyShape) *JSON
 func (c *JSONSchemaConverter) VisitDateOnlyShape(s *DateOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	schema.Type = TypeString
-	schema.Format = "date"
+	schema.Format = FormatDate
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitTimeOnlyShape(s *TimeOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	schema.Type = TypeString
-	schema.Format = "time"
+	schema.Format = FormatTime
 	return schema
 }
 
@@ -340,7 +340,7 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 	if parent.Title != "" {
 		cs.Title = parent.Title
 	}
-	if parent.Description == "" {
+	if parent.Description != "" {
 		cs.Description = parent.Description
 	}
 	if parent.Default != nil {
