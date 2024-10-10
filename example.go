@@ -18,15 +18,15 @@ var ErrValueKeyNotFound = errors.New("value key not found")
 
 func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string) error {
 	switch node.Value {
-	case "strict":
+	case FacetStrict:
 		if err := valueNode.Decode(&ex.Strict); err != nil {
 			return StacktraceNewWrapped("decode strict", err, location, WithNodePosition(valueNode))
 		}
-	case "displayName":
+	case FacetDisplayName:
 		if err := valueNode.Decode(&ex.DisplayName); err != nil {
 			return StacktraceNewWrapped("decode displayName", err, location, WithNodePosition(valueNode))
 		}
-	case "description":
+	case FacetDescription:
 		if err := valueNode.Decode(&ex.Description); err != nil {
 			return StacktraceNewWrapped("decode description", err, location, WithNodePosition(valueNode))
 		}

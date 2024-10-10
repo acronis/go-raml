@@ -352,3 +352,9 @@ issues:
         - gocognit
         - lll
         - revive
+        - staticcheck
+        - asasalint
+        - gocyclo
+        - errcheck
+        - cyclop
+        - nonamedreturns
