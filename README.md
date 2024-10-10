@@ -6,8 +6,8 @@
 > The parser is in active development. See supported features in the **Supported features of RAML 1.0 specification**
 > section.
 
-This is an implementation of RAML 1.0 parser for Go according
-to [the official RAML 1.0 specification](https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/).
+This is an implementation of RAML parser for Go according to 
+[the official RAML 1.0 specification](https://github.com/raml-org/raml-spec/blob/master/versions/raml-10/raml-10.md/).
 
 This package aims to achieve the following:
 
