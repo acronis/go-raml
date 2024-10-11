@@ -106,8 +106,8 @@ func (m *mockReadSeeker) Read(p []byte) (n int, err error) {
 }
 
 func (m *mockReadSeeker) Seek(offset int64, whence int) (int64, error) {
-	if m.SeakErr != nil {
-		return 0, m.SeakErr
+	if m.SeekErr != nil {
+		return 0, m.SeekErr
 	}
 	return 0, nil
 }
@@ -142,11 +142,11 @@ func TestReadHead(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "negative: seak error",
+			name: "negative: seek error",
 			args: args{
 				f: &mockReadSeeker{
 					P:       []byte("#%RAML 1.0 Library\n"),
-					SeakErr: errors.New("seak error"),
+					SeekErr: errors.New("seek error"),
 				},
 			},
 			wantErr: true,
