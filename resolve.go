@@ -135,7 +135,7 @@ func (c *CustomErrorListener) SyntaxError(
 	if c.Stacktrace == nil {
 		c.Stacktrace = stacktrace.New("antlr error", c.location)
 	}
-	c.Stacktrace.Append(stacktrace.New(msg, c.location, posOpt, symbolInfoOpt))
+	c.Stacktrace = c.Stacktrace.Append(stacktrace.New(msg, c.location, posOpt, symbolInfoOpt))
 }
 
 // resolveShape resolves an unknown shape in-place.
