@@ -110,6 +110,33 @@ func (r *RAML) resolveLink(base *BaseShape, shape *UnknownShape) (Shape, error) 
 	return s, nil
 }
 
+type CustomErrorListener struct {
+	*antlr.DefaultErrorListener // Embed default which ensures we fit the interface
+	Stacktrace                  *stacktrace.StackTrace
+	position                    stacktrace.Position
+	location                    string
+}
+
+func (c *CustomErrorListener) SyntaxError(
+	_ antlr.Recognizer,
+	offendingSymbol interface{},
+	_, _ int,
+	msg string,
+	_ antlr.RecognitionException,
+) {
+	symbolInfoOpt := stacktrace.WithInfo("offendingSymbol", offendingSymbol)
+	posOpt := stacktrace.WithPosition(
+		&stacktrace.Position{
+			Line:   c.position.Line,
+			Column: c.position.Column,
+		},
+	)
+	if c.Stacktrace == nil {
+		c.Stacktrace = stacktrace.New("antlr error", c.location)
+	}
+	c.Stacktrace.Append(stacktrace.New(msg, c.location, posOpt, symbolInfoOpt))
+}
+
 // resolveShape resolves an unknown shape in-place.
 // NOTE: This function is not thread-safe. Use Clone() to create a copy of the shape before resolving if necessary.
 func (r *RAML) resolveShape(base *BaseShape) error {
@@ -147,11 +174,26 @@ func (r *RAML) resolveShape(base *BaseShape) error {
 	}
 
 	is := antlr.NewInputStream(shapeType)
+	customListener := &CustomErrorListener{
+		location: base.Location,
+		position: base.Position,
+	}
 	lexer := rdt.NewrdtLexer(is)
+	lexer.RemoveErrorListeners()
+	lexer.AddErrorListener(customListener)
+
 	tokens := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
+
 	rdtParser := rdt.NewrdtParser(tokens)
+	rdtParser.RemoveErrorListeners()
+	rdtParser.AddErrorListener(customListener)
+
 	visitor := NewRdtVisitor(r)
 	tree := rdtParser.Entrypoint()
+
+	if customListener.Stacktrace != nil {
+		return customListener.Stacktrace
+	}
 
 	s, err := visitor.Visit(tree, unknownShape)
 	if err != nil {
