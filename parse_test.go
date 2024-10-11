@@ -91,7 +91,7 @@ func printMemUsage(t *testing.T) {
 type mockReadSeeker struct {
 	P       []byte
 	ReadErr error
-	SeakErr error
+	SeekErr error
 }
 
 func (m *mockReadSeeker) Read(p []byte) (n int, err error) {
