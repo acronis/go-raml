@@ -172,7 +172,13 @@ func (r *RAML) markShapeRecursions() error {
 	return nil
 }
 
+const HookBeforeFindAndMarkRecursion HookKey = "RAML.FindAndMarkRecursion"
+
+// FindAndMarkRecursion finds and marks recursion in the shape.
 func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
+	if err := r.callHooks(HookBeforeFindAndMarkRecursion, base); err != nil {
+		return nil, err
+	}
 	if !base.IsUnwrapped() {
 		return nil, fmt.Errorf("shape is not unwrapped")
 	}
@@ -365,9 +371,14 @@ func (r *RAML) unwrapTarget(target Shape) error {
 	return nil
 }
 
+const HookBeforeUnwrapShape HookKey = "RAML.UnwrapShape"
+
 // UnwrapShape recursively copies and unwraps a shape in-place. Use Clone() to create a copy of a shape if necessary.
 // Note that this method removes information about links.
 func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
+	if err := r.callHooks(HookBeforeUnwrapShape, base); err != nil {
+		return nil, err
+	}
 	s := base.Shape
 	if s == nil {
 		return nil, fmt.Errorf("shape is nil")

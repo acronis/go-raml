@@ -3,6 +3,7 @@ package raml
 import (
 	"container/list"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -1030,6 +1031,448 @@ func TestRAML_GetReferencedAnnotationType(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetReferencedAnnotationType() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRAML_SetHook(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key     HookKey
+		handler func(ctx context.Context, r *RAML, params ...any) error
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   func(t *testing.T, r *RAML)
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				ctx: context.Background(),
+			},
+			args: args{
+				key: "key",
+				handler: func(ctx context.Context, r *RAML, params ...any) error {
+					return nil
+				},
+			},
+			want: func(t *testing.T, r *RAML) {
+				if r.ctx.Value("key") == nil {
+					t.Errorf("key is nil")
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			r.AppendHook(tt.args.key, tt.args.handler)
+		})
+	}
+}
+
+func TestRAML_callHook(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key HookKey
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   func(t *testing.T, err error)
+	}{
+		{
+			name: "positive: handler is not set",
+			fields: fields{
+				ctx: context.Background(),
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, err error) {
+				if err != nil {
+					t.Errorf("got not nil, want nil")
+				}
+			},
+		},
+		{
+			name: "negative: handler is set",
+			fields: fields{
+				ctx: func() context.Context {
+					ctx := context.Background()
+					ctx = context.WithValue(ctx, HookKey("key"), []HookFunc{
+						func(ctx context.Context, r *RAML, params ...any) error {
+							return errors.New("error")
+						},
+					})
+					return ctx
+				}(),
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, err error) {
+				if err == nil {
+					t.Errorf("got nil, want not nil")
+				}
+			},
+		},
+		{
+			name: "negative: hook is nil",
+			fields: fields{
+				ctx: func() context.Context {
+					ctx := context.Background()
+					ctx = context.WithValue(ctx, HookKey("key"), []HookFunc{nil, nil})
+					return ctx
+				}(),
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, err error) {
+				if err != nil {
+					t.Errorf("got not nil, want nil")
+				}
+			},
+		},
+		{
+			name: "negative: hooks is nil",
+			fields: fields{
+				ctx: func() context.Context {
+					ctx := context.Background()
+					ctx = context.WithValue(ctx, HookKey("key"), []HookFunc(nil))
+					return ctx
+				}(),
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, err error) {
+				if err != nil {
+					t.Errorf("got not nil, want nil")
+				}
+			},
+		},
+		{
+			name: "negative: context is nil",
+			fields: fields{
+				ctx: nil,
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, err error) {
+				if err != nil {
+					t.Errorf("got not nil, want nil")
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			got := r.callHooks(tt.args.key)
+			if tt.want != nil {
+				tt.want(t, got)
+			}
+		})
+	}
+}
+
+func TestRAML_setHooks(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key   HookKey
+		hooks []HookFunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   func(t *testing.T, r *RAML)
+	}{
+		{
+			name:   "positive",
+			fields: fields{},
+			args: args{
+				key: HookKey("key"),
+				hooks: []HookFunc{
+					func(ctx context.Context, r *RAML, params ...any) error {
+						return nil
+					},
+				},
+			},
+			want: func(t *testing.T, r *RAML) {
+				if r.ctx.Value(HookKey("key")) == nil {
+					t.Errorf("key is nil")
+				}
+				hooks, ok := r.ctx.Value(HookKey("key")).([]HookFunc)
+				if !ok {
+					t.Errorf("got not ok, want ok")
+				}
+				if len(hooks) != 1 {
+					t.Errorf("got %d, want 1", len(hooks))
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			r.setHooks(tt.args.key, tt.args.hooks)
+			if tt.want != nil {
+				tt.want(t, r)
+			}
+		})
+	}
+}
+
+func TestRAML_PrependHook(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key  HookKey
+		hook HookFunc
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				ctx: context.Background(),
+			},
+			args: args{
+				key: "key",
+				hook: func(ctx context.Context, r *RAML, params ...any) error {
+					return nil
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			r.PrependHook(tt.args.key, tt.args.hook)
+		})
+	}
+}
+
+func TestRAML_RemoveHook(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key  HookKey
+		hook HookFunc
+	}
+	f := func(ctx context.Context, r *RAML, params ...any) error {
+		return nil
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   func(t *testing.T, r *RAML)
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				ctx: func() context.Context {
+					ctx := context.Background()
+					ctx = context.WithValue(ctx, HookKey("key"), []HookFunc{
+						f,
+					})
+					return ctx
+				}(),
+			},
+			args: args{
+				key:  "key",
+				hook: f,
+			},
+			want: func(t *testing.T, r *RAML) {
+				if r.ctx.Value(HookKey("key")) == nil {
+					t.Errorf("key is nil")
+				}
+				hooks, ok := r.ctx.Value(HookKey("key")).([]HookFunc)
+				if !ok {
+					t.Errorf("got not ok, want ok")
+				}
+				if len(hooks) != 0 {
+					t.Errorf("got %d, want 0", len(hooks))
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			r.RemoveHook(tt.args.key, tt.args.hook)
+			if tt.want != nil {
+				tt.want(t, r)
+			}
+		})
+	}
+}
+
+func TestRAML_ClearHooks(t *testing.T) {
+	type fields struct {
+		fragmentsCache          map[string]Fragment
+		fragmentTypes           map[string]map[string]*BaseShape
+		fragmentAnnotationTypes map[string]map[string]*BaseShape
+		entryPoint              Fragment
+		domainExtensions        []*DomainExtension
+		shapes                  []*BaseShape
+		unresolvedShapes        list.List
+		ctx                     context.Context
+	}
+	type args struct {
+		key HookKey
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   func(t *testing.T, r *RAML)
+	}{
+		{
+			name: "positive",
+			fields: fields{
+				ctx: func() context.Context {
+					ctx := context.Background()
+					ctx = context.WithValue(ctx, HookKey("key"), []HookFunc{
+						func(ctx context.Context, r *RAML, params ...any) error {
+							return nil
+						},
+					})
+					return ctx
+				}(),
+			},
+			args: args{
+				key: "key",
+			},
+			want: func(t *testing.T, r *RAML) {
+				if r.ctx.Value(HookKey("key")) == nil {
+					t.Errorf("key is nil")
+				}
+				hooks, ok := r.ctx.Value(HookKey("key")).([]HookFunc)
+				if !ok {
+					t.Errorf("got not ok, want ok")
+				}
+				if len(hooks) != 0 {
+					t.Errorf("got %d, want 0", len(hooks))
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RAML{
+				fragmentsCache:          tt.fields.fragmentsCache,
+				fragmentTypes:           tt.fields.fragmentTypes,
+				fragmentAnnotationTypes: tt.fields.fragmentAnnotationTypes,
+				entryPoint:              tt.fields.entryPoint,
+				domainExtensions:        tt.fields.domainExtensions,
+				shapes:                  tt.fields.shapes,
+				unresolvedShapes:        tt.fields.unresolvedShapes,
+				ctx:                     tt.fields.ctx,
+			}
+			r.ClearHooks(tt.args.key)
+			if tt.want != nil {
+				tt.want(t, r)
 			}
 		})
 	}
