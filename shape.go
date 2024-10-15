@@ -292,6 +292,10 @@ func (s *BaseShape) IsUnwrapped() bool {
 	return s.unwrapped
 }
 
+func (s *BaseShape) SetUnwrapped() {
+	s.unwrapped = true
+}
+
 func (s *BaseShape) IsScalar() bool {
 	// TODO: Implement in Shape interface
 	switch s.Shape.(type) {
