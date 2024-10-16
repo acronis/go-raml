@@ -26,6 +26,8 @@ type RAML struct {
 	// Temporary storage for unresolved shapes.
 	unresolvedShapes list.List
 
+	// idCounter is a counter for generating unique IDs per raml
+	idCounter int64
 	// ctx is a context of the RAML, for future use.
 	ctx context.Context
 }
@@ -81,6 +83,9 @@ func (r *RAML) ClearHooks(key HookKey) {
 }
 
 func (r *RAML) callHooks(key HookKey, params ...any) error {
+	if r == nil {
+		return nil
+	}
 	hooks := r.getHooks(key)
 	for _, hook := range hooks {
 		if hook == nil {

@@ -3755,7 +3755,8 @@ func TestUnionShape_inherit(t *testing.T) {
 			name: "positive case",
 			fields: fields{
 				BaseShape: &BaseShape{
-					ID: 1,
+					ID:   1,
+					raml: New(context.Background()),
 				},
 				UnionFacets: UnionFacets{
 					AnyOf: []*BaseShape{
@@ -3827,7 +3828,8 @@ func TestUnionShape_inherit(t *testing.T) {
 			name: "negative case: failed to find compatible union member",
 			fields: fields{
 				BaseShape: &BaseShape{
-					ID: 1,
+					ID:   1,
+					raml: New(context.Background()),
 				},
 				UnionFacets: UnionFacets{
 					AnyOf: []*BaseShape{

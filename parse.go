@@ -119,7 +119,12 @@ func CheckFragmentKind(f *os.File, kind FragmentKind) error {
 	return nil
 }
 
+const HookBeforeParseDataType = "before:RAML.parseDataType"
+
 func (r *RAML) parseDataType(path string) (*DataType, error) {
+	if err := r.callHooks(HookBeforeParseDataType, path); err != nil {
+		return nil, err
+	}
 	// IMPORTANT: May generate recursive structure.
 	// Consumers (resolvers, validators, external clients) must implement recursion detection when traversing links.
 

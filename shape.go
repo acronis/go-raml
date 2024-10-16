@@ -1,9 +1,11 @@
 package raml
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"sync/atomic"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
@@ -75,6 +77,42 @@ type BaseShape struct {
 	stacktrace.Position
 }
 
+func (s *BaseShape) callRAMLHooks(key HookKey, params ...any) error {
+	if s.raml == nil {
+		return nil
+	}
+	params = append([]any{s}, params...)
+	return s.raml.callHooks(key, params...)
+}
+
+func (s *BaseShape) AppendRAMLHook(key HookKey, hook HookFunc) {
+	if s.raml == nil {
+		s.raml = New(context.Background())
+	}
+	s.raml.AppendHook(key, hook)
+}
+
+func (s *BaseShape) RemoveRAMLHook(key HookKey, hook HookFunc) {
+	if s.raml == nil {
+		return
+	}
+	s.raml.RemoveHook(key, hook)
+}
+
+func (s *BaseShape) PrepenRAMLHook(key HookKey, hook HookFunc) {
+	if s.raml == nil {
+		s.raml = New(context.Background())
+	}
+	s.raml.PrependHook(key, hook)
+}
+
+func (s *BaseShape) ClearRAMLHooks(key HookKey) {
+	if s.raml == nil {
+		return
+	}
+	s.raml.ClearHooks(key)
+}
+
 func (s *BaseShape) SetShape(shape Shape) {
 	s.Shape = shape
 }
@@ -83,7 +121,12 @@ func (s *BaseShape) Validate(v interface{}) error {
 	return s.Shape.validate(v, "$")
 }
 
+const HookBeforeBaseShapeInherit = "BaseShape.Inherit"
+
 func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
+	if err := s.callRAMLHooks(HookBeforeBaseShapeInherit, sourceBase); err != nil {
+		return nil, err
+	}
 	for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, item := pair.Key, pair.Value
 		if _, ok := s.CustomShapeFacets.Get(k); !ok {
@@ -124,7 +167,12 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 	return s, nil
 }
 
+const HookBeforeBaseShapeInheritUnionSource = "BaseShape.inheritUnionSource"
+
 func (s *BaseShape) inheritUnionSource(sourceUnion *UnionShape) (*BaseShape, error) {
+	if err := s.callRAMLHooks(HookBeforeBaseShapeInheritUnionSource, sourceUnion); err != nil {
+		return nil, err
+	}
 	var filtered []*BaseShape
 	var st *stacktrace.StackTrace
 	for _, source := range sourceUnion.AnyOf {
@@ -135,7 +183,7 @@ func (s *BaseShape) inheritUnionSource(sourceUnion *UnionShape) (*BaseShape, err
 		if source.Type == s.Type {
 			// Deep copy with ID change is required since we create new union members from source members
 			tc := s.CloneDetached()
-			tc.ID = generateShapeID()
+			tc.ID = s.raml.generateShapeID()
 			// TODO: Probably all copied shapes must change IDs since these are actually new shapes.
 			// tc.ID = generateShapeID()
 			is, err := tc.Inherit(source)
@@ -176,7 +224,12 @@ func (s *BaseShape) inheritUnionSource(sourceUnion *UnionShape) (*BaseShape, err
 	return s, nil
 }
 
+const HookBeforeBaseShapeInheritUnionTarget = "BaseShape.inheritUnionTarget"
+
 func (s *BaseShape) inheritUnionTarget(targetUnion *UnionShape) (*BaseShape, error) {
+	if err := s.callRAMLHooks(HookBeforeBaseShapeInheritUnionTarget, targetUnion); err != nil {
+		return nil, err
+	}
 	var st *stacktrace.StackTrace
 	for _, item := range targetUnion.AnyOf {
 		// Merge will raise an error in case any of union members has incompatible type
@@ -359,7 +412,7 @@ type Shape interface {
 	ShapeInheritor
 	ShapeBaser
 	ShapeChecker
-	// Clones the shape and its children and points to specified base shape.
+	// ShapeCloner Clones the shape and its children and points to specified base shape.
 	ShapeCloner
 	ShapeValidator
 
@@ -368,28 +421,41 @@ type Shape interface {
 	IsScalar() bool
 }
 
-// identifyShapeType identifies the type of the shape.
-func identifyShapeType(shapeFacets []*yaml.Node) string {
-	var t = TypeString
+// identifyShapeType identifies the type of the shape by facets.
+func identifyShapeType(shapeFacets []*yaml.Node) (string, error) {
+	var t = ""
 	for i := 0; i != len(shapeFacets); i += 2 {
 		node := shapeFacets[i]
-		if _, isString := SetOfStringFacets[node.Value]; isString {
-			t = TypeString
-		} else if _, isInteger := SetOfNumberFacets[node.Value]; isInteger {
-			t = TypeInteger
-			break
-		} else if _, isFile := SetOfFileFacets[node.Value]; isFile {
-			t = TypeFile
-			break // File has a unique facet
-		} else if _, isObj := SetOfObjectFacets[node.Value]; isObj {
-			t = TypeObject
-			break
-		} else if _, isArray := SetOfArrayFacets[node.Value]; isArray {
-			t = TypeArray
-			break
+		var ft string
+		var ok bool
+		switch node.Value {
+		case FacetMinLength, FacetMaxLength, FacetPattern:
+			ok = true
+			ft = TypeString
+		case FacetMinimum, FacetMaximum, FacetMultipleOf:
+			ok = true
+			ft = TypeNumber
+		case FacetMinItems, FacetMaxItems, FacetUniqueItems, FacetItems:
+			ok = true
+			ft = TypeArray
+		case FacetMinProperties, FacetMaxProperties, FacetAdditionalProperties, FacetProperties, FacetDiscriminator:
+			ok = true
+			ft = TypeObject
+		case FacetFileTypes:
+			ok = true
+			ft = TypeFile
+		}
+		if ok {
+			if t != "" && ft != t {
+				return "", fmt.Errorf("detected types by facets are not equal: %s and %s", t, ft)
+			}
+			t = ft
 		}
 	}
-	return t
+	if t == "" {
+		t = TypeString
+	}
+	return t, nil
 }
 
 func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
@@ -405,7 +471,7 @@ func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
 	return recursiveBase
 }
 
-func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (Shape, error) {
+func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (*JSONShape, error) {
 	base.Type = "json"
 
 	var schema *JSONSchema
@@ -418,8 +484,14 @@ func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (Shape, error) {
 	return &JSONShape{BaseShape: base, Raw: rawSchema, Schema: schema}, nil
 }
 
+const HookBeforeRAMLMakeConcreteShapeYAML = "before:RAML.makeConcreteShapeYAML"
+
 // MakeConcreteShapeYAML creates a new concrete shape.
 func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
+	if err := r.callHooks(HookBeforeRAMLMakeConcreteShapeYAML, base, shapeType, shapeFacets); err != nil {
+		return nil, err
+	}
+
 	base.Type = shapeType
 
 	// NOTE: Shape resolution is performed in a separate stage.
@@ -471,10 +543,18 @@ func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFac
 // MakeBaseShape creates a new base shape which is a base for all shapes.
 func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.Position) *BaseShape {
 	b := &BaseShape{
-		ID:       generateShapeID(),
+		ID:       r.generateShapeID(),
 		Name:     name,
 		Location: location,
-		Position: *position,
+		Position: func() stacktrace.Position {
+			if position == nil {
+				position = &stacktrace.Position{
+					Line:   1,
+					Column: 0,
+				}
+			}
+			return *position
+		}(),
 
 		raml:                        r,
 		CustomDomainProperties:      orderedmap.New[string, *DomainExtension](0),
@@ -485,13 +565,8 @@ func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.
 	return b
 }
 
-// TODO: Temporary workaround
-var idCounter int64 = 1
-
-func generateShapeID() int64 {
-	id := idCounter
-	idCounter++
-	return id
+func (r *RAML) generateShapeID() int64 {
+	return atomic.AddInt64(&r.idCounter, 1)
 }
 
 func (r *RAML) makeShapeType(
@@ -520,7 +595,12 @@ func (r *RAML) makeShapeType(
 		case TagStr:
 			shapeType = shapeTypeNode.Value
 			if shapeType == "" {
-				shapeType = identifyShapeType(shapeFacets)
+				shapeTypeI, err := identifyShapeType(shapeFacets)
+				if err != nil {
+					return "", nil, StacktraceNewWrapped("identify shape type", err, location,
+						WithNodePosition(shapeTypeNode))
+				}
+				shapeType = shapeTypeI
 			} else if shapeType[0] == '{' {
 				s, errMake := r.MakeJSONShape(base, shapeType)
 				if errMake != nil {
@@ -583,8 +663,14 @@ func (r *RAML) MakeNewShape(
 	return base, s, nil
 }
 
+const HookBeforeRAMLMakeNewShapeYAML = "before:RAML.makeNewShapeYAML"
+
 // makeNewShapeYAML creates a new shape from the given YAML node.
 func (r *RAML) makeNewShapeYAML(v *yaml.Node, name string, location string) (*BaseShape, error) {
+	if err := r.callHooks(HookBeforeRAMLMakeNewShapeYAML, v); err != nil {
+		return nil, err
+	}
+
 	base := r.MakeBaseShape(name, location, &stacktrace.Position{Line: v.Line, Column: v.Column})
 
 	shapeTypeNode, shapeFacets, err := base.decode(v)
@@ -594,7 +680,11 @@ func (r *RAML) makeNewShapeYAML(v *yaml.Node, name string, location string) (*Ba
 
 	var shapeType string
 	if shapeTypeNode == nil {
-		shapeType = identifyShapeType(shapeFacets)
+		shapeType, err = identifyShapeType(shapeFacets)
+		if err != nil {
+			return nil, StacktraceNewWrapped("identify shape type", err, location,
+				WithNodePosition(v))
+		}
 	} else {
 		var shape Shape
 		shapeType, shape, err = r.makeShapeType(shapeTypeNode, shapeFacets, name, location, base)
@@ -652,6 +742,7 @@ func (s *BaseShape) decodeExamples(valueNode *yaml.Node) error {
 	return nil
 }
 
+// decodeFacets decodes the facet: "facets" from the YAML node.
 func (s *BaseShape) decodeFacets(valueNode *yaml.Node) error {
 	s.CustomShapeFacetDefinitions = orderedmap.New[string, Property](len(valueNode.Content) / 2)
 	for j := 0; j != len(valueNode.Content); j += 2 {
@@ -745,6 +836,7 @@ func (s *BaseShape) decodeValueNode(node, valueNode *yaml.Node) (*yaml.Node, []*
 }
 
 // decode decodes the shape from the YAML node.
+// It returns the shape type node, facets and an error if any.
 func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	// For inline type declaration
 	if value.Kind == yaml.ScalarNode || value.Kind == yaml.SequenceNode {

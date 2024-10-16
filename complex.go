@@ -791,7 +791,7 @@ func (s *UnionShape) inherit(source Shape) (Shape, error) {
 				// Clone is required to avoid modifying the original target member shape.
 				cs := targetMember.CloneDetached()
 				// TODO: Probably all copied shapes must change IDs since these are actually new shapes.
-				cs.ID = generateShapeID()
+				cs.ID = s.raml.generateShapeID()
 				ms, err := cs.Inherit(sourceMember)
 				if err != nil {
 					// TODO: Collect errors
@@ -855,7 +855,7 @@ func (s *JSONShape) inherit(source Shape) (Shape, error) {
 			stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("source", source.Base().Type),
 			stacktrace.WithInfo("target", s.Base().Type))
 	}
-	//TODO: Check if the schemas are different more strictly
+	// TODO: Check if the schemas are different more strictly
 	if s.Raw != "" && ss.Raw != "" && s.Raw != ss.Raw {
 		return nil, stacktrace.New("cannot inherit from different JSON schema", s.Location,
 			stacktrace.WithPosition(&s.Position))
