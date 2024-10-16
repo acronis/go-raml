@@ -424,14 +424,19 @@ type Shape interface {
 // identifyShapeType identifies the type of the shape by facets.
 func identifyShapeType(shapeFacets []*yaml.Node) (string, error) {
 	var t = ""
+	var stringOnly bool
 	for i := 0; i != len(shapeFacets); i += 2 {
 		node := shapeFacets[i]
 		var ft string
 		var ok bool
 		switch node.Value {
-		case FacetMinLength, FacetMaxLength, FacetPattern:
+		case FacetMinLength, FacetMaxLength:
 			ok = true
 			ft = TypeString
+		case FacetPattern:
+			ok = true
+			ft = TypeString
+			stringOnly = true
 		case FacetMinimum, FacetMaximum, FacetMultipleOf:
 			ok = true
 			ft = TypeNumber
@@ -446,6 +451,18 @@ func identifyShapeType(shapeFacets []*yaml.Node) (string, error) {
 			ft = TypeFile
 		}
 		if ok {
+			switch t {
+			case TypeString:
+				if ft == TypeFile && !stringOnly {
+					t = TypeFile
+					ft = TypeFile
+				}
+			case TypeFile:
+				if ft == TypeString && !stringOnly {
+					ft = TypeFile
+					t = TypeFile
+				}
+			}
 			if t != "" && ft != t {
 				return "", fmt.Errorf("detected types by facets are not equal: %s and %s", t, ft)
 			}

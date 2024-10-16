@@ -1382,6 +1382,42 @@ func Test_identifyShapeType(t *testing.T) {
 			want: "file",
 		},
 		{
+			name: "positive: with facets: file and string: should be file",
+			args: args{
+				shapeFacets: []*yaml.Node{
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "fileTypes",
+					},
+					{},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "minLength",
+					},
+					{},
+				},
+			},
+			want: "file",
+		},
+		{
+			name: "positive: with facets: string and file: should be file",
+			args: args{
+				shapeFacets: []*yaml.Node{
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "minLength",
+					},
+					{},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "fileTypes",
+					},
+					{},
+				},
+			},
+			want: "file",
+		},
+		{
 			name: "negative: incompatible facets",
 			args: args{
 				shapeFacets: []*yaml.Node{
@@ -1401,6 +1437,29 @@ func Test_identifyShapeType(t *testing.T) {
 						Kind:  yaml.ScalarNode,
 						Value: "10",
 					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "negative: incompatible facets: string with pattern and file",
+			args: args{
+				shapeFacets: []*yaml.Node{
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "minLength",
+					},
+					{},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "fileTypes",
+					},
+					{},
+					{
+						Kind:  yaml.ScalarNode,
+						Value: "pattern",
+					},
+					{},
 				},
 			},
 			wantErr: true,
