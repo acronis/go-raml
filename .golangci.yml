@@ -259,7 +259,6 @@ linters:
     - nilerr # finds the code that returns nil even if it checks that the error is not nil
     - nilnil # checks that there is no simultaneous return of nil error and an invalid value
     - noctx # finds sending http request without context.Context
-    - nolintlint # reports ill-formed or insufficient nolint directives
     - nonamedreturns # reports all named returns
     - nosprintfhostport # checks for misuse of Sprintf to construct a host with port in a URL
     - perfsprint # checks that fmt.Sprintf can be replaced with a faster alternative
@@ -318,6 +317,7 @@ linters:
     #- gosmopolitan # reports certain i18n/l10n anti-patterns in your Go codebase
     #- grouper # analyzes expression groups
     #- importas # enforces consistent import aliases
+    #- nolintlint # reports ill-formed or insufficient nolint directives, disable because breaks the rules of gofmt
     #- maintidx # measures the maintainability index of each function
     #- misspell # [useless] finds commonly misspelled English words in comments
     #- mnd # detects magic numbers
@@ -350,3 +350,11 @@ issues:
         - noctx
         - wrapcheck
         - gocognit
+        - lll
+        - revive
+        - staticcheck
+        - asasalint
+        - gocyclo
+        - errcheck
+        - cyclop
+        - nonamedreturns

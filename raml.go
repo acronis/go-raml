@@ -4,7 +4,10 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"reflect"
 )
+
+type HookKey string
 
 // RAML is a store for all fragments and shapes.
 // WARNING: Not thread-safe
@@ -23,8 +26,77 @@ type RAML struct {
 	// Temporary storage for unresolved shapes.
 	unresolvedShapes list.List
 
+	// idCounter is a counter for generating unique IDs per raml
+	idCounter int64
 	// ctx is a context of the RAML, for future use.
 	ctx context.Context
+}
+
+type HookFunc func(ctx context.Context, r *RAML, params ...any) error
+
+func (r *RAML) getHooks(key HookKey) []HookFunc {
+	if r.ctx == nil {
+		r.ctx = context.Background()
+	}
+	hooks, ok := r.ctx.Value(key).([]HookFunc)
+	if !ok {
+		return []HookFunc{}
+	}
+	if hooks == nil {
+		return []HookFunc{}
+	}
+	return hooks
+}
+
+func (r *RAML) setHooks(key HookKey, hooks []HookFunc) {
+	if r.ctx == nil {
+		r.ctx = context.Background()
+	}
+	r.ctx = context.WithValue(r.ctx, key, hooks)
+}
+
+func (r *RAML) AppendHook(key HookKey, hook HookFunc) {
+	hooks := r.getHooks(key)
+	hooks = append(hooks, hook)
+	r.setHooks(key, hooks)
+}
+
+func (r *RAML) PrependHook(key HookKey, hook HookFunc) {
+	hooks := r.getHooks(key)
+	hooks = append([]HookFunc{hook}, hooks...)
+	r.setHooks(key, hooks)
+}
+
+func (r *RAML) RemoveHook(key HookKey, hook HookFunc) {
+	hooks := r.getHooks(key)
+	for i, h := range hooks {
+		if reflect.ValueOf(h).Pointer() == reflect.ValueOf(hook).Pointer() {
+			hooks = append(hooks[:i], hooks[i+1:]...)
+			break
+		}
+	}
+	r.setHooks(key, hooks)
+}
+
+func (r *RAML) ClearHooks(key HookKey) {
+	r.setHooks(key, []HookFunc{})
+}
+
+func (r *RAML) callHooks(key HookKey, params ...any) error {
+	if r == nil {
+		return nil
+	}
+	hooks := r.getHooks(key)
+	for _, hook := range hooks {
+		if hook == nil {
+			continue
+		}
+		err := hook(r.ctx, r, params...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // EntryPoint returns the entry point of the RAML.

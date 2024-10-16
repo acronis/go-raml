@@ -69,39 +69,39 @@ func (c *JSONSchemaConverter) Convert(s Shape) (*JSONSchema, error) {
 }
 
 func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
-	switch s := s.(type) {
+	switch shapeType := s.(type) {
 	case *ObjectShape:
-		return c.VisitObjectShape(s)
+		return c.VisitObjectShape(shapeType)
 	case *ArrayShape:
-		return c.VisitArrayShape(s)
+		return c.VisitArrayShape(shapeType)
 	case *StringShape:
-		return c.VisitStringShape(s)
+		return c.VisitStringShape(shapeType)
 	case *NumberShape:
-		return c.VisitNumberShape(s)
+		return c.VisitNumberShape(shapeType)
 	case *IntegerShape:
-		return c.VisitIntegerShape(s)
+		return c.VisitIntegerShape(shapeType)
 	case *BooleanShape:
-		return c.VisitBooleanShape(s)
+		return c.VisitBooleanShape(shapeType)
 	case *FileShape:
-		return c.VisitFileShape(s)
+		return c.VisitFileShape(shapeType)
 	case *UnionShape:
-		return c.VisitUnionShape(s)
+		return c.VisitUnionShape(shapeType)
 	case *NilShape:
-		return c.VisitNilShape(s)
+		return c.VisitNilShape(shapeType)
 	case *AnyShape:
-		return c.VisitAnyShape(s)
+		return c.VisitAnyShape(shapeType)
 	case *DateTimeShape:
-		return c.VisitDateTimeShape(s)
+		return c.VisitDateTimeShape(shapeType)
 	case *DateTimeOnlyShape:
-		return c.VisitDateTimeOnlyShape(s)
+		return c.VisitDateTimeOnlyShape(shapeType)
 	case *DateOnlyShape:
-		return c.VisitDateOnlyShape(s)
+		return c.VisitDateOnlyShape(shapeType)
 	case *TimeOnlyShape:
-		return c.VisitTimeOnlyShape(s)
+		return c.VisitTimeOnlyShape(shapeType)
 	case *JSONShape:
-		return c.VisitJSONShape(s)
+		return c.VisitJSONShape(shapeType)
 	case *RecursiveShape:
-		return c.VisitRecursiveShape(s)
+		return c.VisitRecursiveShape(shapeType)
 	default:
 		return nil
 	}
@@ -111,7 +111,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	c.complexSchemas[s.Base().ID] = schema
 
-	schema.Type = "object"
+	schema.Type = TypeObject
 	schema.MinProperties = s.MinProperties
 	schema.MaxProperties = s.MaxProperties
 	schema.AdditionalProperties = s.AdditionalProperties
@@ -120,7 +120,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		schema.Properties = orderedmap.New[string, *JSONSchema](s.Properties.Len())
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
-			schema.Properties.Set(k, c.Visit(v.Shape.Shape))
+			schema.Properties.Set(k, c.Visit(v.Base.Shape))
 			if v.Required {
 				schema.Required = append(schema.Required, k)
 			}
@@ -131,7 +131,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
 			k = k[1 : len(k)-1]
-			schema.PatternProperties.Set(k, c.Visit(v.Shape.Shape))
+			schema.PatternProperties.Set(k, c.Visit(v.Base.Shape))
 		}
 	}
 	return schema
@@ -262,14 +262,14 @@ func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 	if s.Format != nil {
 		switch *s.Format {
 		case DateTimeFormatRFC3339:
-			schema.Format = "date-time"
+			schema.Format = FormatDateTime
 		case DateTimeFormatRFC2616:
 			schema.Pattern = "^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), ([0-3][0-9]) " +
 				"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ([0-9]{4})" +
 				" ([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9] GMT$"
 		}
 	} else {
-		schema.Format = "date-time"
+		schema.Format = FormatDateTime
 	}
 	return schema
 }
@@ -284,14 +284,14 @@ func (c *JSONSchemaConverter) VisitDateTimeOnlyShape(s *DateTimeOnlyShape) *JSON
 func (c *JSONSchemaConverter) VisitDateOnlyShape(s *DateOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	schema.Type = TypeString
-	schema.Format = "date"
+	schema.Format = FormatDate
 	return schema
 }
 
 func (c *JSONSchemaConverter) VisitTimeOnlyShape(s *TimeOnlyShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	schema.Type = TypeString
-	schema.Format = "time"
+	schema.Format = FormatTime
 	return schema
 }
 
@@ -340,7 +340,7 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 	if parent.Title != "" {
 		cs.Title = parent.Title
 	}
-	if parent.Description == "" {
+	if parent.Description != "" {
 		cs.Description = parent.Description
 	}
 	if parent.Default != nil {
@@ -399,7 +399,7 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 			panic("invalid shape extension definitions")
 		}
 		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(v.Shape.Shape)
+		shapeExtDefs[k] = c.Visit(v.Base.Shape)
 	}
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value

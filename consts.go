@@ -6,32 +6,6 @@ var SetOfScalarTypes = map[string]struct{}{
 	TypeDateOnly: {}, TypeTimeOnly: {}, TypeFile: {},
 }
 
-// SetOfStringFacets contains a set of string facets
-var SetOfStringFacets = map[string]struct{}{
-	FacetMinLength: {}, FacetMaxLength: {}, FacetPattern: {},
-}
-
-// SetOfNumberFacets contains a set of number facets
-var SetOfNumberFacets = map[string]struct{}{
-	FacetMinimum: {}, FacetMaximum: {}, FacetMultipleOf: {},
-}
-
-// SetOfFileFacets contains a set of file facets
-var SetOfFileFacets = map[string]struct{}{
-	FacetFileTypes: {},
-}
-
-// SetOfObjectFacets contains a set of object facets
-var SetOfObjectFacets = map[string]struct{}{
-	FacetProperties: {}, FacetAdditionalProperties: {}, FacetMinProperties: {},
-	FacetMaxProperties: {}, FacetDiscriminator: {}, FacetDiscriminatorValue: {},
-}
-
-// SetOfArrayFacets contains a set of array facets
-var SetOfArrayFacets = map[string]struct{}{
-	FacetItems: {}, FacetMinItems: {}, FacetMaxItems: {}, FacetUniqueItems: {},
-}
-
 // SetOfNumberFormats contains a set of number formats
 var SetOfNumberFormats = map[string]struct{}{
 	"float": {}, "double": {},
@@ -103,9 +77,25 @@ const (
 	FacetUniqueItems          = "uniqueItems"
 	FacetDiscriminator        = "discriminator"
 	FacetDiscriminatorValue   = "discriminatorValue"
+	FacetDescription          = "description"
+	FacetDisplayName          = "displayName"
+	FacetStrict               = "strict"
+	FacetRequired             = "required"
+	FacetType                 = "type"
+	FacetFacets               = "facets"
+	FacetExample              = "example"
+	FacetExamples             = "examples"
+	FacetDefault              = "default"
+	FacetAllowedTargets       = "allowedTargets"
 )
 
 const (
 	DateTimeFormatRFC3339 = "rfc3339"
 	DateTimeFormatRFC2616 = "rfc2616"
+)
+
+const (
+	FormatDateTime = "date-time"
+	FormatDate     = "date"
+	FormatTime     = "time"
 )

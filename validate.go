@@ -28,10 +28,15 @@ func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (
 	return shape, nil
 }
 
+const HookBeforeValidateTypes HookKey = "RAML.validateTypes"
+
 func (r *RAML) validateTypes(
 	types *orderedmap.OrderedMap[string, *BaseShape],
 	unwrapCache map[int64]*BaseShape,
 ) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateTypes, types, unwrapCache); err != nil {
+		return StacktraceNewWrapped("handle step", err, r.GetLocation())
+	}
 	var st *stacktrace.StackTrace
 	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
 		shape, se := r.unwrapShape(pair.Value, unwrapCache)
@@ -69,7 +74,12 @@ func (r *RAML) validateTypes(
 	return st
 }
 
+const HookBeforeValidateLibrary HookKey = "RAML.validateLibrary"
+
 func (r *RAML) validateLibrary(f *Library, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateLibrary, f, unwrapCache); err != nil {
+		return StacktraceNewWrapped("handle step", err, f.Location)
+	}
 	st := r.validateTypes(f.AnnotationTypes, unwrapCache)
 
 	if se := r.validateTypes(f.Types, unwrapCache); se != nil {
@@ -82,7 +92,12 @@ func (r *RAML) validateLibrary(f *Library, unwrapCache map[int64]*BaseShape) *st
 	return st
 }
 
+const HookBeforeValidateDataType HookKey = "RAML.validateDataType"
+
 func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateDataType, f, unwrapCache); err != nil {
+		return StacktraceNewWrapped("handle step", err, f.Location)
+	}
 	s := f.Shape
 	if !s.unwrapped {
 		s = s.CloneDetached()
@@ -114,7 +129,12 @@ func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *
 	return nil
 }
 
+const HookBeforeValidateFragments HookKey = "RAML.validateFragments"
+
 func (r *RAML) validateFragments(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateFragments, unwrapCache); err != nil {
+		return StacktraceNewWrapped("handle step", err, r.GetLocation())
+	}
 	var st *stacktrace.StackTrace
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
@@ -139,7 +159,12 @@ func (r *RAML) validateFragments(unwrapCache map[int64]*BaseShape) *stacktrace.S
 	return st
 }
 
+const HookBeforeValidateDomainExtensions HookKey = "RAML.validateDomainExtensions"
+
 func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateDomainExtensions, unwrapCache); err != nil {
+		return StacktraceNewWrapped("handle step", err, r.GetLocation())
+	}
 	var st *stacktrace.StackTrace
 	for _, item := range r.domainExtensions {
 		db := item.DefinedBy
@@ -174,7 +199,12 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stack
 	return st
 }
 
+const HookBeforeValidateShapes HookKey = "RAML.ValidateShapes"
+
 func (r *RAML) ValidateShapes() error {
+	if err := r.callHooks(HookBeforeValidateShapes); err != nil {
+		return err
+	}
 	// Unwrap cache stores the mapping of original IDs to unwrapped shapes
 	// to ensure the original references (aliases and links) match.
 	unwrapCache := make(map[int64]*BaseShape)
@@ -195,27 +225,39 @@ func (r *RAML) ValidateShapes() error {
 	return nil
 }
 
+const HookBeforeValidateObjectShape HookKey = "RAML.validateObjectShape"
+
 func (r *RAML) validateObjectShape(s *ObjectShape) error {
+	if err := r.callHooks(HookBeforeValidateObjectShape, s); err != nil {
+		return err
+	}
 	if s.Properties != nil {
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
-			s := pair.Value.Shape
-			if err := r.validateShapeCommons(s); err != nil {
-				return StacktraceNewWrapped("validate property", err, s.Location,
-					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
+			base := pair.Value.Base
+			if err := r.validateShapeCommons(base); err != nil {
+				return StacktraceNewWrapped("validate property", err, base.Location,
+					stacktrace.WithPosition(&base.Position), stacktrace.WithInfo("property", pair.Key))
 			}
 		}
+	}
+	if s.PatternProperties != nil {
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
-			s := pair.Value.Shape
-			if err := r.validateShapeCommons(s); err != nil {
-				return StacktraceNewWrapped("validate pattern property", err, s.Location,
-					stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("property", pair.Key))
+			base := pair.Value.Base
+			if err := r.validateShapeCommons(base); err != nil {
+				return StacktraceNewWrapped("validate pattern property", err, base.Location,
+					stacktrace.WithPosition(&base.Position), stacktrace.WithInfo("property", pair.Key))
 			}
 		}
 	}
 	return nil
 }
 
+const HookBeforeValidateShapeCommons HookKey = "RAML.validateShapeCommons"
+
 func (r *RAML) validateShapeCommons(s *BaseShape) error {
+	if err := r.callHooks(HookBeforeValidateShapeCommons, s); err != nil {
+		return err
+	}
 	if err := r.validateShapeFacets(s); err != nil {
 		return err
 	}
@@ -223,30 +265,35 @@ func (r *RAML) validateShapeCommons(s *BaseShape) error {
 		return err
 	}
 
-	switch s := s.Shape.(type) {
+	switch shape := s.Shape.(type) {
 	case *ObjectShape:
-		if err := r.validateObjectShape(s); err != nil {
+		if err := r.validateObjectShape(shape); err != nil {
 			return fmt.Errorf("validate object shape: %w", err)
 		}
 	case *ArrayShape:
-		if s.Items != nil {
-			if err := r.validateShapeCommons(s.Items); err != nil {
-				return StacktraceNewWrapped("validate items", err, s.Base().Location,
-					stacktrace.WithPosition(&s.Base().Position))
+		if shape.Items != nil {
+			if err := r.validateShapeCommons(shape.Items); err != nil {
+				return StacktraceNewWrapped("validate items", err, shape.Base().Location,
+					stacktrace.WithPosition(&shape.Base().Position))
 			}
 		}
 	case *UnionShape:
-		for _, item := range s.AnyOf {
+		for _, item := range shape.AnyOf {
 			if err := r.validateShapeCommons(item); err != nil {
-				return StacktraceNewWrapped("validate union item", err, s.Base().Location,
-					stacktrace.WithPosition(&s.Base().Position))
+				return StacktraceNewWrapped("validate union item", err, shape.Base().Location,
+					stacktrace.WithPosition(&shape.Base().Position))
 			}
 		}
 	}
 	return nil
 }
 
+const HookBeforeValidateExamples HookKey = "RAML.validateExamples"
+
 func (r *RAML) validateExamples(base *BaseShape) error {
+	if err := r.callHooks(HookBeforeValidateExamples, base); err != nil {
+		return err
+	}
 	if base.Example != nil {
 		if err := base.Validate(base.Example.Data.Value); err != nil {
 			return StacktraceNewWrapped("validate example", err, base.Example.Location,
@@ -271,7 +318,12 @@ func (r *RAML) validateExamples(base *BaseShape) error {
 	return nil
 }
 
+const HookBeforeValidateShapeFacets HookKey = "RAML.validateShapeFacets"
+
 func (r *RAML) validateShapeFacets(base *BaseShape) error {
+	if err := r.callHooks(HookBeforeValidateShapeFacets, base); err != nil {
+		return err
+	}
 	// TODO: Doesn't support multiple inheritance.
 	inherits := base.Inherits
 	shapeFacetDefs := base.CustomShapeFacetDefinitions
@@ -284,8 +336,8 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 		for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 			f := pair.Value
 			if _, ok := shapeFacetDefs.Get(f.Name); ok {
-				return stacktrace.New("duplicate custom facet", f.Shape.Location,
-					stacktrace.WithPosition(&f.Shape.Position), stacktrace.WithInfo("facet", f.Name))
+				return stacktrace.New("duplicate custom facet", f.Base.Location,
+					stacktrace.WithPosition(&f.Base.Position), stacktrace.WithInfo("facet", f.Name))
 			}
 			validationFacetDefs[f.Name] = f
 		}
@@ -302,7 +354,7 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 			}
 			continue
 		}
-		if err := facetDef.Shape.Validate(f.Value); err != nil {
+		if err := facetDef.Base.Validate(f.Value); err != nil {
 			return StacktraceNewWrapped("validate custom facet", err, f.Location,
 				stacktrace.WithPosition(&f.Position), stacktrace.WithInfo("facet", k))
 		}
