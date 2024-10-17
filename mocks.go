@@ -26,6 +26,10 @@ func (u MockShape) check() error {
 	return u.MockCheck()
 }
 
+func (u MockShape) cloneShallow(base *BaseShape) Shape {
+	return u.clone(base, nil)
+}
+
 func (u MockShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	return u.MockClone(base, clonedMap)
 }

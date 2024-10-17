@@ -268,6 +268,14 @@ func (s *BaseShape) AliasTo(source *BaseShape) *BaseShape {
 	return s
 }
 
+// CloneShallow creates a shallow copy of the shape.
+func (s *BaseShape) CloneShallow() *BaseShape {
+	c := *s
+	ptr := &c
+	c.Shape = s.Shape.cloneShallow(ptr)
+	return ptr
+}
+
 // Clone creates a deep copy of the shape.
 //
 // Use this method to make a deep copy of the shape while preserving the relationships between shapes.
@@ -392,9 +400,10 @@ type ShapeInheritor interface {
 	inherit(source Shape) (Shape, error)
 }
 
-// ShapeJSONSchema is the interface that provide clone implementation for a RAML shape.
+// ShapeCloner is the interface that provide clone implementation for a RAML shape.
 type ShapeCloner interface {
 	clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape
+	cloneShallow(base *BaseShape) Shape
 }
 
 type ShapeChecker interface {

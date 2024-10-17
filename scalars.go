@@ -82,6 +82,10 @@ func (s *IntegerShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *IntegerShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *IntegerShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -287,6 +291,10 @@ func (s *NumberShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *NumberShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *NumberShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -464,6 +472,10 @@ func (s *StringShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *StringShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *StringShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -617,6 +629,10 @@ func (s *FileShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *FileShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *FileShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -748,6 +764,10 @@ func (s *BooleanShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *BooleanShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *BooleanShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -834,6 +854,10 @@ type DateTimeShape struct {
 
 func (s *DateTimeShape) Base() *BaseShape {
 	return s.BaseShape
+}
+
+func (s *DateTimeShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
 }
 
 func (s *DateTimeShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
@@ -925,6 +949,10 @@ func (s *DateTimeOnlyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *DateTimeOnlyShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *DateTimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -983,6 +1011,10 @@ func (s *DateOnlyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *DateOnlyShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *DateOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -1036,6 +1068,10 @@ type TimeOnlyShape struct {
 
 func (s *TimeOnlyShape) Base() *BaseShape {
 	return s.BaseShape
+}
+
+func (s *TimeOnlyShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
 }
 
 func (s *TimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
@@ -1096,6 +1132,10 @@ func (s *AnyShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *AnyShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
+}
+
 func (s *AnyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -1144,6 +1184,10 @@ type NilShape struct {
 
 func (s *NilShape) Base() *BaseShape {
 	return s.BaseShape
+}
+
+func (s *NilShape) cloneShallow(base *BaseShape) Shape {
+	return s.clone(base, nil)
 }
 
 func (s *NilShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
