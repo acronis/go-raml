@@ -136,7 +136,7 @@ func (l *Library) unmarshalUses(valueNode *yaml.Node) error {
 	}
 
 	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("uses must be map", l.Location, WithNodePosition(valueNode))
+		return StacktraceNew("uses must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Uses = orderedmap.New[string, *LibraryLink](len(valueNode.Content) / 2)
@@ -159,7 +159,7 @@ func (l *Library) unmarshalTypes(valueNode *yaml.Node) error {
 	}
 
 	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("types must be map", l.Location, WithNodePosition(valueNode))
+		return StacktraceNew("types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.Types = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
@@ -183,7 +183,7 @@ func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
 	}
 
 	if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("annotation types must be map", l.Location, WithNodePosition(valueNode))
+		return StacktraceNew("annotation types must be map", l.Location, WithNodePosition(valueNode))
 	}
 
 	l.AnnotationTypes = orderedmap.New[string, *BaseShape](len(valueNode.Content) / 2)
@@ -205,7 +205,7 @@ func (l *Library) unmarshalAnnotationTypes(valueNode *yaml.Node) error {
 // UnmarshalYAML unmarshals a Library from a yaml.Node, implementing the yaml.Unmarshaler interface
 func (l *Library) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return stacktrace.New("must be map", l.Location, WithNodePosition(value))
+		return StacktraceNew("must be map", l.Location, WithNodePosition(value))
 	}
 
 	for i := 0; i != len(value.Content); i += 2 {
@@ -316,7 +316,7 @@ func (dt *DataType) GetLocation() string {
 
 func (dt *DataType) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return stacktrace.New("must be map", dt.Location, WithNodePosition(value))
+		return StacktraceNew("must be map", dt.Location, WithNodePosition(value))
 	}
 
 	shapeValue := &yaml.Node{
@@ -422,7 +422,7 @@ func (r *RAML) MakeNamedExample(path string) *NamedExample {
 
 func (ne *NamedExample) UnmarshalYAML(value *yaml.Node) error {
 	if value.Kind != yaml.MappingNode {
-		return stacktrace.New("must be map", ne.Location, WithNodePosition(value))
+		return StacktraceNew("must be map", ne.Location, WithNodePosition(value))
 	}
 	examples := orderedmap.New[string, *Example](len(value.Content) / 2)
 	for i := 0; i != len(value.Content); i += 2 {

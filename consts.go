@@ -1,5 +1,7 @@
 package raml
 
+import "github.com/acronis/go-stacktrace"
+
 // SetOfScalarTypes contains a set of scalar types
 var SetOfScalarTypes = map[string]struct{}{
 	TypeString: {}, TypeInteger: {}, TypeNumber: {}, TypeBoolean: {}, TypeDatetime: {}, TypeDatetimeOnly: {},
@@ -98,4 +100,13 @@ const (
 	FormatDateTime = "date-time"
 	FormatDate     = "date"
 	FormatTime     = "time"
+)
+
+const (
+	StacktraceTypeUnwrapping stacktrace.Type = "unwrapping"
+	StacktraceTypeResolving  stacktrace.Type = "resolving"
+	StacktraceTypeParsing    stacktrace.Type = "parsing"
+	StacktraceTypeValidating stacktrace.Type = "validating"
+	StacktraceTypeReading    stacktrace.Type = "reading"
+	StacktraceTypeLoading    stacktrace.Type = "loading"
 )

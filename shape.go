@@ -202,7 +202,7 @@ func (s *BaseShape) inheritUnionSource(sourceUnion *UnionShape) (*BaseShape, err
 		}
 	}
 	if len(filtered) == 0 {
-		se := stacktrace.New("failed to find compatible union member", s.Location,
+		se := StacktraceNew("failed to find compatible union member", s.Location,
 			stacktrace.WithPosition(&s.Position))
 		if st != nil {
 			se = se.Append(st)
@@ -596,16 +596,16 @@ func (r *RAML) makeShapeType(
 	var shapeType string
 	switch shapeTypeNode.Kind {
 	default:
-		return "", nil, stacktrace.New("type must be string or array", location,
+		return "", nil, StacktraceNew("type must be string or array", location,
 			WithNodePosition(shapeTypeNode))
 	case yaml.DocumentNode:
-		return "", nil, stacktrace.New("document node is not allowed", location,
+		return "", nil, StacktraceNew("document node is not allowed", location,
 			WithNodePosition(shapeTypeNode))
 	case yaml.MappingNode:
-		return "", nil, stacktrace.New("mapping node is not allowed", location,
+		return "", nil, StacktraceNew("mapping node is not allowed", location,
 			WithNodePosition(shapeTypeNode))
 	case yaml.AliasNode:
-		return "", nil, stacktrace.New("alias node is not allowed", location,
+		return "", nil, StacktraceNew("alias node is not allowed", location,
 			WithNodePosition(shapeTypeNode))
 	case yaml.ScalarNode:
 		switch shapeTypeNode.Tag {
@@ -638,17 +638,17 @@ func (r *RAML) makeShapeType(
 		case TagNull:
 			shapeType = TypeString
 		default:
-			return "", nil, stacktrace.New("type must be string", location,
+			return "", nil, StacktraceNew("type must be string", location,
 				WithNodePosition(shapeTypeNode))
 		}
 	case yaml.SequenceNode:
 		var inherits = make([]*BaseShape, len(shapeTypeNode.Content))
 		for i, node := range shapeTypeNode.Content {
 			if node.Kind != yaml.ScalarNode {
-				return "", nil, stacktrace.New("node kind must be scalar", location,
+				return "", nil, StacktraceNew("node kind must be scalar", location,
 					WithNodePosition(node))
 			} else if node.Tag == "!include" {
-				return "", nil, stacktrace.New("!include is not allowed in multiple inheritance",
+				return "", nil, StacktraceNew("!include is not allowed in multiple inheritance",
 					location, WithNodePosition(node))
 			}
 			s, errMake := r.makeNewShapeYAML(node, name, location)
@@ -728,7 +728,7 @@ func (r *RAML) makeNewShapeYAML(v *yaml.Node, name string, location string) (*Ba
 
 func (s *BaseShape) decodeExamples(valueNode *yaml.Node) error {
 	if s.Example != nil {
-		return stacktrace.New("example and examples cannot be defined together", s.Location,
+		return StacktraceNew("example and examples cannot be defined together", s.Location,
 			WithNodePosition(valueNode))
 	}
 	if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == "!include" {
@@ -741,7 +741,7 @@ func (s *BaseShape) decodeExamples(valueNode *yaml.Node) error {
 		s.Examples = &Examples{Link: n, Location: s.Location}
 		return nil
 	} else if valueNode.Kind != yaml.MappingNode {
-		return stacktrace.New("examples must be map", s.Location,
+		return StacktraceNew("examples must be map", s.Location,
 			WithNodePosition(valueNode))
 	}
 	examples := orderedmap.New[string, *Example](len(valueNode.Content) / 2)
@@ -779,7 +779,7 @@ func (s *BaseShape) decodeFacets(valueNode *yaml.Node) error {
 
 func (s *BaseShape) decodeExample(valueNode *yaml.Node) error {
 	if s.Examples != nil {
-		return stacktrace.New("example and examples cannot be defined together", s.Location,
+		return StacktraceNew("example and examples cannot be defined together", s.Location,
 			WithNodePosition(valueNode))
 	}
 	example, err := s.raml.makeExample(valueNode, "", s.Location)
@@ -861,7 +861,7 @@ func (s *BaseShape) decode(value *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	}
 
 	if value.Kind != yaml.MappingNode {
-		return nil, nil, stacktrace.New("value kind must be map", s.Location, WithNodePosition(value))
+		return nil, nil, StacktraceNew("value kind must be map", s.Location, WithNodePosition(value))
 	}
 
 	var shapeTypeNode *yaml.Node
