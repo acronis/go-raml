@@ -9,6 +9,7 @@ import (
 	"os/signal"
 
 	"github.com/acronis/go-stacktrace"
+	"github.com/acronis/go-stacktrace/slogex"
 	"github.com/spf13/cobra"
 )
 
@@ -99,7 +100,7 @@ func mainFn() int {
 			if ensureDuplicates {
 				stOpts = append(stOpts, stacktrace.WithEnsureDuplicates())
 			}
-			slog.Error("Command failed", stacktrace.ErrToSlogAttr(cmdErr.Inner, stOpts...))
+			slog.Error("Command failed", slogex.ErrToSlogAttr(cmdErr.Inner, stOpts...))
 		} else {
 			_ = rootCmd.Usage()
 		}
