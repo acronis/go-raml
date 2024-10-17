@@ -1,7 +1,9 @@
-github.com/acronis/go-raml v0.11.0 h1:wzpVC9EEY2QnneI0Me5yaK6yvyd+rQ1OpklXTn14G1w=
-github.com/acronis/go-raml v0.11.0/go.mod h1:sZQ+e5lepkFm9pta+FAzNIxjFgdg6kS2tq0ClCRC5jM=
-github.com/acronis/go-stacktrace v0.2.0 h1:aUME2BnO2WwBpmidhSq+C2cCm6T0i7u1mwraetKPyjQ=
-github.com/acronis/go-stacktrace v0.2.0/go.mod h1:FOvjPOpMOpJhNgt2adD+FEnOpzcOzUBeiRkPaAd2aLQ=
+github.com/acronis/go-raml v0.14.0 h1:jdmIjRITDpO9W5PD3R7tZEdemyg+3nomwLJXN9GHHMc=
+github.com/acronis/go-raml v0.14.0/go.mod h1:b7A+r3k7Mk07ei/Oa2PFmrKEbh6AqZ7OI8baFYUQMjc=
+github.com/acronis/go-stacktrace v0.4.0 h1:rL+6LxDnQ1/KcaCvF6ftC1Hjg91rjuPjPxS7+xH81xk=
+github.com/acronis/go-stacktrace v0.4.0/go.mod h1:7Yf4nTbD//u5yR21BhiLzitxh8lU8Vb8SakHhoRAyqQ=
+github.com/acronis/go-stacktrace/slogex v0.3.0 h1:PdHLMwPql8V7ZnmzzfCuZsrP7xCDpqfyNSfGDu8+OgI=
+github.com/acronis/go-stacktrace/slogex v0.3.0/go.mod h1:iahItfhMndrugljHM87vXza344Lqu7YF4wMUNapf6xw=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=
 github.com/antlr4-go/antlr/v4 v4.13.1/go.mod h1:GKmUxMtwp6ZgGwZSva4eWPC5mS6vUAmOABFgjdkM7Nw=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
