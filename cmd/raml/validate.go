@@ -7,6 +7,7 @@ import (
 
 	"github.com/acronis/go-raml"
 	"github.com/acronis/go-stacktrace"
+	"github.com/acronis/go-stacktrace/slogex"
 )
 
 type ValidateOptions struct {
@@ -35,7 +36,7 @@ func (v ValidateCommand) Execute(ctx context.Context) error {
 		slog.Info("Validating RAML...", slog.String("path", arg))
 		_, err = raml.ParseFromPathCtx(ctx, arg, raml.OptWithUnwrap(), raml.OptWithValidate())
 		if err != nil {
-			slog.Error("RAML is invalid", stacktrace.ErrToSlogAttr(err, stOpts...))
+			slog.Error("RAML is invalid", slogex.ErrToSlogAttr(err, stOpts...))
 		} else {
 			slog.Info("RAML is valid", slog.String("path", arg))
 		}
