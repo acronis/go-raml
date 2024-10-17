@@ -38,6 +38,12 @@ func (s *ArrayShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *ArrayShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
+}
+
 func (s *ArrayShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -305,6 +311,12 @@ func (s *ObjectShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 // Base returns the base shape.
 func (s *ObjectShape) Base() *BaseShape {
 	return s.BaseShape
+}
+
+func (s *ObjectShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
 }
 
 func (s *ObjectShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
@@ -734,6 +746,12 @@ func (s *UnionShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *UnionShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
+}
+
 func (s *UnionShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -833,6 +851,12 @@ func (s *JSONShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *JSONShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
+}
+
 func (s *JSONShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -881,6 +905,12 @@ func (s *UnknownShape) Base() *BaseShape {
 	return s.BaseShape
 }
 
+func (s *UnknownShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
+}
+
 func (s *UnknownShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
@@ -917,6 +947,12 @@ func (s *RecursiveShape) unmarshalYAMLNodes(_ []*yaml.Node) error {
 
 func (s *RecursiveShape) Base() *BaseShape {
 	return s.BaseShape
+}
+
+func (s *RecursiveShape) cloneShallow(base *BaseShape) Shape {
+	c := *s
+	c.BaseShape = base
+	return &c
 }
 
 func (s *RecursiveShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
