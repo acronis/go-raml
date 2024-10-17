@@ -64,5 +64,11 @@ func FixYamlError(err error) error {
 }
 
 func StacktraceNewWrapped(msg string, err error, location string, opts ...stacktrace.Option) *stacktrace.StackTrace {
-	return stacktrace.NewWrapped(msg, FixYamlError(err), location, opts...)
+	opts = append(opts, stacktrace.WithLocation(location))
+	return stacktrace.NewWrapped(msg, FixYamlError(err), opts...)
+}
+
+func StacktraceNew(msg string, location string, opts ...stacktrace.Option) *stacktrace.StackTrace {
+	opts = append(opts, stacktrace.WithLocation(location))
+	return stacktrace.New(msg, opts...)
 }

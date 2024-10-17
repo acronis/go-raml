@@ -3,7 +3,7 @@ module github.com/acronis/go-raml
 go 1.20.6
 
 require (
-	github.com/acronis/go-stacktrace v0.3.0
+	github.com/acronis/go-stacktrace v0.4.0
 	github.com/antlr4-go/antlr/v4 v4.13.0
 	github.com/stretchr/testify v1.9.0
 	github.com/wk8/go-ordered-map/v2 v2.1.8

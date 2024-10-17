@@ -14,13 +14,13 @@ func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (
 		if err != nil {
 			return nil, StacktraceNewWrapped("unwrap shape", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 		}
 		_, err = r.FindAndMarkRecursion(us)
 		if err != nil {
 			return nil, StacktraceNewWrapped("find recursion", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 		}
 		unwrapCache[shape.ID] = us
 		shape = us
@@ -51,7 +51,7 @@ func (r *RAML) validateTypes(
 		if err := shape.Check(); err != nil {
 			se = StacktraceNewWrapped("check type", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 			if st == nil {
 				st = se
 			} else {
@@ -62,7 +62,7 @@ func (r *RAML) validateTypes(
 		if err := r.validateShapeCommons(shape); err != nil {
 			se = StacktraceNewWrapped("validate shape commons", err, shape.Location,
 				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 			if st == nil {
 				st = se
 			} else {
@@ -105,13 +105,13 @@ func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *
 		if err != nil {
 			return StacktraceNewWrapped("unwrap shape", err, s.Location,
 				stacktrace.WithPosition(&s.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 		}
 		_, err = r.FindAndMarkRecursion(us)
 		if err != nil {
 			return StacktraceNewWrapped("find recursion", err, s.Location,
 				stacktrace.WithPosition(&s.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 		}
 		unwrapCache[s.ID] = us
 		s = us
@@ -119,12 +119,12 @@ func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *
 	if err := s.Check(); err != nil {
 		return StacktraceNewWrapped("check data type", err, s.Location,
 			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithType(stacktrace.TypeValidating))
+			stacktrace.WithType(StacktraceTypeValidating))
 	}
 	if err := r.validateShapeCommons(s); err != nil {
 		return StacktraceNewWrapped("validate shape commons", err, s.Location,
 			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithType(stacktrace.TypeValidating))
+			stacktrace.WithType(StacktraceTypeValidating))
 	}
 	return nil
 }
@@ -171,9 +171,9 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stack
 		if !db.unwrapped {
 			us, ok := unwrapCache[db.ID]
 			if !ok {
-				se := stacktrace.New("unwrapped shape not found", db.Location,
+				se := StacktraceNew("unwrapped shape not found", db.Location,
 					stacktrace.WithPosition(&db.Position),
-					stacktrace.WithType(stacktrace.TypeValidating))
+					stacktrace.WithType(StacktraceTypeValidating))
 				if st == nil {
 					st = se
 				} else {
@@ -186,7 +186,7 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stack
 		if err := db.Validate(item.Extension.Value); err != nil {
 			se := StacktraceNewWrapped("check domain extension", err, item.Extension.Location,
 				stacktrace.WithPosition(&item.Extension.Position),
-				stacktrace.WithType(stacktrace.TypeValidating))
+				stacktrace.WithType(StacktraceTypeValidating))
 			if st == nil {
 				st = se
 			} else {
@@ -336,7 +336,7 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 		for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 			f := pair.Value
 			if _, ok := shapeFacetDefs.Get(f.Name); ok {
-				return stacktrace.New("duplicate custom facet", f.Base.Location,
+				return StacktraceNew("duplicate custom facet", f.Base.Location,
 					stacktrace.WithPosition(&f.Base.Position), stacktrace.WithInfo("facet", f.Name))
 			}
 			validationFacetDefs[f.Name] = f
@@ -349,7 +349,7 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 		f, ok := shapeFacets.Get(k)
 		if !ok {
 			if facetDef.Required {
-				return stacktrace.New("required custom facet is missing", base.Location,
+				return StacktraceNew("required custom facet is missing", base.Location,
 					stacktrace.WithPosition(&base.Position), stacktrace.WithInfo("facet", k))
 			}
 			continue
@@ -363,7 +363,7 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 	for pair := shapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, f := pair.Key, pair.Value
 		if _, ok := validationFacetDefs[k]; !ok {
-			return stacktrace.New("unknown facet", f.Location, stacktrace.WithPosition(&f.Position),
+			return StacktraceNew("unknown facet", f.Location, stacktrace.WithPosition(&f.Position),
 				stacktrace.WithInfo("facet", k))
 		}
 	}

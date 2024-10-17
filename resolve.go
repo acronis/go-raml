@@ -34,7 +34,7 @@ func (r *RAML) resolveShapes() error {
 		if err := r.resolveShape(base); err != nil {
 			se := StacktraceNewWrapped("resolve shape", err, base.Location,
 				stacktrace.WithPosition(&base.Position),
-				stacktrace.WithType(stacktrace.TypeResolving))
+				stacktrace.WithType(StacktraceTypeResolving))
 			if st == nil {
 				st = se
 			} else {
@@ -57,7 +57,7 @@ func (r *RAML) resolveDomainExtensions() error {
 		if err := r.resolveDomainExtension(de); err != nil {
 			se := StacktraceNewWrapped("resolve domain extension", err, de.Location,
 				stacktrace.WithPosition(&de.Position),
-				stacktrace.WithType(stacktrace.TypeResolving))
+				stacktrace.WithType(StacktraceTypeResolving))
 			if st == nil {
 				st = se
 			} else {
@@ -133,9 +133,9 @@ func (c *CustomErrorListener) SyntaxError(
 		},
 	)
 	if c.Stacktrace == nil {
-		c.Stacktrace = stacktrace.New("antlr error", c.location)
+		c.Stacktrace = StacktraceNew("antlr error", c.location)
 	}
-	c.Stacktrace = c.Stacktrace.Append(stacktrace.New(msg, c.location, posOpt, symbolInfoOpt))
+	c.Stacktrace = c.Stacktrace.Append(StacktraceNew(msg, c.location, posOpt, symbolInfoOpt))
 }
 
 // resolveShape resolves an unknown shape in-place.

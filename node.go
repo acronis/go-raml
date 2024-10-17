@@ -137,7 +137,7 @@ func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any
 		return node.Value, nil
 	case TagInclude:
 		if isInclude {
-			return nil, stacktrace.New("nested includes are not allowed", location, WithNodePosition(node))
+			return nil, StacktraceNew("nested includes are not allowed", location, WithNodePosition(node))
 		}
 		// TODO: In case with includes that are explicitly required to be string value, probably need to introduce
 		//  a new tag.
@@ -182,10 +182,10 @@ func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any
 func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
 	switch node.Kind {
 	default:
-		return nil, stacktrace.New("unexpected kind", location,
+		return nil, StacktraceNew("unexpected kind", location,
 			stacktrace.WithInfo("node.kind", stacktrace.Stringer(node.Kind)), WithNodePosition(node))
 	case yaml.AliasNode:
-		return nil, stacktrace.New("alias nodes are not supported", location, WithNodePosition(node))
+		return nil, StacktraceNew("alias nodes are not supported", location, WithNodePosition(node))
 	case yaml.DocumentNode:
 		return yamlNodeToDataNode(node.Content[0], location, isInclude)
 	case yaml.ScalarNode:
@@ -193,7 +193,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 	case yaml.MappingNode:
 		properties := make(map[string]any, len(node.Content)/2)
 		if len(node.Content)%2 != 0 {
-			return nil, stacktrace.New("mapping node should have even number of children", location,
+			return nil, StacktraceNew("mapping node should have even number of children", location,
 				WithNodePosition(node))
 		}
 		for i := 0; i != len(node.Content); i += 2 {
