@@ -29,8 +29,9 @@ jobs:
     - name: Test
       run: make test
 
-    - name: Update coverage report
-      uses: ncruces/go-coverage-report@v0
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v3
       with:
-        coverage-file: cover.out
-      continue-on-error: true
+        files: cover.out
+        flags: unittests
+        fail_ci_if_error: true
