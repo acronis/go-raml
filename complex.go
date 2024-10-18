@@ -53,6 +53,21 @@ func (s *ArrayShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shap
 	return &c
 }
 
+func (s *ArrayShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*ArrayShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Items = ss.Items
+	s.MinItems = ss.MinItems
+	s.MaxItems = ss.MaxItems
+	s.UniqueItems = ss.UniqueItems
+	return s, nil
+}
+
 func (s *ArrayShape) validate(v interface{}, ctxPath string) error {
 	i, ok := v.([]interface{})
 	if !ok {
@@ -339,6 +354,24 @@ func (s *ObjectShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Sha
 		}
 	}
 	return &c
+}
+
+func (s *ObjectShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*ObjectShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Properties = ss.Properties
+	s.PatternProperties = ss.PatternProperties
+	s.MinProperties = ss.MinProperties
+	s.MaxProperties = ss.MaxProperties
+	s.AdditionalProperties = ss.AdditionalProperties
+	s.Discriminator = ss.Discriminator
+	s.DiscriminatorValue = ss.DiscriminatorValue
+	return s, nil
 }
 
 func (s *ObjectShape) validatePatternProperty(
@@ -762,6 +795,18 @@ func (s *UnionShape) clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shap
 	return &c
 }
 
+func (s *UnionShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*UnionShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.AnyOf = ss.AnyOf
+	return s, nil
+}
+
 func (s *UnionShape) validate(v interface{}, ctxPath string) error {
 	st := StacktraceNew("value does not match any type", s.Location,
 		stacktrace.WithPosition(&s.Position))
@@ -889,6 +934,19 @@ func (s *JSONShape) inherit(source Shape) (Shape, error) {
 	return s, nil
 }
 
+func (s *JSONShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*JSONShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Schema = ss.Schema
+	s.Raw = ss.Raw
+	return s, nil
+}
+
 func (s *JSONShape) check() error {
 	// TODO: JSON Schema check
 	return nil
@@ -930,6 +988,10 @@ func (s *UnknownShape) inherit(_ Shape) (Shape, error) {
 	return nil, StacktraceNew("cannot inherit from unknown shape", s.Location, stacktrace.WithPosition(&s.Position))
 }
 
+func (s *UnknownShape) alias(_ Shape) (Shape, error) {
+	return nil, StacktraceNew("cannot alias from unknown shape", s.Location, stacktrace.WithPosition(&s.Position))
+}
+
 func (s *UnknownShape) check() error {
 	return StacktraceNew("cannot check unknown shape", s.Location, stacktrace.WithPosition(&s.Position))
 }
@@ -959,6 +1021,18 @@ func (s *RecursiveShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
+}
+
+func (s *RecursiveShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*RecursiveShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Head = ss.Head
+	return s, nil
 }
 
 func (s *RecursiveShape) validate(v interface{}, ctxPath string) error {

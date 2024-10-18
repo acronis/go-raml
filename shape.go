@@ -251,21 +251,24 @@ func (s *BaseShape) inheritUnionTarget(targetUnion *UnionShape) (*BaseShape, err
 	return targetUnion.Base(), nil
 }
 
-func (s *BaseShape) AliasTo(source *BaseShape) *BaseShape {
+func (s *BaseShape) AliasTo(source *BaseShape) (*BaseShape, error) {
+	_, err := s.Shape.alias(source.Shape)
+	if err != nil {
+		return nil, StacktraceNewWrapped("alias shape", err, s.Location,
+			stacktrace.WithPosition(&s.Position))
+	}
 	s.DisplayName = source.DisplayName
 	s.Description = source.Description
 	s.Example = source.Example
 	s.Examples = source.Examples
 	s.Inherits = source.Inherits
 	s.Alias = source.Alias
-	// TODO: Need to implement alias method on Shape.
-	s.Shape = source.Shape
 	s.Default = source.Default
 	s.Required = source.Required
 	s.CustomShapeFacets = source.CustomShapeFacets
 	s.CustomShapeFacetDefinitions = source.CustomShapeFacetDefinitions
 	s.CustomDomainProperties = source.CustomDomainProperties
-	return s
+	return s, nil
 }
 
 // CloneShallow creates a shallow copy of the shape.
@@ -396,7 +399,6 @@ type ShapeValidator interface {
 
 // ShapeInheritor is the interface that represents an inheritor of a RAML shape.
 type ShapeInheritor interface {
-	// TODO: inplace option?
 	inherit(source Shape) (Shape, error)
 }
 
@@ -404,6 +406,11 @@ type ShapeInheritor interface {
 type ShapeCloner interface {
 	clone(base *BaseShape, clonedMap map[int64]*BaseShape) Shape
 	cloneShallow(base *BaseShape) Shape
+}
+
+// ShapeAliaser is the interface that provides alias implementation for a RAML shape.
+type ShapeAliaser interface {
+	alias(source Shape) (Shape, error)
 }
 
 type ShapeChecker interface {
@@ -423,6 +430,7 @@ type Shape interface {
 	ShapeChecker
 	// ShapeCloner Clones the shape and its children and points to specified base shape.
 	ShapeCloner
+	ShapeAliaser
 	ShapeValidator
 
 	yamlNodesUnmarshaller

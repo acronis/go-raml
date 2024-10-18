@@ -26,6 +26,10 @@ func (u MockShape) check() error {
 	return u.MockCheck()
 }
 
+func (u MockShape) alias(source Shape) (Shape, error) {
+	return u, nil
+}
+
 func (u MockShape) cloneShallow(base *BaseShape) Shape {
 	return u.clone(base, nil)
 }
