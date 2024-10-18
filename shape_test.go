@@ -880,7 +880,8 @@ func TestBaseShape_AliasTo(t *testing.T) {
 				Location:                    tt.fields.Location,
 				Position:                    tt.fields.Position,
 			}
-			got := s.AliasTo(tt.args.source)
+			got, err := s.AliasTo(tt.args.source)
+			require.NoError(t, err)
 			if tt.want != nil {
 				tt.want(t, got)
 			}
