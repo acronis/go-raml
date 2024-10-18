@@ -405,7 +405,7 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 		base.unwrapped = true
 		base.ShapeVisited = false
 		r.PutShape(base)
-		return base.AliasTo(us), nil
+		return base.AliasTo(us)
 	}
 
 	source, err := r.unwrapParents(base)

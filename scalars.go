@@ -92,6 +92,21 @@ func (s *IntegerShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *IntegerShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*IntegerShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Minimum = ss.Minimum
+	s.Maximum = ss.Maximum
+	s.MultipleOf = ss.MultipleOf
+	s.Format = ss.Format
+	return s, nil
+}
+
 func (s *IntegerShape) validate(v interface{}, _ string) error {
 	var val big.Int
 	switch v := v.(type) {
@@ -301,6 +316,21 @@ func (s *NumberShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *NumberShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*NumberShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Minimum = ss.Minimum
+	s.Maximum = ss.Maximum
+	s.MultipleOf = ss.MultipleOf
+	s.Format = ss.Format
+	return s, nil
+}
+
 func (s *NumberShape) validate(v interface{}, _ string) error {
 	var val float64
 	switch v := v.(type) {
@@ -482,6 +512,20 @@ func (s *StringShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *StringShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*StringShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.MinLength = ss.MinLength
+	s.MaxLength = ss.MaxLength
+	s.Pattern = ss.Pattern
+	return s, nil
+}
+
 func (s *StringShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
@@ -639,6 +683,20 @@ func (s *FileShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *FileShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*FileShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.MinLength = ss.MinLength
+	s.MaxLength = ss.MaxLength
+	s.FileTypes = ss.FileTypes
+	return s, nil
+}
+
 func (s *FileShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
@@ -774,6 +832,17 @@ func (s *BooleanShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *BooleanShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*BooleanShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
+}
+
 func (s *BooleanShape) validate(v interface{}, _ string) error {
 	i, ok := v.(bool)
 	if !ok {
@@ -864,6 +933,18 @@ func (s *DateTimeShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
+}
+
+func (s *DateTimeShape) alias(source Shape) (Shape, error) {
+	ss, ok := source.(*DateTimeShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	s.Format = ss.Format
+	return s, nil
 }
 
 func (s *DateTimeShape) validate(v interface{}, _ string) error {
@@ -959,6 +1040,17 @@ func (s *DateTimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape
 	return &c
 }
 
+func (s *DateTimeOnlyShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*DateTimeOnlyShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
+}
+
 func (s *DateTimeOnlyShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
@@ -1021,6 +1113,17 @@ func (s *DateOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *DateOnlyShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*DateOnlyShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
+}
+
 func (s *DateOnlyShape) validate(v interface{}, _ string) error {
 	i, ok := v.(string)
 	if !ok {
@@ -1078,6 +1181,17 @@ func (s *TimeOnlyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
+}
+
+func (s *TimeOnlyShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*TimeOnlyShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
 }
 
 func (s *TimeOnlyShape) validate(v interface{}, _ string) error {
@@ -1142,6 +1256,17 @@ func (s *AnyShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
+func (s *AnyShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*AnyShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
+}
+
 // Validate checks if the value is nil, implements Shape interface
 func (s *AnyShape) validate(_ interface{}, _ string) error {
 	return nil
@@ -1194,6 +1319,17 @@ func (s *NilShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	c := *s
 	c.BaseShape = base
 	return &c
+}
+
+func (s *NilShape) alias(source Shape) (Shape, error) {
+	_, ok := source.(*NilShape)
+	if !ok {
+		return nil, StacktraceNew("cannot make alias from different type", s.Location,
+			stacktrace.WithPosition(&s.Position),
+			stacktrace.WithInfo("source", source.Base().Type),
+			stacktrace.WithInfo("target", s.Base().Type))
+	}
+	return s, nil
 }
 
 // Validate checks if the value is nil, implements Shape interface
