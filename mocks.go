@@ -1,6 +1,10 @@
 package raml
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
 
 // MockShape is a mock implementation of the Shape interface
 type MockShape struct {
@@ -12,6 +16,7 @@ type MockShape struct {
 	MockUnmarshalYAMLNodes func(v []*yaml.Node) error
 	MockString             func() string
 	MockIsScalar           func() bool
+	MockProperty           *string
 }
 
 func (u MockShape) inherit(source Shape) (Shape, error) {
@@ -27,6 +32,11 @@ func (u MockShape) check() error {
 }
 
 func (u MockShape) alias(source Shape) (Shape, error) {
+	s, ok := source.(*MockShape)
+	if !ok {
+		return nil, fmt.Errorf("invalid source type")
+	}
+	u.MockProperty = s.MockProperty
 	return u, nil
 }
 
