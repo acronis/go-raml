@@ -4066,3 +4066,606 @@ func TestJSONShape_inherit(t *testing.T) {
 		})
 	}
 }
+
+func TestArrayShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape   *BaseShape
+		ArrayFacets ArrayFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+		want    func(got Shape) (string, bool)
+	}{
+		{
+			name: "positive case",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				ArrayFacets: ArrayFacets{
+					Items: &BaseShape{
+						ID: 2,
+					},
+					MinItems: func() *uint64 {
+						i := uint64(1)
+						return &i
+					}(),
+					MaxItems: func() *uint64 {
+						i := uint64(10)
+						return &i
+					}(),
+					UniqueItems: func() *bool {
+						b := true
+						return &b
+					}(),
+				},
+			},
+			args: args{
+				source: &ArrayShape{
+					BaseShape: &BaseShape{
+						ID: 3,
+					},
+					ArrayFacets: ArrayFacets{
+						Items: &BaseShape{
+							ID: 4,
+						},
+						MinItems: func() *uint64 {
+							i := uint64(2)
+							return &i
+						}(),
+						MaxItems: func() *uint64 {
+							i := uint64(20)
+							return &i
+						}(),
+						UniqueItems: func() *bool {
+							b := false
+							return &b
+						}(),
+					},
+				},
+			},
+			want: func(got Shape) (string, bool) {
+				s, ok := got.(*ArrayShape)
+				if !ok {
+					return "Shape hasn't been aliased", false
+				}
+				if s.Items.ID != 4 {
+					return "Items haven't been aliased correctly", false
+				}
+				if *s.MinItems != 2 {
+					return "MinItems haven't been aliased correctly", false
+				}
+				if *s.MaxItems != 20 {
+					return "MaxItems haven't been aliased correctly", false
+				}
+				if *s.UniqueItems != false {
+					return "UniqueItems haven't been aliased correctly", false
+				}
+				return "", true
+			},
+		},
+		{
+			name: "negative case: cannot alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				ArrayFacets: ArrayFacets{},
+			},
+			args: args{
+				source: &ObjectShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &ArrayShape{
+				BaseShape:   tt.fields.BaseShape,
+				ArrayFacets: tt.fields.ArrayFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				if msg, ok := tt.want(got); !ok {
+					t.Errorf("alias() got = %v, want %v", msg, ok)
+				}
+			}
+		})
+	}
+}
+
+func TestObjectShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape    *BaseShape
+		ObjectFacets ObjectFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    func(got Shape) (string, bool)
+		wantErr bool
+	}{
+		{
+			name: "positive case",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				ObjectFacets: ObjectFacets{
+					Properties: func() *orderedmap.OrderedMap[string, Property] {
+						m := orderedmap.New[string, Property](0)
+						m.Set("property", Property{
+							Name: "property",
+							Base: &BaseShape{
+								ID: 2,
+							},
+						})
+						return m
+					}(),
+					PatternProperties: func() *orderedmap.OrderedMap[string, PatternProperty] {
+						m := orderedmap.New[string, PatternProperty](0)
+						m.Set("/^pattern*/", PatternProperty{
+							Pattern: regexp.MustCompile("^pattern*"),
+							Base: &BaseShape{
+								ID: 3,
+							},
+						})
+						return m
+					}(),
+					MinProperties: func() *uint64 {
+						i := uint64(1)
+						return &i
+					}(),
+					MaxProperties: func() *uint64 {
+						i := uint64(10)
+						return &i
+					}(),
+					AdditionalProperties: func() *bool {
+						b := true
+						return &b
+					}(),
+					Discriminator: func() *string {
+						d := "discriminator"
+						return &d
+					}(),
+					DiscriminatorValue: "value",
+				},
+			},
+			args: args{
+				source: &ObjectShape{
+					BaseShape: &BaseShape{
+						ID: 4,
+					},
+					ObjectFacets: ObjectFacets{
+						Properties: func() *orderedmap.OrderedMap[string, Property] {
+							m := orderedmap.New[string, Property](0)
+							m.Set("property", Property{
+								Name: "property",
+								Base: &BaseShape{
+									ID: 5,
+								},
+							})
+							return m
+						}(),
+						PatternProperties: func() *orderedmap.OrderedMap[string, PatternProperty] {
+							m := orderedmap.New[string, PatternProperty](0)
+							m.Set("/^pattern*/", PatternProperty{
+								Pattern: regexp.MustCompile("^pattern*"),
+								Base: &BaseShape{
+									ID: 6,
+								},
+							})
+							return m
+						}(),
+						MinProperties: func() *uint64 {
+							i := uint64(2)
+							return &i
+						}(),
+						MaxProperties: func() *uint64 {
+							i := uint64(20)
+							return &i
+						}(),
+						AdditionalProperties: func() *bool {
+							b := false
+							return &b
+						}(),
+						Discriminator: func() *string {
+							d := "new_discriminator"
+							return &d
+						}(),
+						DiscriminatorValue: "new_value",
+					},
+				},
+			},
+			want: func(got Shape) (string, bool) {
+				s, ok := got.(*ObjectShape)
+				if !ok {
+					return "Shape hasn't been aliased", false
+				}
+				if s.Properties == nil || s.PatternProperties == nil {
+					return "Properties or PatternProperties haven't been aliased", false
+				}
+				if *s.MinProperties != 2 || *s.MaxProperties != 20 {
+					return "MinProperties or MaxProperties haven't been aliased correctly", false
+				}
+				if *s.AdditionalProperties != false {
+					return "AdditionalProperties haven't been aliased correctly", false
+				}
+				if *s.Discriminator != "new_discriminator" {
+					return "Discriminator hasn't been aliased correctly", false
+				}
+				if s.DiscriminatorValue != "new_value" {
+					return "DiscriminatorValue hasn't been aliased correctly", false
+				}
+				return "", true
+			},
+		},
+		{
+			name: "negative case: cannot alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				ObjectFacets: ObjectFacets{},
+			},
+			args: args{
+				source: &ArrayShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &ObjectShape{
+				BaseShape:    tt.fields.BaseShape,
+				ObjectFacets: tt.fields.ObjectFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				if msg, ok := tt.want(got); !ok {
+					t.Errorf("alias() %v", msg)
+				}
+			}
+		})
+	}
+}
+func TestUnionShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape   *BaseShape
+		UnionFacets UnionFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    func(got Shape) (string, bool)
+		wantErr bool
+	}{
+		{
+			name: "positive case",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				UnionFacets: UnionFacets{
+					AnyOf: []*BaseShape{
+						{
+							ID:    2,
+							Shape: &StringShape{},
+						},
+					},
+				},
+			},
+			args: args{
+				source: &UnionShape{
+					BaseShape: &BaseShape{
+						ID: 3,
+					},
+					UnionFacets: UnionFacets{
+						AnyOf: []*BaseShape{
+							{
+								ID:    4,
+								Shape: &NumberShape{},
+							},
+						},
+					},
+				},
+			},
+			want: func(got Shape) (string, bool) {
+				s, ok := got.(*UnionShape)
+				if !ok {
+					return "Shape hasn't been aliased", false
+				}
+				if len(s.AnyOf) != 1 || s.AnyOf[0].ID != 4 {
+					return "AnyOf hasn't been aliased correctly", false
+				}
+				return "", true
+			},
+		},
+		{
+			name: "negative case: cannot alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				UnionFacets: UnionFacets{},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &UnionShape{
+				BaseShape:   tt.fields.BaseShape,
+				UnionFacets: tt.fields.UnionFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				if msg, ok := tt.want(got); !ok {
+					t.Errorf("alias() = %v, want %v", msg, "")
+				}
+			}
+		})
+	}
+}
+
+func TestJSONShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+		Schema    *JSONSchema
+		Raw       string
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    func(got Shape) (string, bool)
+		wantErr bool
+	}{
+		{
+			name: "positive case",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				Schema: &JSONSchema{},
+				Raw:    "{}",
+			},
+			args: args{
+				source: &JSONShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+					Schema: &JSONSchema{},
+					Raw:    "{}",
+				},
+			},
+			want: func(got Shape) (string, bool) {
+				s, ok := got.(*JSONShape)
+				if !ok {
+					return "Shape hasn't been aliased", false
+				}
+				if s.Schema == nil {
+					return "Schema hasn't been aliased", false
+				}
+				if s.Raw != "{}" {
+					return "Raw hasn't been aliased correctly", false
+				}
+				return "", true
+			},
+		},
+		{
+			name: "negative case: cannot alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				Schema: &JSONSchema{},
+				Raw:    "{}",
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &JSONShape{
+				BaseShape: tt.fields.BaseShape,
+				Schema:    tt.fields.Schema,
+				Raw:       tt.fields.Raw,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				if msg, ok := tt.want(got); !ok {
+					t.Errorf("alias() = %v, want %v", msg, ok)
+				}
+			}
+		})
+	}
+}
+
+func TestUnknownShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+		facets    []*yaml.Node
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "negative case: cannot alias from unknown shape",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				facets: []*yaml.Node{},
+			},
+			args: args{
+				source: &UnknownShape{
+					BaseShape: &BaseShape{
+						ID: 2,
+					},
+					facets: []*yaml.Node{},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &UnknownShape{
+				BaseShape: tt.fields.BaseShape,
+				facets:    tt.fields.facets,
+			}
+			_, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestRecursiveShape_alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+		Head      *BaseShape
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    func(got Shape) (string, bool)
+		wantErr bool
+	}{
+		{
+			name: "positive case",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				Head: &BaseShape{
+					ID: 2,
+				},
+			},
+			args: args{
+				source: &RecursiveShape{
+					BaseShape: &BaseShape{
+						ID: 3,
+					},
+					Head: &BaseShape{
+						ID: 4,
+					},
+				},
+			},
+			want: func(got Shape) (string, bool) {
+				s, ok := got.(*RecursiveShape)
+				if !ok {
+					return "Shape hasn't been aliased", false
+				}
+				if s.Head.ID != 4 {
+					return "Head hasn't been aliased correctly", false
+				}
+				return "", true
+			},
+		},
+		{
+			name: "negative case: cannot alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{
+					ID: 1,
+				},
+				Head: &BaseShape{
+					ID: 2,
+				},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{
+						ID: 3,
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &RecursiveShape{
+				BaseShape: tt.fields.BaseShape,
+				Head:      tt.fields.Head,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil {
+				if msg, ok := tt.want(got); !ok {
+					t.Errorf("alias() = %v, %s", got, msg)
+				}
+			}
+		})
+	}
+}
