@@ -28,3 +28,9 @@ jobs:
 
     - name: Test
       run: make test
+
+    - name: Update coverage report
+      uses: ncruces/go-coverage-report@v0
+      with:
+        coverage-file: cover.out
+      continue-on-error: true
