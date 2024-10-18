@@ -768,14 +768,17 @@ func TestBaseShape_AliasTo(t *testing.T) {
 		source *BaseShape
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   func(t *testing.T, got *BaseShape)
+		name    string
+		fields  fields
+		args    args
+		want    func(t *testing.T, source *BaseShape, got *BaseShape)
+		wantErr bool
 	}{
 		{
-			name:   "positive",
-			fields: fields{},
+			name: "positive",
+			fields: fields{
+				Shape: &MockShape{},
+			},
 			args: args{
 				source: &BaseShape{
 					ID:          2,
@@ -787,6 +790,7 @@ func TestBaseShape_AliasTo(t *testing.T) {
 					Examples:    &Examples{},
 					Inherits:    []*BaseShape{},
 					Alias:       &BaseShape{},
+					Shape:       &MockShape{},
 					Default:     &Node{},
 					Required:    func() *bool { b := true; return &b }(),
 					Link:        &DataType{},
@@ -801,7 +805,7 @@ func TestBaseShape_AliasTo(t *testing.T) {
 					}(),
 				},
 			},
-			want: func(t *testing.T, got *BaseShape) {
+			want: func(t *testing.T, source *BaseShape, got *BaseShape) {
 				if got == nil {
 					t.Errorf("got is nil")
 					return
@@ -812,8 +816,14 @@ func TestBaseShape_AliasTo(t *testing.T) {
 				if *got.DisplayName != "display name" {
 					t.Errorf("DisplayName = %v, want %v", *got.DisplayName, "display name")
 				}
+				if got.DisplayName != source.DisplayName {
+					t.Errorf("DisplayName is not linked")
+				}
 				if *got.Description != "description" {
 					t.Errorf("Description = %v, want %v", *got.Description, "description")
+				}
+				if got.Description != source.Description {
+					t.Errorf("Description is not linked")
 				}
 				if got.Type != "" {
 					t.Errorf("Type = %v, want %v", got.Type, "empty string")
@@ -832,6 +842,9 @@ func TestBaseShape_AliasTo(t *testing.T) {
 				}
 				if got.Alias == nil {
 					t.Errorf("Alias is nil")
+				}
+				if got.Shape == nil {
+					t.Errorf("Shape is nil")
 				}
 				if got.Default == nil {
 					t.Errorf("Default is nil")
@@ -852,6 +865,7 @@ func TestBaseShape_AliasTo(t *testing.T) {
 					t.Errorf("CustomDomainProperties is nil")
 				}
 			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -881,9 +895,11 @@ func TestBaseShape_AliasTo(t *testing.T) {
 				Position:                    tt.fields.Position,
 			}
 			got, err := s.AliasTo(tt.args.source)
-			require.NoError(t, err)
+			if err != nil && !tt.wantErr {
+				t.Errorf("AliasTo() error = %v", err)
+			}
 			if tt.want != nil {
-				tt.want(t, got)
+				tt.want(t, tt.args.source, got)
 			}
 		})
 	}
