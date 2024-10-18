@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-stacktrace"
@@ -843,8 +844,9 @@ type JSONShape struct {
 	noScalarShape
 	*BaseShape
 
-	Schema *JSONSchema
-	Raw    string
+	Schema    *JSONSchema
+	Validator *gojsonschema.Schema
+	Raw       string
 }
 
 func (s *JSONShape) Base() *BaseShape {
@@ -863,8 +865,21 @@ func (s *JSONShape) clone(base *BaseShape, _ map[int64]*BaseShape) Shape {
 	return &c
 }
 
-func (s *JSONShape) validate(_ interface{}, _ string) error {
-	// TODO: Implement validation with JSON Schema
+func (s *JSONShape) validate(v interface{}, _ string) error {
+	l := gojsonschema.NewGoLoader(v)
+
+	result, err := s.Validator.Validate(l)
+	if err != nil {
+		return StacktraceNewWrapped("validate JSON schema", err, s.Location, stacktrace.WithPosition(&s.Position))
+	}
+
+	if !result.Valid() {
+		st := StacktraceNew("failed to validate against JSON schema", s.Location, stacktrace.WithPosition(&s.Position))
+		for _, err := range result.Errors() {
+			st = st.Append(StacktraceNew(err.String(), s.Location, stacktrace.WithPosition(&s.Position)))
+		}
+		return st
+	}
 	return nil
 }
 

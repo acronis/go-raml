@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-stacktrace"
@@ -500,6 +501,7 @@ func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
 func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (*JSONShape, error) {
 	base.Type = "json"
 
+	// TODO: Probably this can be replaced with gojsonschema but it does not expose internal schema structure.
 	var schema *JSONSchema
 	err := json.Unmarshal([]byte(rawSchema), &schema)
 	if err != nil {
@@ -507,7 +509,29 @@ func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (*JSONShape, err
 			stacktrace.WithPosition(&base.Position))
 	}
 
-	return &JSONShape{BaseShape: base, Raw: rawSchema, Schema: schema}, nil
+	// TODO: This will only work with local files, but currently we work only with local files anyway
+	p := "file://" + filepath.ToSlash(base.Location)
+	// Load schema using string loader
+	l := gojsonschema.NewStringLoader(rawSchema)
+	sl := gojsonschema.NewSchemaLoader()
+	// Add it to schema loader with URI pointing to RAML file.
+	// This will cache the schema and resolve all references against this URI.
+	err = sl.AddSchema(p, l)
+	if err != nil {
+		return nil, StacktraceNewWrapped("add schema", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
+	}
+	// Replace StringLoader with ReferenceLoader to support local/remote references resolution.
+	// Since the reference is cached, gojsonschema will not attempt to load it from the storage.
+	// TODO: Introduce custom reference loader to have possibility to disallow remote schemas.
+	l = gojsonschema.NewReferenceLoader(p)
+	validator, err := sl.Compile(l)
+	if err != nil {
+		return nil, StacktraceNewWrapped("new schema", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
+	}
+
+	return &JSONShape{BaseShape: base, Raw: rawSchema, Schema: schema, Validator: validator}, nil
 }
 
 const HookBeforeRAMLMakeConcreteShapeYAML = "before:RAML.makeConcreteShapeYAML"
