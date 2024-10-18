@@ -4829,3 +4829,643 @@ func TestNilShape_unmarshalYAMLNodes(t *testing.T) {
 		})
 	}
 }
+func TestBooleanShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape  *BaseShape
+		EnumFacets EnumFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "boolean"},
+			},
+			args: args{
+				source: &BooleanShape{
+					BaseShape: &BaseShape{Type: "boolean"},
+				},
+			},
+			want: &BooleanShape{
+				BaseShape: &BaseShape{Type: "boolean"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "boolean"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &BooleanShape{
+				BaseShape:  tt.fields.BaseShape,
+				EnumFacets: tt.fields.EnumFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BooleanShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BooleanShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestIntegerShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape     *BaseShape
+		EnumFacets    EnumFacets
+		FormatFacets  FormatFacets
+		IntegerFacets IntegerFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "integer"},
+				IntegerFacets: IntegerFacets{
+					Minimum: big.NewInt(1),
+					Maximum: big.NewInt(10),
+				},
+			},
+			args: args{
+				source: &IntegerShape{
+					BaseShape: &BaseShape{Type: "integer"},
+					IntegerFacets: IntegerFacets{
+						Minimum: big.NewInt(1),
+						Maximum: big.NewInt(10),
+					},
+				},
+			},
+			want: &IntegerShape{
+				BaseShape: &BaseShape{Type: "integer"},
+				IntegerFacets: IntegerFacets{
+					Minimum: big.NewInt(1),
+					Maximum: big.NewInt(10),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "integer"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &IntegerShape{
+				BaseShape:     tt.fields.BaseShape,
+				EnumFacets:    tt.fields.EnumFacets,
+				FormatFacets:  tt.fields.FormatFacets,
+				IntegerFacets: tt.fields.IntegerFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IntegerShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("IntegerShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestStringShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape  *BaseShape
+		MinLength  *uint64
+		MaxLength  *uint64
+		Pattern    *regexp.Regexp
+		EnumFacets EnumFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "string"},
+				MinLength: func() *uint64 { v := uint64(1); return &v }(),
+				MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+				Pattern:   regexp.MustCompile(`^[a-zA-Z]+$`),
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+					StringFacets: StringFacets{
+						LengthFacets: LengthFacets{
+							MinLength: func() *uint64 { v := uint64(1); return &v }(),
+							MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+						},
+						Pattern: regexp.MustCompile(`^[a-zA-Z]+$`),
+					},
+				},
+			},
+			want: &StringShape{
+				BaseShape: &BaseShape{Type: "string"},
+				StringFacets: StringFacets{
+					LengthFacets: LengthFacets{
+						MinLength: func() *uint64 { v := uint64(1); return &v }(),
+						MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+					},
+					Pattern: regexp.MustCompile(`^[a-zA-Z]+$`),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "string"},
+			},
+			args: args{
+				source: &IntegerShape{
+					BaseShape: &BaseShape{Type: "integer"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &StringShape{
+				BaseShape: tt.fields.BaseShape,
+				StringFacets: StringFacets{
+					LengthFacets: LengthFacets{
+						MinLength: tt.fields.MinLength,
+						MaxLength: tt.fields.MaxLength,
+					},
+					Pattern: tt.fields.Pattern,
+				},
+				EnumFacets: tt.fields.EnumFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StringShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("StringShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestFileShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+		MinLength *uint64
+		MaxLength *uint64
+		FileTypes Nodes
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "file"},
+				MinLength: func() *uint64 { v := uint64(1); return &v }(),
+				MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+				FileTypes: Nodes{
+					{Value: "image/png"},
+					{Value: "image/jpeg"},
+				},
+			},
+			args: args{
+				source: &FileShape{
+					BaseShape: &BaseShape{Type: "file"},
+					FileFacets: FileFacets{
+						FileTypes: Nodes{
+							{Value: "image/png"},
+							{Value: "image/jpeg"},
+						},
+					},
+					LengthFacets: LengthFacets{
+						MinLength: func() *uint64 { v := uint64(1); return &v }(),
+						MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+					},
+				},
+			},
+			want: &FileShape{
+				BaseShape: &BaseShape{Type: "file"},
+				FileFacets: FileFacets{
+					FileTypes: Nodes{
+						{Value: "image/png"},
+						{Value: "image/jpeg"},
+					},
+				},
+				LengthFacets: LengthFacets{
+					MinLength: func() *uint64 { v := uint64(1); return &v }(),
+					MaxLength: func() *uint64 { v := uint64(10); return &v }(),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "file"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &FileShape{
+				BaseShape: tt.fields.BaseShape,
+				FileFacets: FileFacets{
+					FileTypes: tt.fields.FileTypes,
+				},
+				LengthFacets: LengthFacets{
+					MinLength: tt.fields.MinLength,
+					MaxLength: tt.fields.MaxLength,
+				},
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FileShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FileShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestDateTimeShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape    *BaseShape
+		FormatFacets FormatFacets
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "datetime"},
+				FormatFacets: FormatFacets{
+					Format: func() *string {
+						format := "rfc3339"
+						return &format
+					}(),
+				},
+			},
+			args: args{
+				source: &DateTimeShape{
+					BaseShape: &BaseShape{Type: "datetime"},
+					FormatFacets: FormatFacets{
+						Format: func() *string {
+							format := "rfc3339"
+							return &format
+						}(),
+					},
+				},
+			},
+			want: &DateTimeShape{
+				BaseShape: &BaseShape{Type: "datetime"},
+				FormatFacets: FormatFacets{
+					Format: func() *string {
+						format := "rfc3339"
+						return &format
+					}(),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "datetime"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &DateTimeShape{
+				BaseShape:    tt.fields.BaseShape,
+				FormatFacets: tt.fields.FormatFacets,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DateTimeShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DateTimeShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDateTimeOnlyShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "datetime-only"},
+			},
+			args: args{
+				source: &DateTimeOnlyShape{
+					BaseShape: &BaseShape{Type: "datetime-only"},
+				},
+			},
+			want: &DateTimeOnlyShape{
+				BaseShape: &BaseShape{Type: "datetime-only"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "datetime-only"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &DateTimeOnlyShape{
+				BaseShape: tt.fields.BaseShape,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DateTimeOnlyShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DateTimeOnlyShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTimeOnlyShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "time-only"},
+			},
+			args: args{
+				source: &TimeOnlyShape{
+					BaseShape: &BaseShape{Type: "time-only"},
+				},
+			},
+			want: &TimeOnlyShape{
+				BaseShape: &BaseShape{Type: "time-only"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "time-only"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &TimeOnlyShape{
+				BaseShape: tt.fields.BaseShape,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("TimeOnlyShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("TimeOnlyShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAnyShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "any"},
+			},
+			args: args{
+				source: &AnyShape{
+					BaseShape: &BaseShape{Type: "any"},
+				},
+			},
+			want: &AnyShape{
+				BaseShape: &BaseShape{Type: "any"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "any"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &AnyShape{
+				BaseShape: tt.fields.BaseShape,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AnyShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AnyShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNilShape_Alias(t *testing.T) {
+	type fields struct {
+		BaseShape *BaseShape
+	}
+	type args struct {
+		source Shape
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Shape
+		wantErr bool
+	}{
+		{
+			name: "alias from same type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "nil"},
+			},
+			args: args{
+				source: &NilShape{
+					BaseShape: &BaseShape{Type: "nil"},
+				},
+			},
+			want: &NilShape{
+				BaseShape: &BaseShape{Type: "nil"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "alias from different type",
+			fields: fields{
+				BaseShape: &BaseShape{Type: "nil"},
+			},
+			args: args{
+				source: &StringShape{
+					BaseShape: &BaseShape{Type: "string"},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &NilShape{
+				BaseShape: tt.fields.BaseShape,
+			}
+			got, err := s.alias(tt.args.source)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NilShape.alias() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NilShape.alias() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
