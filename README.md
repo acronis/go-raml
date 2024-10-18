@@ -1,4 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/gojp/goreportcard)](https://goreportcard.com/report/gojp/goreportcard)
+[![Go Coverage](https://github.com/acronis/go-raml/wiki/coverage.svg)](https://raw.githack.com/wiki/acronis/go-raml/coverage.html)
 
 # RAML 1.0 parser for Go
 
