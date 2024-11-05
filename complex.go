@@ -899,6 +899,7 @@ func (s *JSONShape) inherit(source Shape) (Shape, error) {
 		return nil, StacktraceNew("cannot inherit from different JSON schema", s.Location,
 			stacktrace.WithPosition(&s.Position))
 	}
+	s.Validator = ss.Validator
 	s.Schema = ss.Schema
 	s.Raw = ss.Raw
 	return s, nil
