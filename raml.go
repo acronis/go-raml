@@ -12,9 +12,18 @@ type HookKey string
 // RAML is a store for all fragments and shapes.
 // WARNING: Not thread-safe
 type RAML struct {
-	fragmentsCache          map[string]Fragment // Library, NamedExample, DataType
-	fragmentTypes           map[string]map[string]*BaseShape
+	fragmentsCache map[string]Fragment // Library, NamedExample, DataType
+
+	// FragmentAnnotationTypes is a map of fragment location to a map of types.
+	fragmentTypes map[string]map[string]*BaseShape
+
+	// FragmentAnnotationTypes is a map of fragment location to a map of annotation types.
 	fragmentAnnotationTypes map[string]map[string]*BaseShape
+
+	// FragmentTypeDefinitions is a map of fragment location to a list of top-level shapes.
+	// This includes types, annotationTypes, request/response bodies, headers, query parameters and query strings.
+	fragmentTypeDefinitions map[string][]*BaseShape
+
 	// entryPoint is a Library, NamedExample or DataType fragment that is used as an entry point for the resolution.
 	entryPoint Fragment
 	// basePath   string
@@ -22,9 +31,16 @@ type RAML struct {
 	// May be reused for both validation and resolution.
 	domainExtensions []*DomainExtension
 
-	shapes []*BaseShape
-	// Temporary storage for unresolved shapes.
-	unresolvedShapes list.List
+	endPoints map[string]*EndPoint
+	shapes    []*BaseShape
+	// Temporary storages for unresolved entities.
+	unresolvedShapes        list.List
+	unresolvedResourceTypes list.List
+
+	// TODO: Maybe it makes sense to make a separate context for WebAPI?
+	globalProtocols []string
+	globalMediaType []string
+	globalSecuredBy []*SecurityScheme
 
 	// idCounter is a counter for generating unique IDs per raml
 	idCounter int64
@@ -138,7 +154,9 @@ func New(ctx context.Context) *RAML {
 	return &RAML{
 		fragmentTypes:           make(map[string]map[string]*BaseShape),
 		fragmentAnnotationTypes: make(map[string]map[string]*BaseShape),
+		fragmentTypeDefinitions: make(map[string][]*BaseShape),
 		fragmentsCache:          make(map[string]Fragment),
+		endPoints:               make(map[string]*EndPoint),
 		domainExtensions:        make([]*DomainExtension, 0),
 		ctx:                     ctx,
 	}
@@ -175,6 +193,14 @@ func (r *RAML) PutTypeIntoFragment(name string, location string, shape *BaseShap
 		r.fragmentTypes[location] = loc
 	}
 	loc[name] = shape
+}
+
+func (r *RAML) PutTypeDefinitionIntoFragment(location string, shape *BaseShape) {
+	r.fragmentTypeDefinitions[location] = append(r.fragmentTypeDefinitions[location], shape)
+}
+
+func (r *RAML) GetTypeDefinitionsFromFragment(location string) []*BaseShape {
+	return r.fragmentTypeDefinitions[location]
 }
 
 // GetTypeFromFragmentPtr returns a shape from a fragment.

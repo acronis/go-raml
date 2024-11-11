@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/acronis/go-stacktrace"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (*BaseShape, *stacktrace.StackTrace) {
@@ -30,129 +29,43 @@ func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (
 
 const HookBeforeValidateTypes HookKey = "RAML.validateTypes"
 
-func (r *RAML) validateTypes(
-	types *orderedmap.OrderedMap[string, *BaseShape],
-	unwrapCache map[int64]*BaseShape,
-) *stacktrace.StackTrace {
-	if err := r.callHooks(HookBeforeValidateTypes, types, unwrapCache); err != nil {
+func (r *RAML) validateTypes(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
+	if err := r.callHooks(HookBeforeValidateTypes, unwrapCache); err != nil {
 		return StacktraceNewWrapped("handle step", err, r.GetLocation())
 	}
 	var st *stacktrace.StackTrace
-	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
-		shape, se := r.unwrapShape(pair.Value, unwrapCache)
-		if se != nil {
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
-			}
-			continue
-		}
-		if err := shape.Check(); err != nil {
-			se = StacktraceNewWrapped("check type", err, shape.Location,
-				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(StacktraceTypeValidating))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
-			}
-			continue
-		}
-		if err := r.validateShapeCommons(shape); err != nil {
-			se = StacktraceNewWrapped("validate shape commons", err, shape.Location,
-				stacktrace.WithPosition(&shape.Position),
-				stacktrace.WithType(StacktraceTypeValidating))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
-			}
-			continue
-		}
-	}
-	return st
-}
-
-const HookBeforeValidateLibrary HookKey = "RAML.validateLibrary"
-
-func (r *RAML) validateLibrary(f *Library, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
-	if err := r.callHooks(HookBeforeValidateLibrary, f, unwrapCache); err != nil {
-		return StacktraceNewWrapped("handle step", err, f.Location)
-	}
-	st := r.validateTypes(f.AnnotationTypes, unwrapCache)
-
-	if se := r.validateTypes(f.Types, unwrapCache); se != nil {
-		if st == nil {
-			st = se
-		} else {
-			st = st.Append(se)
-		}
-	}
-	return st
-}
-
-const HookBeforeValidateDataType HookKey = "RAML.validateDataType"
-
-func (r *RAML) validateDataType(f *DataType, unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
-	if err := r.callHooks(HookBeforeValidateDataType, f, unwrapCache); err != nil {
-		return StacktraceNewWrapped("handle step", err, f.Location)
-	}
-	s := f.Shape
-	if !s.unwrapped {
-		s = s.CloneDetached()
-		us, err := r.UnwrapShape(s)
-		if err != nil {
-			return StacktraceNewWrapped("unwrap shape", err, s.Location,
-				stacktrace.WithPosition(&s.Position),
-				stacktrace.WithType(StacktraceTypeValidating))
-		}
-		_, err = r.FindAndMarkRecursion(us)
-		if err != nil {
-			return StacktraceNewWrapped("find recursion", err, s.Location,
-				stacktrace.WithPosition(&s.Position),
-				stacktrace.WithType(StacktraceTypeValidating))
-		}
-		unwrapCache[s.ID] = us
-		s = us
-	}
-	if err := s.Check(); err != nil {
-		return StacktraceNewWrapped("check data type", err, s.Location,
-			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithType(StacktraceTypeValidating))
-	}
-	if err := r.validateShapeCommons(s); err != nil {
-		return StacktraceNewWrapped("validate shape commons", err, s.Location,
-			stacktrace.WithPosition(&s.Position),
-			stacktrace.WithType(StacktraceTypeValidating))
-	}
-	return nil
-}
-
-const HookBeforeValidateFragments HookKey = "RAML.validateFragments"
-
-func (r *RAML) validateFragments(unwrapCache map[int64]*BaseShape) *stacktrace.StackTrace {
-	if err := r.callHooks(HookBeforeValidateFragments, unwrapCache); err != nil {
-		return StacktraceNewWrapped("handle step", err, r.GetLocation())
-	}
-	var st *stacktrace.StackTrace
-	for _, frag := range r.fragmentsCache {
-		switch f := frag.(type) {
-		case *Library:
-			if err := r.validateLibrary(f, unwrapCache); err != nil {
+	for _, shapes := range r.fragmentTypeDefinitions {
+		for _, shape := range shapes {
+			shape, se := r.unwrapShape(shape, unwrapCache)
+			if se != nil {
 				if st == nil {
-					st = err
+					st = se
 				} else {
-					st = st.Append(err)
+					st = st.Append(se)
 				}
+				continue
 			}
-		case *DataType:
-			if err := r.validateDataType(f, unwrapCache); err != nil {
+			if err := shape.Check(); err != nil {
+				se = StacktraceNewWrapped("check type", err, shape.Location,
+					stacktrace.WithPosition(&shape.Position),
+					stacktrace.WithType(StacktraceTypeValidating))
 				if st == nil {
-					st = err
+					st = se
 				} else {
-					st = st.Append(err)
+					st = st.Append(se)
 				}
+				continue
+			}
+			if err := r.validateShapeCommons(shape); err != nil {
+				se = StacktraceNewWrapped("validate shape commons", err, shape.Location,
+					stacktrace.WithPosition(&shape.Position),
+					stacktrace.WithType(StacktraceTypeValidating))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
 			}
 		}
 	}
@@ -209,8 +122,7 @@ func (r *RAML) ValidateShapes() error {
 	// to ensure the original references (aliases and links) match.
 	unwrapCache := make(map[int64]*BaseShape)
 
-	st := r.validateFragments(unwrapCache)
-
+	st := r.validateTypes(unwrapCache)
 	if se := r.validateDomainExtensions(unwrapCache); se != nil {
 		if st == nil {
 			st = se

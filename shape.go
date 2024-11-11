@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-stacktrace"
@@ -44,7 +45,7 @@ type BaseShape struct {
 	Shape
 	ID          int64
 	Name        string
-	DisplayName *string
+	DisplayName Value[*string]
 	Description *string
 	// TODO: Move Type to underlying Shape
 	Type      string
@@ -57,7 +58,7 @@ type BaseShape struct {
 	Required  *bool
 
 	// To support !include of DataType fragment
-	Link *DataType
+	Link *DataTypeFragment
 
 	// CustomShapeFacets is a map of custom facets with values
 	CustomShapeFacets *orderedmap.OrderedMap[string, *Node]
@@ -127,18 +128,19 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 	if err := s.callRAMLHooks(HookBeforeBaseShapeInherit, sourceBase); err != nil {
 		return nil, err
 	}
-	for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
-		k, item := pair.Key, pair.Value
-		if _, ok := s.CustomShapeFacets.Get(k); !ok {
-			s.CustomShapeFacets.Set(k, item)
-		}
-	}
-	for pair := sourceBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
-		k, item := pair.Key, pair.Value
-		if _, ok := s.CustomDomainProperties.Get(k); !ok {
-			s.CustomDomainProperties.Set(k, item)
-		}
-	}
+	// Custom domain extensions are not inherited.
+	// for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+	// 	k, item := pair.Key, pair.Value
+	// 	if _, ok := s.CustomShapeFacets.Get(k); !ok {
+	// 		s.CustomShapeFacets.Set(k, item)
+	// 	}
+	// }
+	// for pair := sourceBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
+	// 	k, item := pair.Key, pair.Value
+	// 	if _, ok := s.CustomDomainProperties.Get(k); !ok {
+	// 		s.CustomDomainProperties.Set(k, item)
+	// 	}
+	// }
 
 	source := sourceBase.Shape
 	target := s.Shape
@@ -183,9 +185,8 @@ func (s *BaseShape) inheritUnionSource(sourceUnion *UnionShape) (*BaseShape, err
 		if source.Type == s.Type {
 			// Deep copy with ID change is required since we create new union members from source members
 			tc := s.CloneDetached()
-			tc.ID = s.raml.generateShapeID()
 			// TODO: Probably all copied shapes must change IDs since these are actually new shapes.
-			// tc.ID = generateShapeID()
+			tc.ID = s.raml.generateShapeID()
 			is, err := tc.Inherit(source)
 			if err != nil {
 				se := StacktraceNewWrapped("merge shapes", err, s.Location,
@@ -508,14 +509,37 @@ func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
 func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (*JSONShape, error) {
 	base.Type = "json"
 
-	var schema *JSONSchema
+	// TODO: Probably this can be replaced with gojsonschema but it does not expose internal schema structure.
+	var schema map[string]any
 	err := json.Unmarshal([]byte(rawSchema), &schema)
 	if err != nil {
 		return nil, StacktraceNewWrapped("unmarshal json", err, base.Location,
 			stacktrace.WithPosition(&base.Position))
 	}
 
-	return &JSONShape{BaseShape: base, Raw: rawSchema, Schema: schema}, nil
+	// TODO: This will only work with local files, but currently we work only with local files anyway
+	p := "file://" + filepath.ToSlash(base.Location)
+	// Load schema using string loader
+	l := gojsonschema.NewStringLoader(rawSchema)
+	sl := gojsonschema.NewSchemaLoader()
+	// Add it to schema loader with URI pointing to RAML file.
+	// This will cache the schema and resolve all references against this URI.
+	err = sl.AddSchema(p, l)
+	if err != nil {
+		return nil, StacktraceNewWrapped("add schema", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
+	}
+	// Replace StringLoader with ReferenceLoader to support local/remote references resolution.
+	// Since the reference is cached, gojsonschema will not attempt to load it from the storage.
+	// TODO: Introduce custom reference loader to have possibility to disallow remote schemas.
+	l = gojsonschema.NewReferenceLoader(p)
+	validator, err := sl.Compile(l)
+	if err != nil {
+		return nil, StacktraceNewWrapped("new schema", err, base.Location,
+			stacktrace.WithPosition(&base.Position))
+	}
+
+	return &JSONShape{BaseShape: base, Raw: rawSchema, Schema: schema, Validator: validator}, nil
 }
 
 const HookBeforeRAMLMakeConcreteShapeYAML = "before:RAML.makeConcreteShapeYAML"
@@ -664,7 +688,7 @@ func (r *RAML) makeShapeType(
 			if node.Kind != yaml.ScalarNode {
 				return "", nil, StacktraceNew("node kind must be scalar", location,
 					WithNodePosition(node))
-			} else if node.Tag == "!include" {
+			} else if node.Tag == TagInclude {
 				return "", nil, StacktraceNew("!include is not allowed in multiple inheritance",
 					location, WithNodePosition(node))
 			}
@@ -808,15 +832,15 @@ func (s *BaseShape) decodeExample(valueNode *yaml.Node) error {
 	return nil
 }
 
-func (s *BaseShape) decodeValueNode(node, valueNode *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
+func (s *BaseShape) decodeValueNode(keyNode, valueNode *yaml.Node) (*yaml.Node, []*yaml.Node, error) {
 	var shapeTypeNode *yaml.Node
 	shapeFacets := make([]*yaml.Node, 0)
 
-	switch node.Value {
+	switch keyNode.Value {
 	case FacetType:
 		shapeTypeNode = valueNode
 	case FacetDisplayName:
-		if err := valueNode.Decode(&s.DisplayName); err != nil {
+		if err := s.DisplayName.decode(valueNode, s.Location); err != nil {
 			return nil, nil, StacktraceNewWrapped("decode display name", err, s.Location,
 				WithNodePosition(valueNode))
 		}
@@ -853,17 +877,20 @@ func (s *BaseShape) decodeValueNode(node, valueNode *yaml.Node) (*yaml.Node, []*
 		}
 		s.Default = n
 	case FacetAllowedTargets:
-		// TODO: Included by annotationTypes
+		// if err := valueNode.Decode(&s.AllowedTargets); err != nil {
+		// 	return nil, nil, StacktraceNewWrapped("decode allowed targets", err, s.Location,
+		// 		WithNodePosition(valueNode))
+		// }
 	default:
-		if IsCustomDomainExtensionNode(node.Value) {
-			name, de, err := s.raml.unmarshalCustomDomainExtension(s.Location, node, valueNode)
+		if IsCustomDomainExtensionNode(keyNode.Value) {
+			name, de, err := s.raml.unmarshalCustomDomainExtension(s.Location, keyNode, valueNode)
 			if err != nil {
 				return nil, nil, StacktraceNewWrapped("unmarshal custom domain extension", err, s.Location,
 					WithNodePosition(valueNode))
 			}
 			s.CustomDomainProperties.Set(name, de)
 		} else {
-			shapeFacets = append(shapeFacets, node, valueNode)
+			shapeFacets = append(shapeFacets, keyNode, valueNode)
 		}
 	}
 	return shapeTypeNode, shapeFacets, nil

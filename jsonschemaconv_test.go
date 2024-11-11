@@ -2176,9 +2176,11 @@ func TestJSONSchemaConverter_makeSchemaFromBaseShape(t *testing.T) {
 			args: args{
 				base: &BaseShape{
 					Type: "string",
-					DisplayName: func() *string {
+					DisplayName: func() Value[*string] {
 						v := "display name"
-						return &v
+						return Value[*string]{
+							Value: &v,
+						}
 					}(),
 					Description: func() *string {
 						v := "description"
