@@ -127,18 +127,6 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 	if err := s.callRAMLHooks(HookBeforeBaseShapeInherit, sourceBase); err != nil {
 		return nil, err
 	}
-	for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
-		k, item := pair.Key, pair.Value
-		if _, ok := s.CustomShapeFacets.Get(k); !ok {
-			s.CustomShapeFacets.Set(k, item)
-		}
-	}
-	for pair := sourceBase.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
-		k, item := pair.Key, pair.Value
-		if _, ok := s.CustomDomainProperties.Get(k); !ok {
-			s.CustomDomainProperties.Set(k, item)
-		}
-	}
 
 	source := sourceBase.Shape
 	target := s.Shape
