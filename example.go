@@ -30,6 +30,12 @@ func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string
 		if err := valueNode.Decode(&ex.Description); err != nil {
 			return StacktraceNewWrapped("decode description", err, location, WithNodePosition(valueNode))
 		}
+	case FacetValue:
+		n, err := ex.raml.makeRootNode(valueNode, location)
+		if err != nil {
+			return StacktraceNewWrapped("make node", err, location, WithNodePosition(valueNode))
+		}
+		ex.Data = n
 	default:
 		if IsCustomDomainExtensionNode(node.Value) {
 			deName, de, err := ex.raml.unmarshalCustomDomainExtension(location, node, valueNode)
@@ -37,6 +43,9 @@ func (ex *Example) decode(node *yaml.Node, valueNode *yaml.Node, location string
 				return StacktraceNewWrapped("unmarshal custom domain extension", err, location, WithNodePosition(valueNode))
 			}
 			ex.CustomDomainProperties.Set(deName, de)
+		} else {
+			return StacktraceNew("unknown field", location, WithNodePosition(valueNode),
+				stacktrace.WithInfo("field", node.Value))
 		}
 	}
 	return nil
@@ -66,11 +75,6 @@ func (ex *Example) fill(location string, value *yaml.Node) error {
 			return fmt.Errorf("decode example: %w", err)
 		}
 	}
-	n, err := ex.raml.makeRootNode(valueKey, location)
-	if err != nil {
-		return StacktraceNewWrapped("make node", err, location, WithNodePosition(valueKey))
-	}
-	ex.Data = n
 	return nil
 }
 

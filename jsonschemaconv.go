@@ -329,7 +329,7 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 func (c *JSONSchemaConverter) VisitJSONShape(s *JSONShape) *JSONSchema {
 	schema := c.makeSchemaFromBaseShape(s.Base())
 	// NOTE: RAML type may override common properties like title, description, etc.
-	schema = c.overrideCommonProperties(schema, s.Schema)
+	// schema = c.overrideCommonProperties(schema, s.Schema)
 	// NOTE: Nested JSON Schema may not have $schema keyword.
 	schema.Version = ""
 	return schema
@@ -365,8 +365,8 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 	schema := &JSONSchema{
 		Extras: make(map[string]interface{}),
 	}
-	if base.DisplayName != nil {
-		schema.Title = *base.DisplayName
+	if base.DisplayName.Value != nil {
+		schema.Title = *base.DisplayName.Value
 	}
 	if base.Description != nil {
 		schema.Description = *base.Description

@@ -215,12 +215,6 @@ func (s *IntegerShape) check() error {
 			}
 		}
 	}
-	// invalid format, found by copilot =)
-	if s.Format != nil {
-		if _, ok := SetOfIntegerFormats[*s.Format]; !ok {
-			return StacktraceNew("invalid format", s.Location, stacktrace.WithPosition(&s.Position))
-		}
-	}
 	return nil
 }
 
@@ -394,7 +388,7 @@ func (s *NumberShape) inherit(source Shape) (Shape, error) {
 			stacktrace.WithInfo("target", *s.Maximum))
 	}
 	// TODO: multipleOf validation
-	if ss.MultipleOf != nil {
+	if s.MultipleOf == nil {
 		// TODO: Disallow multipleOf 0 to avoid division by zero during validation
 		s.MultipleOf = ss.MultipleOf
 	}
