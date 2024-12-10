@@ -136,14 +136,7 @@ func (r *RAML) UnwrapShapes() error {
 		return fmt.Errorf("mark shape recursions: %w", err)
 	}
 	// Links to definedBy must be updated after unwrapping.
-	se := r.unwrapDomainExtensions()
-	if se != nil {
-		if st == nil {
-			st = se
-		} else {
-			st = st.Append(se)
-		}
-	}
+	st = r.unwrapDomainExtensions()
 	if st != nil {
 		return st
 	}
