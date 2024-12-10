@@ -128,19 +128,15 @@ func (r *RAML) UnwrapShapes() error {
 	r.fragmentAnnotationTypes = make(map[string]map[string]*BaseShape)
 	r.shapes = make([]*BaseShape, 0, len(r.shapes))
 	st := r.unwrapFragments()
+	if st != nil {
+		return st
+	}
 	err := r.markShapeRecursions()
 	if err != nil {
 		return fmt.Errorf("mark shape recursions: %w", err)
 	}
 	// Links to definedBy must be updated after unwrapping.
-	se := r.unwrapDomainExtensions()
-	if se != nil {
-		if st == nil {
-			st = se
-		} else {
-			st = st.Append(se)
-		}
-	}
+	st = r.unwrapDomainExtensions()
 	if st != nil {
 		return st
 	}
