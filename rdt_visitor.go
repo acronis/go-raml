@@ -146,6 +146,9 @@ func (visitor *RdtVisitor) VisitUnion(ctx *rdt.UnionContext, target *UnknownShap
 
 func (visitor *RdtVisitor) VisitGroup(ctx *rdt.GroupContext, target *UnknownShape) (Shape, error) {
 	// First and last nodes are terminal nodes
+	// ( expression )
+	// ^     ^      ^
+	// 0     1      2
 	return visitor.Visit(ctx.GetChildren()[1].(antlr.ParseTree), target)
 }
 
