@@ -120,14 +120,14 @@ func (s *ArrayShape) inherit(source Shape) (Shape, error) {
 	}
 	if s.MinItems == nil {
 		s.MinItems = ss.MinItems
-	} else if ss.MinItems != nil && *s.MinItems > *ss.MinItems {
+	} else if ss.MinItems != nil && *s.MinItems < *ss.MinItems {
 		return nil, StacktraceNew("minItems constraint violation", s.Location,
 			stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("source", *ss.MinItems),
 			stacktrace.WithInfo("target", *s.MinItems))
 	}
 	if s.MaxItems == nil {
 		s.MaxItems = ss.MaxItems
-	} else if ss.MaxItems != nil && *s.MaxItems < *ss.MaxItems {
+	} else if ss.MaxItems != nil && *s.MaxItems > *ss.MaxItems {
 		return nil, StacktraceNew("maxItems constraint violation", s.Location,
 			stacktrace.WithPosition(&s.Position), stacktrace.WithInfo("source", *ss.MaxItems),
 			stacktrace.WithInfo("target", *s.MaxItems))
@@ -475,7 +475,7 @@ func (s *ObjectShape) validate(v interface{}, ctxPath string) error {
 func (s *ObjectShape) inheritMinProperties(source *ObjectShape) error {
 	if s.MinProperties == nil {
 		s.MinProperties = source.MinProperties
-	} else if source.MinProperties != nil && *s.MinProperties > *source.MinProperties {
+	} else if source.MinProperties != nil && *s.MinProperties < *source.MinProperties {
 		return StacktraceNew("minProperties constraint violation", s.Location,
 			stacktrace.WithPosition(&s.Position),
 			stacktrace.WithInfo("source", *source.MinProperties),
@@ -487,7 +487,7 @@ func (s *ObjectShape) inheritMinProperties(source *ObjectShape) error {
 func (s *ObjectShape) inheritMaxProperties(source *ObjectShape) error {
 	if s.MaxProperties == nil {
 		s.MaxProperties = source.MaxProperties
-	} else if source.MaxProperties != nil && *s.MaxProperties < *source.MaxProperties {
+	} else if source.MaxProperties != nil && *s.MaxProperties > *source.MaxProperties {
 		return StacktraceNew("maxProperties constraint violation", s.Location,
 			stacktrace.WithPosition(&s.Position),
 			stacktrace.WithInfo("source", *source.MaxProperties),

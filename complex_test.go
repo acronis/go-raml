@@ -344,11 +344,11 @@ func TestArrayShape_Inherit(t *testing.T) {
 							},
 						},
 						MinItems: func() *uint64 {
-							i := uint64(3)
+							i := uint64(1)
 							return &i
 						}(),
 						MaxItems: func() *uint64 {
-							i := uint64(3)
+							i := uint64(6)
 							return &i
 						}(),
 						UniqueItems: func() *bool {
@@ -427,7 +427,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MinItems: func() *uint64 {
-						i := uint64(2)
+						i := uint64(1)
 						return &i
 					}(),
 				},
@@ -437,7 +437,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
 						MinItems: func() *uint64 {
-							i := uint64(1)
+							i := uint64(2)
 							return &i
 						}(),
 					},
@@ -451,7 +451,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 				BaseShape: &BaseShape{},
 				ArrayFacets: ArrayFacets{
 					MaxItems: func() *uint64 {
-						i := uint64(1)
+						i := uint64(2)
 						return &i
 					}(),
 				},
@@ -461,7 +461,7 @@ func TestArrayShape_Inherit(t *testing.T) {
 					BaseShape: &BaseShape{},
 					ArrayFacets: ArrayFacets{
 						MaxItems: func() *uint64 {
-							i := uint64(2)
+							i := uint64(1)
 							return &i
 						}(),
 					},
@@ -1780,7 +1780,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MinProperties: func() *uint64 {
-						i := uint64(2)
+						i := uint64(4)
 						return &i
 					}(),
 				},
@@ -1792,7 +1792,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MinProperties: func() *uint64 {
-							i := uint64(4)
+							i := uint64(2)
 							return &i
 						}(),
 					},
@@ -1802,7 +1802,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 				if got.MinProperties == nil {
 					return "MinProperties hasn't been inherited", false
 				}
-				if *got.MinProperties != 2 {
+				if *got.MinProperties != 4 {
 					return "MinProperties hasn't been inherited correctly", false
 				}
 				return "", true
@@ -1847,7 +1847,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MinProperties: func() *uint64 {
-						i := uint64(4)
+						i := uint64(2)
 						return &i
 					}(),
 				},
@@ -1859,7 +1859,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MinProperties: func() *uint64 {
-							i := uint64(2)
+							i := uint64(4)
 							return &i
 						}(),
 					},
@@ -1870,7 +1870,7 @@ func TestObjectShape_inheritMinProperties(t *testing.T) {
 				if got.MinProperties == nil {
 					return "MinProperties hasn't been inherited", false
 				}
-				if *got.MinProperties != 4 {
+				if *got.MinProperties != 2 {
 					return "MinProperties hasn't been inherited correctly", false
 				}
 				return "", true
@@ -1918,7 +1918,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MaxProperties: func() *uint64 {
-						i := uint64(4)
+						i := uint64(2)
 						return &i
 					}(),
 				},
@@ -1930,7 +1930,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MaxProperties: func() *uint64 {
-							i := uint64(2)
+							i := uint64(4)
 							return &i
 						}(),
 					},
@@ -1940,7 +1940,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 				if got.MaxProperties == nil {
 					return "MaxProperties hasn't been inherited", false
 				}
-				if *got.MaxProperties != 4 {
+				if *got.MaxProperties != 2 {
 					return "MaxProperties hasn't been inherited correctly", false
 				}
 				return "", true
@@ -1985,7 +1985,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MaxProperties: func() *uint64 {
-						i := uint64(2)
+						i := uint64(4)
 						return &i
 					}(),
 				},
@@ -1997,7 +1997,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MaxProperties: func() *uint64 {
-							i := uint64(4)
+							i := uint64(2)
 							return &i
 						}(),
 					},
@@ -2008,7 +2008,7 @@ func TestObjectShape_inheritMaxProperties(t *testing.T) {
 				if got.MaxProperties == nil {
 					return "MaxProperties hasn't been inherited", false
 				}
-				if *got.MaxProperties != 2 {
+				if *got.MaxProperties != 4 {
 					return "MaxProperties hasn't been inherited correctly", false
 				}
 				return "", true
@@ -2535,11 +2535,11 @@ func TestObjectShape_inherit(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MinProperties: func() *uint64 {
-							i := uint64(4)
+							i := uint64(1)
 							return &i
 						}(),
 						MaxProperties: func() *uint64 {
-							i := uint64(2)
+							i := uint64(5)
 							return &i
 						}(),
 						Properties: func() *orderedmap.OrderedMap[string, Property] {
@@ -2700,7 +2700,7 @@ func TestObjectShape_inherit(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MinProperties: func() *uint64 {
-						i := uint64(4)
+						i := uint64(2)
 						return &i
 					}(),
 				},
@@ -2712,7 +2712,7 @@ func TestObjectShape_inherit(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MinProperties: func() *uint64 {
-							i := uint64(2)
+							i := uint64(4)
 							return &i
 						}(),
 					},
@@ -2728,7 +2728,7 @@ func TestObjectShape_inherit(t *testing.T) {
 				},
 				ObjectFacets: ObjectFacets{
 					MaxProperties: func() *uint64 {
-						i := uint64(2)
+						i := uint64(4)
 						return &i
 					}(),
 				},
@@ -2740,7 +2740,7 @@ func TestObjectShape_inherit(t *testing.T) {
 					},
 					ObjectFacets: ObjectFacets{
 						MaxProperties: func() *uint64 {
-							i := uint64(4)
+							i := uint64(2)
 							return &i
 						}(),
 					},
