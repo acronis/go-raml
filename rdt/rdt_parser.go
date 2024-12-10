@@ -50,40 +50,45 @@ func rdtparserParserInit() {
 	}
 	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 22, 83, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
+		4, 1, 22, 95, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
 		4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 1, 0, 1, 0, 1, 0, 1,
 		1, 1, 1, 3, 1, 24, 8, 1, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 3, 2, 31, 8, 2,
 		1, 3, 1, 3, 1, 4, 1, 4, 1, 4, 3, 4, 38, 8, 4, 1, 4, 1, 4, 1, 5, 1, 5, 1,
 		5, 3, 5, 45, 8, 5, 1, 5, 1, 5, 1, 6, 1, 6, 5, 6, 51, 8, 6, 10, 6, 12, 6,
 		54, 9, 6, 1, 6, 1, 6, 5, 6, 58, 8, 6, 10, 6, 12, 6, 61, 9, 6, 1, 6, 1,
 		6, 5, 6, 65, 8, 6, 10, 6, 12, 6, 68, 9, 6, 4, 6, 70, 8, 6, 11, 6, 12, 6,
-		71, 1, 7, 1, 7, 1, 7, 1, 7, 1, 8, 1, 8, 1, 8, 3, 8, 81, 8, 8, 1, 8, 0,
-		0, 9, 0, 2, 4, 6, 8, 10, 12, 14, 16, 0, 1, 1, 0, 7, 20, 87, 0, 18, 1, 0,
-		0, 0, 2, 23, 1, 0, 0, 0, 4, 30, 1, 0, 0, 0, 6, 32, 1, 0, 0, 0, 8, 37, 1,
-		0, 0, 0, 10, 44, 1, 0, 0, 0, 12, 48, 1, 0, 0, 0, 14, 73, 1, 0, 0, 0, 16,
-		77, 1, 0, 0, 0, 18, 19, 3, 2, 1, 0, 19, 20, 5, 0, 0, 1, 20, 1, 1, 0, 0,
-		0, 21, 24, 3, 4, 2, 0, 22, 24, 3, 12, 6, 0, 23, 21, 1, 0, 0, 0, 23, 22,
-		1, 0, 0, 0, 24, 3, 1, 0, 0, 0, 25, 31, 3, 6, 3, 0, 26, 31, 3, 14, 7, 0,
-		27, 31, 3, 16, 8, 0, 28, 31, 3, 10, 5, 0, 29, 31, 3, 8, 4, 0, 30, 25, 1,
-		0, 0, 0, 30, 26, 1, 0, 0, 0, 30, 27, 1, 0, 0, 0, 30, 28, 1, 0, 0, 0, 30,
-		29, 1, 0, 0, 0, 31, 5, 1, 0, 0, 0, 32, 33, 7, 0, 0, 0, 33, 7, 1, 0, 0,
-		0, 34, 38, 3, 6, 3, 0, 35, 38, 3, 14, 7, 0, 36, 38, 3, 16, 8, 0, 37, 34,
-		1, 0, 0, 0, 37, 35, 1, 0, 0, 0, 37, 36, 1, 0, 0, 0, 38, 39, 1, 0, 0, 0,
-		39, 40, 5, 5, 0, 0, 40, 9, 1, 0, 0, 0, 41, 45, 3, 6, 3, 0, 42, 45, 3, 14,
-		7, 0, 43, 45, 3, 16, 8, 0, 44, 41, 1, 0, 0, 0, 44, 42, 1, 0, 0, 0, 44,
-		43, 1, 0, 0, 0, 45, 46, 1, 0, 0, 0, 46, 47, 5, 4, 0, 0, 47, 11, 1, 0, 0,
-		0, 48, 52, 3, 4, 2, 0, 49, 51, 5, 22, 0, 0, 50, 49, 1, 0, 0, 0, 51, 54,
-		1, 0, 0, 0, 52, 50, 1, 0, 0, 0, 52, 53, 1, 0, 0, 0, 53, 69, 1, 0, 0, 0,
-		54, 52, 1, 0, 0, 0, 55, 59, 5, 3, 0, 0, 56, 58, 5, 22, 0, 0, 57, 56, 1,
-		0, 0, 0, 58, 61, 1, 0, 0, 0, 59, 57, 1, 0, 0, 0, 59, 60, 1, 0, 0, 0, 60,
-		62, 1, 0, 0, 0, 61, 59, 1, 0, 0, 0, 62, 66, 3, 4, 2, 0, 63, 65, 5, 22,
-		0, 0, 64, 63, 1, 0, 0, 0, 65, 68, 1, 0, 0, 0, 66, 64, 1, 0, 0, 0, 66, 67,
-		1, 0, 0, 0, 67, 70, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0, 69, 55, 1, 0, 0, 0,
-		70, 71, 1, 0, 0, 0, 71, 69, 1, 0, 0, 0, 71, 72, 1, 0, 0, 0, 72, 13, 1,
-		0, 0, 0, 73, 74, 5, 1, 0, 0, 74, 75, 3, 2, 1, 0, 75, 76, 5, 2, 0, 0, 76,
-		15, 1, 0, 0, 0, 77, 80, 5, 21, 0, 0, 78, 79, 5, 6, 0, 0, 79, 81, 5, 21,
-		0, 0, 80, 78, 1, 0, 0, 0, 80, 81, 1, 0, 0, 0, 81, 17, 1, 0, 0, 0, 9, 23,
-		30, 37, 44, 52, 59, 66, 71, 80,
+		71, 1, 7, 1, 7, 5, 7, 76, 8, 7, 10, 7, 12, 7, 79, 9, 7, 1, 7, 1, 7, 5,
+		7, 83, 8, 7, 10, 7, 12, 7, 86, 9, 7, 1, 7, 1, 7, 1, 8, 1, 8, 1, 8, 3, 8,
+		93, 8, 8, 1, 8, 0, 0, 9, 0, 2, 4, 6, 8, 10, 12, 14, 16, 0, 1, 1, 0, 7,
+		20, 101, 0, 18, 1, 0, 0, 0, 2, 23, 1, 0, 0, 0, 4, 30, 1, 0, 0, 0, 6, 32,
+		1, 0, 0, 0, 8, 37, 1, 0, 0, 0, 10, 44, 1, 0, 0, 0, 12, 48, 1, 0, 0, 0,
+		14, 73, 1, 0, 0, 0, 16, 89, 1, 0, 0, 0, 18, 19, 3, 2, 1, 0, 19, 20, 5,
+		0, 0, 1, 20, 1, 1, 0, 0, 0, 21, 24, 3, 4, 2, 0, 22, 24, 3, 12, 6, 0, 23,
+		21, 1, 0, 0, 0, 23, 22, 1, 0, 0, 0, 24, 3, 1, 0, 0, 0, 25, 31, 3, 6, 3,
+		0, 26, 31, 3, 14, 7, 0, 27, 31, 3, 16, 8, 0, 28, 31, 3, 10, 5, 0, 29, 31,
+		3, 8, 4, 0, 30, 25, 1, 0, 0, 0, 30, 26, 1, 0, 0, 0, 30, 27, 1, 0, 0, 0,
+		30, 28, 1, 0, 0, 0, 30, 29, 1, 0, 0, 0, 31, 5, 1, 0, 0, 0, 32, 33, 7, 0,
+		0, 0, 33, 7, 1, 0, 0, 0, 34, 38, 3, 6, 3, 0, 35, 38, 3, 14, 7, 0, 36, 38,
+		3, 16, 8, 0, 37, 34, 1, 0, 0, 0, 37, 35, 1, 0, 0, 0, 37, 36, 1, 0, 0, 0,
+		38, 39, 1, 0, 0, 0, 39, 40, 5, 5, 0, 0, 40, 9, 1, 0, 0, 0, 41, 45, 3, 6,
+		3, 0, 42, 45, 3, 14, 7, 0, 43, 45, 3, 16, 8, 0, 44, 41, 1, 0, 0, 0, 44,
+		42, 1, 0, 0, 0, 44, 43, 1, 0, 0, 0, 45, 46, 1, 0, 0, 0, 46, 47, 5, 4, 0,
+		0, 47, 11, 1, 0, 0, 0, 48, 52, 3, 4, 2, 0, 49, 51, 5, 22, 0, 0, 50, 49,
+		1, 0, 0, 0, 51, 54, 1, 0, 0, 0, 52, 50, 1, 0, 0, 0, 52, 53, 1, 0, 0, 0,
+		53, 69, 1, 0, 0, 0, 54, 52, 1, 0, 0, 0, 55, 59, 5, 3, 0, 0, 56, 58, 5,
+		22, 0, 0, 57, 56, 1, 0, 0, 0, 58, 61, 1, 0, 0, 0, 59, 57, 1, 0, 0, 0, 59,
+		60, 1, 0, 0, 0, 60, 62, 1, 0, 0, 0, 61, 59, 1, 0, 0, 0, 62, 66, 3, 4, 2,
+		0, 63, 65, 5, 22, 0, 0, 64, 63, 1, 0, 0, 0, 65, 68, 1, 0, 0, 0, 66, 64,
+		1, 0, 0, 0, 66, 67, 1, 0, 0, 0, 67, 70, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0,
+		69, 55, 1, 0, 0, 0, 70, 71, 1, 0, 0, 0, 71, 69, 1, 0, 0, 0, 71, 72, 1,
+		0, 0, 0, 72, 13, 1, 0, 0, 0, 73, 77, 5, 1, 0, 0, 74, 76, 5, 22, 0, 0, 75,
+		74, 1, 0, 0, 0, 76, 79, 1, 0, 0, 0, 77, 75, 1, 0, 0, 0, 77, 78, 1, 0, 0,
+		0, 78, 80, 1, 0, 0, 0, 79, 77, 1, 0, 0, 0, 80, 84, 3, 2, 1, 0, 81, 83,
+		5, 22, 0, 0, 82, 81, 1, 0, 0, 0, 83, 86, 1, 0, 0, 0, 84, 82, 1, 0, 0, 0,
+		84, 85, 1, 0, 0, 0, 85, 87, 1, 0, 0, 0, 86, 84, 1, 0, 0, 0, 87, 88, 5,
+		2, 0, 0, 88, 15, 1, 0, 0, 0, 89, 92, 5, 21, 0, 0, 90, 91, 5, 6, 0, 0, 91,
+		93, 5, 21, 0, 0, 92, 90, 1, 0, 0, 0, 92, 93, 1, 0, 0, 0, 93, 17, 1, 0,
+		0, 0, 11, 23, 30, 37, 44, 52, 59, 66, 71, 77, 84, 92,
 	}
 	deserializer := antlr.NewATNDeserializer(nil)
 	staticData.atn = deserializer.Deserialize(staticData.serializedATN)
@@ -1265,6 +1270,8 @@ func (p *rdtParser) Union() (localctx IUnionContext) {
 	p.EnterRule(localctx, 12, rdtParserRULE_union)
 	var _la int
 
+	var _alt int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(48)
@@ -1343,24 +1350,31 @@ func (p *rdtParser) Union() (localctx IUnionContext) {
 		if p.HasError() {
 			goto errorExit
 		}
-		_la = p.GetTokenStream().LA(1)
-
-		for _la == rdtParserWS {
-			{
-				p.SetState(63)
-				p.Match(rdtParserWS)
-				if p.HasError() {
-					// Recognition error - abort rule
-					goto errorExit
+		_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 6, p.GetParserRuleContext())
+		if p.HasError() {
+			goto errorExit
+		}
+		for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
+			if _alt == 1 {
+				{
+					p.SetState(63)
+					p.Match(rdtParserWS)
+					if p.HasError() {
+						// Recognition error - abort rule
+						goto errorExit
+					}
 				}
-			}
 
+			}
 			p.SetState(68)
 			p.GetErrorHandler().Sync(p)
 			if p.HasError() {
 				goto errorExit
 			}
-			_la = p.GetTokenStream().LA(1)
+			_alt = p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 6, p.GetParserRuleContext())
+			if p.HasError() {
+				goto errorExit
+			}
 		}
 
 		p.SetState(71)
@@ -1395,6 +1409,8 @@ type IGroupContext interface {
 	LPAREN() antlr.TerminalNode
 	Expression() IExpressionContext
 	RPAREN() antlr.TerminalNode
+	AllWS() []antlr.TerminalNode
+	WS(i int) antlr.TerminalNode
 
 	// IsGroupContext differentiates from other interfaces.
 	IsGroupContext()
@@ -1456,6 +1472,14 @@ func (s *GroupContext) RPAREN() antlr.TerminalNode {
 	return s.GetToken(rdtParserRPAREN, 0)
 }
 
+func (s *GroupContext) AllWS() []antlr.TerminalNode {
+	return s.GetTokens(rdtParserWS)
+}
+
+func (s *GroupContext) WS(i int) antlr.TerminalNode {
+	return s.GetToken(rdtParserWS, i)
+}
+
 func (s *GroupContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
@@ -1477,6 +1501,8 @@ func (s *GroupContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 func (p *rdtParser) Group() (localctx IGroupContext) {
 	localctx = NewGroupContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 14, rdtParserRULE_group)
+	var _la int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(73)
@@ -1486,12 +1512,60 @@ func (p *rdtParser) Group() (localctx IGroupContext) {
 			goto errorExit
 		}
 	}
-	{
-		p.SetState(74)
-		p.Expression()
+	p.SetState(77)
+	p.GetErrorHandler().Sync(p)
+	if p.HasError() {
+		goto errorExit
+	}
+	_la = p.GetTokenStream().LA(1)
+
+	for _la == rdtParserWS {
+		{
+			p.SetState(74)
+			p.Match(rdtParserWS)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+		p.SetState(79)
+		p.GetErrorHandler().Sync(p)
+		if p.HasError() {
+			goto errorExit
+		}
+		_la = p.GetTokenStream().LA(1)
 	}
 	{
-		p.SetState(75)
+		p.SetState(80)
+		p.Expression()
+	}
+	p.SetState(84)
+	p.GetErrorHandler().Sync(p)
+	if p.HasError() {
+		goto errorExit
+	}
+	_la = p.GetTokenStream().LA(1)
+
+	for _la == rdtParserWS {
+		{
+			p.SetState(81)
+			p.Match(rdtParserWS)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+		p.SetState(86)
+		p.GetErrorHandler().Sync(p)
+		if p.HasError() {
+			goto errorExit
+		}
+		_la = p.GetTokenStream().LA(1)
+	}
+	{
+		p.SetState(87)
 		p.Match(rdtParserRPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1597,14 +1671,14 @@ func (p *rdtParser) Reference() (localctx IReferenceContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(77)
+		p.SetState(89)
 		p.Match(rdtParserIDENTIFIER)
 		if p.HasError() {
 			// Recognition error - abort rule
 			goto errorExit
 		}
 	}
-	p.SetState(80)
+	p.SetState(92)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -1613,7 +1687,7 @@ func (p *rdtParser) Reference() (localctx IReferenceContext) {
 
 	if _la == rdtParserDOT {
 		{
-			p.SetState(78)
+			p.SetState(90)
 			p.Match(rdtParserDOT)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -1621,7 +1695,7 @@ func (p *rdtParser) Reference() (localctx IReferenceContext) {
 			}
 		}
 		{
-			p.SetState(79)
+			p.SetState(91)
 			p.Match(rdtParserIDENTIFIER)
 			if p.HasError() {
 				// Recognition error - abort rule
