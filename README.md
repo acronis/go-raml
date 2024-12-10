@@ -24,12 +24,12 @@ This package aims to achieve the following:
 
 ## Why RAML?
 
-RAML is a powerful modelling language that encourages design-first approach to API definitions by offering
-modularity and flexibility. Combined with a powerful type system with inheritance support that it offers,
-it also allows the developers to easily define complex data type schemas by leveraging
-both inheritance mechanism (by referencing a parent type with common properties) and modularity (by referencing common data type fragments).
+RAML is a powerful modelling language that encourages a design-first approach to API definitions by offering
+modularity and flexibility. As well as the powerful type system with inheritance support that it offers,
+it also allows developers to easily define complex data type schemas by leveraging
+both an inheritance mechanism (by referencing a parent type with common properties) and modularity (by referencing common data type fragments).
 
-RAML uses YAML as a markup language which also contributes to readability, especially in complex definitions.
+RAML uses YAML as a markup language, which also contributes to readability, especially in complex definitions.
 
 For comparison, an example of a simple data type schema in RAML would be the following:
 
@@ -95,7 +95,7 @@ of the inheritance support:
 
 RAML's primary objective is to provide a specification for maintainable, design-driven API definitions.
 
-By using RAML, you can make a well-structured API definition that would be easy to read, maintain
+By using RAML, you can make a well-structured API definition that is easy to read, maintain
 and use.
 
 ### Validate data
@@ -132,8 +132,7 @@ annotationTypes:
 
 ### And more
 
-With all the features, there can be more creative cases that can be covered
-and are not limited to the mentioned use cases.
+With all these features, more creative cases can be covered than the use cases mentioned here.
 
 ## Supported features of RAML 1.0 specification
 
@@ -197,7 +196,7 @@ The following sections are currently implemented. See notes for each point:
     - [x] Validate
     - [ ] Convert to JSON Schema
 
-## Comparison to existing libraries
+## Comparison with existing libraries
 
 ### Table of libraries
 
@@ -248,7 +247,7 @@ make install
 
 ### Parser options
 
-By default, parser outputs the resulting model as is and without validation. This means that information about all links and inheritance chains
+By default, the parser outputs the resulting model as is and without validation. This means that information about all links and inheritance chains
 is unmodified. Be aware
 that the parser may generate recursive structures, depending on your definition, and you may need to implement recursion
 detection when traversing the model.
@@ -264,11 +263,11 @@ The parser currently provides two options:
   parents/links.
 
 > [!NOTE]
-> In most cases, the use of both flags is advised. If you need to access unmodified types, use only `OptWithValidate()`. Note that memory consumption may be higher and processing time may be longer since `OptWithValidate()` performs a dedicated copy and unwrap for each type.
+> In most cases, the use of both flags is advised. If you need to access unmodified types, use only `OptWithValidate()`. Memory consumption may be higher and processing time may be longer since `OptWithValidate()` performs a dedicated copy and unwrap for each type.
 
 ### Parsing from string
 
-The following code will parse a RAML string, output a library model and print the common information about the defined
+The following code will parse a RAML string, output a library model, and print the common information about the defined
 type.
 
 ```go
@@ -333,7 +332,7 @@ Type name: BasicType, type: string, minLength: 0, location: <absolute_path>/libr
 
 ### Parsing from file
 
-The following code will parse a RAML file, output a library model and print the common information about the defined
+The following code will parse a RAML file, output a library model, and print the common information about the defined
 type.
 
 ```go
