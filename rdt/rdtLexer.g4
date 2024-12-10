@@ -27,4 +27,4 @@ UNION_TYPE: 'union';
 // Priority 2
 IDENTIFIER: ([0-9] | [a-z] | [A-Z] | '_' | '-')+;
 
-WS: [ \t];
+WS: [ \t] -> channel(HIDDEN);
