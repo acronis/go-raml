@@ -32,6 +32,6 @@ array: (primitive | group | reference) ARRAY_NOTATION;
 
 union: type WS* (PIPE WS* type WS*)+;
 
-group: LPAREN expression RPAREN;
+group: LPAREN WS* expression WS* RPAREN;
 
 reference: IDENTIFIER (DOT IDENTIFIER)?;
