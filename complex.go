@@ -1,10 +1,12 @@
 package raml
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 
+	"github.com/cespare/xxhash"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 
@@ -68,6 +70,16 @@ func (s *ArrayShape) alias(source Shape) (Shape, error) {
 	return s, nil
 }
 
+func hashInterfaceFast(v interface{}) (uint64, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return 0, fmt.Errorf("marshal: %w", err)
+	}
+
+	// Use xxhash for fast hashing.
+	return xxhash.Sum64(data), nil
+}
+
 func (s *ArrayShape) validate(v interface{}, ctxPath string) error {
 	i, ok := v.([]interface{})
 	if !ok {
@@ -82,7 +94,7 @@ func (s *ArrayShape) validate(v interface{}, ctxPath string) error {
 		return fmt.Errorf("array must have not more than %d items", *s.MaxItems)
 	}
 	validateUniqueItems := s.UniqueItems != nil && *s.UniqueItems
-	uniqueItems := make(map[interface{}]struct{})
+	uniqueItems := make(map[uint64]struct{})
 	for ii, item := range i {
 		ctxPathA := ctxPath + "[" + strconv.Itoa(ii) + "]"
 		if s.Items != nil {
@@ -91,7 +103,12 @@ func (s *ArrayShape) validate(v interface{}, ctxPath string) error {
 			}
 		}
 		if validateUniqueItems {
-			uniqueItems[item] = struct{}{}
+			itemHash, err := hashInterfaceFast(item)
+			if err != nil {
+				return fmt.Errorf("hash array item %s: %w", ctxPathA, err)
+			}
+
+			uniqueItems[itemHash] = struct{}{}
 		}
 	}
 	if validateUniqueItems && len(uniqueItems) != len(i) {
