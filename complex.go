@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/cespare/xxhash"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/zeebo/xxh3"
 	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-stacktrace"
@@ -77,7 +77,7 @@ func hashInterfaceFast(v interface{}) (uint64, error) {
 	}
 
 	// Use xxhash for fast hashing.
-	return xxhash.Sum64(data), nil
+	return xxh3.Hash(data), nil
 }
 
 func (s *ArrayShape) validate(v interface{}, ctxPath string) error {

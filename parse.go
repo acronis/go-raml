@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -224,7 +223,7 @@ func (r *RAML) parseLibrary(path string) (*Library, error) {
 	var err error
 
 	if lib := r.GetFragment(path); lib != nil {
-		slog.Debug("reusing fragment", slog.String("path", path))
+		// slog.Debug("reusing fragment", slog.String("path", path))
 		return lib.(*Library), nil
 	}
 
@@ -274,7 +273,7 @@ func (r *RAML) parseNamedExample(path string) (*NamedExample, error) {
 	// Convert rel to abs relative to current workdir if necessary.
 
 	if lib := r.GetFragment(path); lib != nil {
-		slog.Debug("reusing fragment", slog.String("path", path))
+		// slog.Debug("reusing fragment", slog.String("path", path))
 		return lib.(*NamedExample), nil
 	}
 

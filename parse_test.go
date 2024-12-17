@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"os"
 	"runtime"
 	"testing"
@@ -20,8 +19,7 @@ func Test_ParseFromPathIntegration(t *testing.T) {
 	require.NoError(t, err)
 	elapsed := time.Since(start)
 	shapesAll := rml.GetShapes()
-	slog.Info("ParseFromPath", "took ms", elapsed.Milliseconds(), "location",
-		rml.entryPoint.GetLocation(), "total shapes", len(shapesAll))
+	t.Logf("ParseFromPath took %d ms, location %s, total shapes %d", elapsed.Milliseconds(), rml.entryPoint.GetLocation(), len(shapesAll))
 
 	for _, base := range shapesAll {
 		shape := base.Shape
@@ -84,8 +82,8 @@ func printMemUsage(t *testing.T) {
 	var m runtime.MemStats
 	t.Helper()
 	runtime.ReadMemStats(&m)
-	slog.Info("Memory usage", "alloc MiB", m.Alloc/1024/1024, "total alloc MiB",
-		m.TotalAlloc/1024/1024, "sys MiB", m.Sys/1024/1024, "num GC", m.NumGC)
+	t.Logf("Memory usage: alloc MiB %d, total alloc MiB %d, sys MiB %d, num GC %d",
+		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
 }
 
 type mockReadSeeker struct {
