@@ -1,6 +1,6 @@
 module github.com/acronis/go-raml/cmd/raml
 
-go 1.23.0
+go 1.22.6
 
 require (
 	github.com/acronis/go-raml v0.14.0
