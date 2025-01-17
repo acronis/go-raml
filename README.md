@@ -31,6 +31,99 @@ both an inheritance mechanism (by referencing a parent type with common properti
 
 RAML uses YAML as a markup language, which also contributes to readability, especially in complex definitions.
 
+### RAML vs OpenAPI
+
+While both specifications provide a way to define endpoints, request and responses, and security schemes,
+RAML additionally provides ways to reuse their content. For example:
+
+* By specifying traits to apply individual reusable properties to specific endpoints or collections.
+* By specifying resource types to apply a common set of available actions or collections.
+* By utilizing type inheritance when building complex types.
+
+OpenAPI also allows breaking down the specification into individual and reusable components and include them
+in the document. However, these components only deduplicate the content and cannot be modified. In RAML, on the other hand,
+it is possible to reuse a component AND modify it, thus reducing the boilerplate.
+The following simple example demonstrates how common resource types can be used to build a uniform CRUD API:
+
+```yaml
+#%RAML 1.0
+
+title: Test API
+version: v1
+baseUri: /api/{version}
+mediaType: application/json
+
+resourceTypes:
+  BatchCollection:
+    get:
+      responses:
+        200:
+          body:
+            type: <<entityType>>[]
+    post:
+      body:
+        type: <<entityType>>
+      responses:
+        201:
+          body:
+            type: <<entityType>>
+    delete:
+      responses:
+        204:
+  ItemCollection:
+    get:
+      responses:
+        200:
+          body:
+            type: <<entityType>>
+    put:
+      body:
+        type: <<entityType>>
+      responses:
+        204:
+    delete:
+      responses:
+        204:
+
+types:
+  User:
+    properties:
+      id: integer
+      name: string
+      email: string
+      age: integer
+  
+  Organization:
+    properties:
+      id: integer
+      name: string
+      address: string
+
+/users:
+  type: 
+    BatchCollection:
+      entityType: User
+  /{user_id}:
+    type: 
+      ItemCollection:
+        entityType: User
+
+/organizations:
+  type: 
+    BatchCollection:
+      entityType: Organization
+  /{organization_id}:
+    type: 
+      ItemCollection:
+        entityType: Organization
+```
+
+Additionally, developers may use typed annotations to introduce custom behavior, contract validation, assist code generation,
+auto-tests, etc. Compared to OpenAPI where extensions are untyped, this allows the developers to describe the extension
+right in the document.
+
+### RAML data type vs JSON Schema
+
 For comparison, an example of a simple data type schema in RAML would be the following:
 
 ```yaml
