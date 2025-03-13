@@ -131,6 +131,10 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 	source := sourceBase.Shape
 	target := s.Shape
 
+	if s.Description == nil {
+		s.Description = sourceBase.Description
+	}
+
 	// If source type is any, return target as is
 	if _, ok := source.(*AnyShape); ok {
 		return s, nil
