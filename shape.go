@@ -263,6 +263,23 @@ func (s *BaseShape) AliasTo(source *BaseShape) (*BaseShape, error) {
 func (s *BaseShape) CloneShallow() *BaseShape {
 	c := *s
 	ptr := &c
+
+	c.CustomDomainProperties = orderedmap.New[string, *DomainExtension](s.CustomDomainProperties.Len())
+	for pair := s.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
+		c.CustomDomainProperties.Set(pair.Key, pair.Value)
+	}
+
+	c.CustomShapeFacets = orderedmap.New[string, *Node](s.CustomShapeFacets.Len())
+	for pair := s.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+		c.CustomShapeFacets.Set(pair.Key, pair.Value)
+	}
+
+	c.CustomShapeFacetDefinitions = orderedmap.New[string, Property](s.CustomShapeFacetDefinitions.Len())
+	for pair := s.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		prop := pair.Value
+		c.CustomShapeFacetDefinitions.Set(pair.Key, prop)
+	}
+
 	c.Shape = s.Shape.cloneShallow(ptr)
 	return ptr
 }
