@@ -104,6 +104,7 @@ func (s *IntegerShape) alias(source Shape) (Shape, error) {
 	s.Maximum = ss.Maximum
 	s.MultipleOf = ss.MultipleOf
 	s.Format = ss.Format
+	s.Enum = ss.Enum
 	return s, nil
 }
 
@@ -328,6 +329,7 @@ func (s *NumberShape) alias(source Shape) (Shape, error) {
 	s.Maximum = ss.Maximum
 	s.MultipleOf = ss.MultipleOf
 	s.Format = ss.Format
+	s.Enum = ss.Enum
 	return s, nil
 }
 
@@ -523,6 +525,7 @@ func (s *StringShape) alias(source Shape) (Shape, error) {
 	s.MinLength = ss.MinLength
 	s.MaxLength = ss.MaxLength
 	s.Pattern = ss.Pattern
+	s.Enum = ss.Enum
 	return s, nil
 }
 

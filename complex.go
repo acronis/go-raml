@@ -821,6 +821,7 @@ func (s *UnionShape) alias(source Shape) (Shape, error) {
 			stacktrace.WithInfo("target", s.Base().Type))
 	}
 	s.AnyOf = ss.AnyOf
+	s.Enum = ss.Enum
 	return s, nil
 }
 
