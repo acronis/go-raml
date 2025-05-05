@@ -663,13 +663,13 @@ func (s *ObjectShape) checkProperties() error {
 				stacktrace.WithInfo("discriminator", *s.Discriminator))
 		}
 		discriminatorValue := s.DiscriminatorValue
-		if discriminatorValue == nil {
-			discriminatorValue = s.Base().Name
-		}
-		if err := prop.Base.Validate(discriminatorValue); err != nil {
-			return StacktraceNewWrapped("validate discriminator value", err, s.Location,
-				stacktrace.WithPosition(&s.Base().Position),
-				stacktrace.WithInfo("discriminator", *s.Discriminator))
+		// If discriminatorValue is set explicitly - validate it against the discriminator type
+		if discriminatorValue != nil {
+			if err := prop.Base.Validate(discriminatorValue); err != nil {
+				return StacktraceNewWrapped("validate discriminator value", err, s.Location,
+					stacktrace.WithPosition(&s.Base().Position),
+					stacktrace.WithInfo("discriminator", *s.Discriminator))
+			}
 		}
 	}
 
