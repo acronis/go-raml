@@ -349,12 +349,30 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 	if parent.Examples != nil {
 		cs.Examples = parent.Examples
 	}
-	if parent.Extras != nil {
-		if cs.Extras == nil {
-			cs.Extras = parent.Extras
+	if parent.Annotations != nil {
+		if cs.Annotations == nil {
+			cs.Annotations = parent.Annotations
 		} else {
-			for k, v := range parent.Extras {
-				cs.Extras[k] = v
+			for k, v := range parent.Annotations {
+				cs.Annotations[k] = v
+			}
+		}
+	}
+	if parent.FacetDefinitions != nil {
+		if cs.FacetDefinitions == nil {
+			cs.FacetDefinitions = parent.FacetDefinitions
+		} else {
+			for k, v := range parent.FacetDefinitions {
+				cs.FacetDefinitions[k] = v
+			}
+		}
+	}
+	if parent.FacetData != nil {
+		if cs.FacetData == nil {
+			cs.FacetData = parent.FacetData
+		} else {
+			for k, v := range parent.FacetData {
+				cs.FacetData[k] = v
 			}
 		}
 	}
@@ -363,7 +381,9 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 
 func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSchema {
 	schema := &JSONSchema{
-		Extras: make(map[string]interface{}),
+		Annotations:      make(map[string]any),
+		FacetDefinitions: make(map[string]*JSONSchema),
+		FacetData:        make(map[string]any),
 	}
 	if base.DisplayName != nil {
 		schema.Title = *base.DisplayName
@@ -385,25 +405,15 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 	}
 	for pair := base.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.Extras["x-domainExt-"+k] = v.Extension.Value
+		schema.Annotations[k] = v.Extension.Value
 	}
 	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		m := schema.Extras["x-shapeExt-definitions"]
-		if m == nil {
-			m = make(map[string]interface{})
-			schema.Extras["x-shapeExt-definitions"] = m
-		}
-		shouldBeMap, ok := m.(map[string]interface{})
-		if !ok {
-			panic("invalid shape extension definitions")
-		}
-		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(v.Base.Shape)
+		schema.FacetDefinitions[k] = c.Visit(v.Base.Shape)
 	}
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.Extras["x-shapeExt-data-"+k] = v.Value
+		schema.FacetData[k] = v.Value
 	}
 	return schema
 }

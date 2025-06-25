@@ -2067,7 +2067,7 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					Examples: []interface{}{
 						"parent",
 					},
-					Extras: map[string]interface{}{
+					Annotations: map[string]interface{}{
 						"parent": "parent",
 					},
 				},
@@ -2079,7 +2079,7 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					Examples: []interface{}{
 						"child",
 					},
-					Extras: map[string]interface{}{
+					Annotations: map[string]interface{}{
 						"child": "child",
 					},
 				},
@@ -2103,13 +2103,13 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 				if !reflect.DeepEqual(schema.Examples, []interface{}{"parent"}) {
 					tt.Errorf("expected schema.Examples to be [parent], got %v", schema.Examples)
 				}
-				if schema.Extras == nil {
+				if schema.Annotations == nil {
 					tt.Errorf("expected schema.Extras to be non-nil, got nil")
 				}
-				if v, ok := schema.Extras["parent"]; !ok {
+				if v, ok := schema.Annotations["parent"]; !ok {
 					tt.Errorf("expected schema.Extras to have parent key, got %v", v)
 				}
-				if v, ok := schema.Extras["child"]; !ok {
+				if v, ok := schema.Annotations["child"]; !ok {
 					tt.Errorf("expected schema.Extras to have child key, got %v", v)
 				}
 			},
@@ -2120,7 +2120,7 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			args: args{
 				parent: &JSONSchema{
 					Type: "object",
-					Extras: map[string]interface{}{
+					Annotations: map[string]interface{}{
 						"parent": "parent",
 					},
 				},
@@ -2129,10 +2129,10 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 				},
 			},
 			want: func(tt *testing.T, schema *JSONSchema) {
-				if schema.Extras == nil {
+				if schema.Annotations == nil {
 					tt.Errorf("expected schema.Extras to be non-nil, got nil")
 				}
-				if v, ok := schema.Extras["parent"]; !ok {
+				if v, ok := schema.Annotations["parent"]; !ok {
 					tt.Errorf("expected schema.Extras to have parent key, got %v", v)
 				}
 			},
@@ -2260,22 +2260,23 @@ func TestJSONSchemaConverter_makeSchemaFromBaseShape(t *testing.T) {
 				if schema.Examples[0] != "value" {
 					tt.Errorf("expected schema.Examples to have value, got %v", schema.Examples)
 				}
-				if schema.Extras == nil {
-					tt.Errorf("expected schema.Extras to be non-nil, got nil")
+				if schema.Annotations == nil {
+					tt.Errorf("expected schema.Annotations to be non-nil, got nil")
 				}
-				if v, ok := schema.Extras["x-domainExt-custom"]; !ok && v != "value" {
-					tt.Errorf("expected schema.Extras to have x-domainExt-custom key, got %v", v)
+				if v, ok := schema.Annotations["custom"]; !ok && v != "value" {
+					tt.Errorf("expected schema.Annotations to have custom key, got %v", v)
 				}
-				if v, ok := schema.Extras["x-shapeExt-data-custom"]; !ok && v != "value" {
-					tt.Errorf("expected schema.Extras to have x-shapeExt-data-custom key, got %v", v)
+				if schema.FacetData == nil {
+					tt.Errorf("expected schema.FacetData to be non-nil, got nil")
 				}
-				if v, ok := schema.Extras["x-shapeExt-definitions"]; !ok {
-					tt.Errorf("expected schema.Extras to have x-shapeExt-definitions key, got %v", v)
-				} else {
-					defs := v.(map[string]interface{})
-					if _, present := defs["custom"]; !present {
-						tt.Errorf("expected schema.Extras to have custom key in x-shapeExt-definitions, got %v", defs)
-					}
+				if v, ok := schema.FacetData["custom"]; !ok && v != "value" {
+					tt.Errorf("expected schema.FacetData to have custom key, got %v", v)
+				}
+				if schema.FacetDefinitions == nil {
+					tt.Errorf("expected schema.FacetDefinitions to be non-nil, got nil")
+				}
+				if v, ok := schema.FacetDefinitions["custom"]; !ok {
+					tt.Errorf("expected schema.FacetDefinitions to have custom key in definitions, got %v", v)
 				}
 				if schema.Properties != nil {
 					tt.Errorf("expected schema.Properties to be nil, got non-nil")
