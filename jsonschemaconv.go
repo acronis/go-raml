@@ -315,11 +315,10 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 	baseHead := head.Base()
 	// TODO: Type name is not unique, need pretty naming to avoid collisions.
 	definition := baseHead.Name
-	if c.definitions[definition] == nil {
-		defSchema := &JSONSchema{}
-		// NOTE: Assign empty defSchema before traversing to definitions to occupy the name.
-		c.definitions[definition] = defSchema
-		*defSchema = *c.Visit(head)
+	if _, ok := c.definitions[definition]; !ok {
+		// NOTE: Assign empty defSchema to definitions to occupy the name before traversing.
+		c.definitions[definition] = &JSONSchema{}
+		c.definitions[definition] = c.Visit(head)
 	}
 	schema.Ref = "#/definitions/" + definition
 
@@ -349,12 +348,30 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 	if parent.Examples != nil {
 		cs.Examples = parent.Examples
 	}
-	if parent.Extras != nil {
-		if cs.Extras == nil {
-			cs.Extras = parent.Extras
+	if parent.Annotations != nil {
+		if cs.Annotations == nil {
+			cs.Annotations = parent.Annotations
 		} else {
-			for k, v := range parent.Extras {
-				cs.Extras[k] = v
+			for pair := parent.Annotations.Oldest(); pair != nil; pair = pair.Next() {
+				cs.Annotations.Set(pair.Key, pair.Value)
+			}
+		}
+	}
+	if parent.FacetDefinitions != nil {
+		if cs.FacetDefinitions == nil {
+			cs.FacetDefinitions = parent.FacetDefinitions
+		} else {
+			for pair := parent.FacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+				cs.FacetDefinitions.Set(pair.Key, pair.Value)
+			}
+		}
+	}
+	if parent.FacetData != nil {
+		if cs.FacetData == nil {
+			cs.FacetData = parent.FacetData
+		} else {
+			for pair := parent.FacetData.Oldest(); pair != nil; pair = pair.Next() {
+				cs.FacetData.Set(pair.Key, pair.Value)
 			}
 		}
 	}
@@ -362,9 +379,7 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 }
 
 func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSchema {
-	schema := &JSONSchema{
-		Extras: make(map[string]interface{}),
-	}
+	schema := &JSONSchema{}
 	if base.DisplayName != nil {
 		schema.Title = *base.DisplayName
 	}
@@ -383,27 +398,20 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 	if base.Example != nil {
 		schema.Examples = []any{base.Example.Data.Value}
 	}
+	schema.Annotations = orderedmap.New[string, any](base.CustomDomainProperties.Len())
 	for pair := base.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.Extras["x-domainExt-"+k] = v.Extension.Value
+		schema.Annotations.Set(k, v.Extension.Value)
 	}
+	schema.FacetDefinitions = orderedmap.New[string, *JSONSchema](base.CustomShapeFacetDefinitions.Len())
 	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		m := schema.Extras["x-shapeExt-definitions"]
-		if m == nil {
-			m = make(map[string]interface{})
-			schema.Extras["x-shapeExt-definitions"] = m
-		}
-		shouldBeMap, ok := m.(map[string]interface{})
-		if !ok {
-			panic("invalid shape extension definitions")
-		}
-		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(v.Base.Shape)
+		schema.FacetDefinitions.Set(k, c.Visit(v.Base.Shape))
 	}
+	schema.FacetData = orderedmap.New[string, any](base.CustomShapeFacets.Len())
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.Extras["x-shapeExt-data-"+k] = v.Value
+		schema.FacetData.Set(k, v.Value)
 	}
 	return schema
 }

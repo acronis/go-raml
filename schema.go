@@ -64,8 +64,9 @@ type JSONSchema struct {
 	Default     any    `json:"default,omitempty"`
 	Examples    []any  `json:"examples,omitempty"`
 
-	// TODO: There's no better way to serialize custom properties on the same level in Go.
-	Extras map[string]any `json:"x-custom,omitempty"`
+	Annotations      map[string]any         `json:"x-annotations,omitempty"`
+	FacetDefinitions map[string]*JSONSchema `json:"x-facet-definitions,omitempty"`
+	FacetData        map[string]any         `json:"x-facet-data,omitempty"`
 
 	// Special boolean representation of the Schema
 	boolean *bool

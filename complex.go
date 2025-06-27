@@ -650,6 +650,7 @@ func (s *ObjectShape) checkProperties() error {
 	}
 	// FIXME: Need to validate on which level the discriminator is applied to avoid potential false positives.
 	// Inline definitions with discriminator are not allowed.
+	//nolint:nestif // Contains simple checks.
 	if s.Discriminator != nil {
 		prop, ok := s.Properties.Get(*s.Discriminator)
 		if !ok {
