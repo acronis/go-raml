@@ -352,8 +352,8 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 		if cs.Annotations == nil {
 			cs.Annotations = parent.Annotations
 		} else {
-			for k, v := range parent.Annotations {
-				cs.Annotations[k] = v
+			for pair := parent.Annotations.Oldest(); pair != nil; pair = pair.Next() {
+				cs.Annotations.Set(pair.Key, pair.Value)
 			}
 		}
 	}
@@ -361,8 +361,8 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 		if cs.FacetDefinitions == nil {
 			cs.FacetDefinitions = parent.FacetDefinitions
 		} else {
-			for k, v := range parent.FacetDefinitions {
-				cs.FacetDefinitions[k] = v
+			for pair := parent.FacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+				cs.FacetDefinitions.Set(pair.Key, pair.Value)
 			}
 		}
 	}
@@ -370,8 +370,8 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 		if cs.FacetData == nil {
 			cs.FacetData = parent.FacetData
 		} else {
-			for k, v := range parent.FacetData {
-				cs.FacetData[k] = v
+			for pair := parent.FacetData.Oldest(); pair != nil; pair = pair.Next() {
+				cs.FacetData.Set(pair.Key, pair.Value)
 			}
 		}
 	}
@@ -379,11 +379,7 @@ func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child
 }
 
 func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSchema {
-	schema := &JSONSchema{
-		Annotations:      make(map[string]any),
-		FacetDefinitions: make(map[string]*JSONSchema),
-		FacetData:        make(map[string]any),
-	}
+	schema := &JSONSchema{}
 	if base.DisplayName != nil {
 		schema.Title = *base.DisplayName
 	}
@@ -402,17 +398,20 @@ func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSche
 	if base.Example != nil {
 		schema.Examples = []any{base.Example.Data.Value}
 	}
+	schema.Annotations = orderedmap.New[string, any](base.CustomDomainProperties.Len())
 	for pair := base.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.Annotations[k] = v.Extension.Value
+		schema.Annotations.Set(k, v.Extension.Value)
 	}
+	schema.FacetDefinitions = orderedmap.New[string, *JSONSchema](base.CustomShapeFacetDefinitions.Len())
 	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.FacetDefinitions[k] = c.Visit(v.Base.Shape)
+		schema.FacetDefinitions.Set(k, c.Visit(v.Base.Shape))
 	}
+	schema.FacetData = orderedmap.New[string, any](base.CustomShapeFacets.Len())
 	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, v := pair.Key, pair.Value
-		schema.FacetData[k] = v.Value
+		schema.FacetData.Set(k, v.Value)
 	}
 	return schema
 }
