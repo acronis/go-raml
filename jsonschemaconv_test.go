@@ -2119,14 +2119,14 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			},
 		},
 		{
-			name:   "positive case: extras nil",
+			name:   "positive case: annotations nil",
 			fields: fields{},
 			args: args{
 				parent: &JSONSchema{
 					Type: "object",
 					Annotations: func() *orderedmap.OrderedMap[string, any] {
 						m := orderedmap.New[string, any](0)
-						m.Set("custom", "custom")
+						m.Set("parent", "parent")
 						return m
 					}(),
 				},
