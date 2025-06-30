@@ -64,9 +64,9 @@ type JSONSchema struct {
 	Default     any    `json:"default,omitempty"`
 	Examples    []any  `json:"examples,omitempty"`
 
-	Annotations      map[string]any         `json:"x-annotations,omitempty"`
-	FacetDefinitions map[string]*JSONSchema `json:"x-facet-definitions,omitempty"`
-	FacetData        map[string]any         `json:"x-facet-data,omitempty"`
+	Annotations      *orderedmap.OrderedMap[string, any]         `json:"x-annotations,omitempty"`
+	FacetDefinitions *orderedmap.OrderedMap[string, *JSONSchema] `json:"x-facet-definitions,omitempty"`
+	FacetData        *orderedmap.OrderedMap[string, any]         `json:"x-facet-data,omitempty"`
 
 	// Special boolean representation of the Schema
 	boolean *bool

@@ -2067,9 +2067,11 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					Examples: []interface{}{
 						"parent",
 					},
-					Annotations: map[string]interface{}{
-						"parent": "parent",
-					},
+					Annotations: func() *orderedmap.OrderedMap[string, any] {
+						m := orderedmap.New[string, any](0)
+						m.Set("parent", "parent")
+						return m
+					}(),
 				},
 				child: &JSONSchema{
 					Type:        "object",
@@ -2079,9 +2081,11 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					Examples: []interface{}{
 						"child",
 					},
-					Annotations: map[string]interface{}{
-						"child": "child",
-					},
+					Annotations: func() *orderedmap.OrderedMap[string, any] {
+						m := orderedmap.New[string, any](0)
+						m.Set("child", "child")
+						return m
+					}(),
 				},
 			},
 			want: func(tt *testing.T, schema *JSONSchema) {
@@ -2104,13 +2108,13 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					tt.Errorf("expected schema.Examples to be [parent], got %v", schema.Examples)
 				}
 				if schema.Annotations == nil {
-					tt.Errorf("expected schema.Extras to be non-nil, got nil")
+					tt.Errorf("expected schema.Annotations to be non-nil, got nil")
 				}
-				if v, ok := schema.Annotations["parent"]; !ok {
-					tt.Errorf("expected schema.Extras to have parent key, got %v", v)
+				if v, ok := schema.Annotations.Get("parent"); !ok {
+					tt.Errorf("expected schema.Annotations to have parent key, got %v", v)
 				}
-				if v, ok := schema.Annotations["child"]; !ok {
-					tt.Errorf("expected schema.Extras to have child key, got %v", v)
+				if v, ok := schema.Annotations.Get("child"); !ok {
+					tt.Errorf("expected schema.Annotations to have child key, got %v", v)
 				}
 			},
 		},
@@ -2120,9 +2124,11 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			args: args{
 				parent: &JSONSchema{
 					Type: "object",
-					Annotations: map[string]interface{}{
-						"parent": "parent",
-					},
+					Annotations: func() *orderedmap.OrderedMap[string, any] {
+						m := orderedmap.New[string, any](0)
+						m.Set("custom", "custom")
+						return m
+					}(),
 				},
 				child: &JSONSchema{
 					Type: "object",
@@ -2130,10 +2136,10 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			},
 			want: func(tt *testing.T, schema *JSONSchema) {
 				if schema.Annotations == nil {
-					tt.Errorf("expected schema.Extras to be non-nil, got nil")
+					tt.Errorf("expected schema.Annotations to be non-nil, got nil")
 				}
-				if v, ok := schema.Annotations["parent"]; !ok {
-					tt.Errorf("expected schema.Extras to have parent key, got %v", v)
+				if v, ok := schema.Annotations.Get("parent"); !ok {
+					tt.Errorf("expected schema.Annotations to have parent key, got %v", v)
 				}
 			},
 		},
@@ -2263,19 +2269,19 @@ func TestJSONSchemaConverter_makeSchemaFromBaseShape(t *testing.T) {
 				if schema.Annotations == nil {
 					tt.Errorf("expected schema.Annotations to be non-nil, got nil")
 				}
-				if v, ok := schema.Annotations["custom"]; !ok && v != "value" {
+				if v, ok := schema.Annotations.Get("custom"); !ok && v != "value" {
 					tt.Errorf("expected schema.Annotations to have custom key, got %v", v)
 				}
 				if schema.FacetData == nil {
 					tt.Errorf("expected schema.FacetData to be non-nil, got nil")
 				}
-				if v, ok := schema.FacetData["custom"]; !ok && v != "value" {
+				if v, ok := schema.FacetData.Get("custom"); !ok && v != "value" {
 					tt.Errorf("expected schema.FacetData to have custom key, got %v", v)
 				}
 				if schema.FacetDefinitions == nil {
 					tt.Errorf("expected schema.FacetDefinitions to be non-nil, got nil")
 				}
-				if v, ok := schema.FacetDefinitions["custom"]; !ok {
+				if v, ok := schema.FacetDefinitions.Get("custom"); !ok {
 					tt.Errorf("expected schema.FacetDefinitions to have custom key in definitions, got %v", v)
 				}
 				if schema.Properties != nil {
