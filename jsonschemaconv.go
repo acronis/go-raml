@@ -315,11 +315,10 @@ func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema
 	baseHead := head.Base()
 	// TODO: Type name is not unique, need pretty naming to avoid collisions.
 	definition := baseHead.Name
-	if c.definitions[definition] == nil {
-		defSchema := &JSONSchema{}
-		// NOTE: Assign empty defSchema before traversing to definitions to occupy the name.
-		c.definitions[definition] = defSchema
-		*defSchema = *c.Visit(head)
+	if _, ok := c.definitions[definition]; !ok {
+		// NOTE: Assign empty defSchema to definitions to occupy the name before traversing.
+		c.definitions[definition] = &JSONSchema{}
+		c.definitions[definition] = c.Visit(head)
 	}
 	schema.Ref = "#/definitions/" + definition
 
