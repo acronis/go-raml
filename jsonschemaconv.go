@@ -31,7 +31,7 @@ type JSONSchemaConverterOptions struct {
 type JSONSchemaConverter struct {
 	ShapeVisitor[JSONSchema]
 
-	definitions    Definitions
+	definitions    Definitions[JSONSchema]
 	complexSchemas map[int64]*JSONSchema
 
 	opts JSONSchemaConverterOptions
@@ -54,17 +54,18 @@ func (c *JSONSchemaConverter) Convert(s Shape) (*JSONSchema, error) {
 
 	entrypointName := s.Base().Name
 	c.complexSchemas = make(map[int64]*JSONSchema)
-	c.definitions = make(Definitions)
-	schema := &JSONSchema{}
+	c.definitions = make(Definitions[JSONSchema])
+	c.definitions[entrypointName] = &JSONSchema{}
 	// NOTE: Assign empty schema before traversing to definitions to occupy the name.
 	// TODO: Probably can be refactored in a better way.
-	c.definitions[entrypointName] = schema
-	*schema = *c.Visit(s)
+	c.definitions[entrypointName] = c.Visit(s)
 
 	return &JSONSchema{
-		Version:     JSONSchemaVersion,
-		Ref:         "#/definitions/" + entrypointName,
-		Definitions: c.definitions,
+		JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+			Version:     JSONSchemaVersion,
+			Ref:         "#/definitions/" + entrypointName,
+			Definitions: c.definitions,
+		},
 	}, nil
 }
 

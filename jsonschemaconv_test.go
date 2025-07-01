@@ -121,7 +121,7 @@ func TestNewJSONSchemaConverter(t *testing.T) {
 func TestJSONSchemaConverter_Convert(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -194,7 +194,7 @@ func TestJSONSchemaConverter_Convert(t *testing.T) {
 func TestJSONSchemaConverter_Visit(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -470,7 +470,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 			name: "positive case: visit recursive shape",
 			fields: fields{
 				complexSchemas: make(map[int64]*JSONSchema),
-				definitions:    make(Definitions),
+				definitions:    make(Definitions[JSONSchema]),
 			},
 			args: args{
 				s: &RecursiveShape{
@@ -525,7 +525,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 func TestJSONSchemaConverter_VisitObjectShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -623,7 +623,7 @@ func TestJSONSchemaConverter_VisitObjectShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitArrayShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -696,7 +696,7 @@ func TestJSONSchemaConverter_VisitArrayShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitUnionShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -765,7 +765,7 @@ func TestJSONSchemaConverter_VisitUnionShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitStringShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -860,7 +860,7 @@ func TestJSONSchemaConverter_VisitStringShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitIntegerShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -972,7 +972,7 @@ func TestJSONSchemaConverter_VisitIntegerShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitNumberShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1084,7 +1084,7 @@ func TestJSONSchemaConverter_VisitNumberShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitFileShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1149,7 +1149,7 @@ func TestJSONSchemaConverter_VisitFileShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitBooleanShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1232,7 +1232,7 @@ func TestJSONSchemaConverter_VisitBooleanShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitDateTimeShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1462,7 +1462,7 @@ func TestJSONSchemaConverter_VisitDateTimeShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitDateTimeOnlyShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1558,7 +1558,7 @@ func TestJSONSchemaConverter_VisitDateTimeOnlyShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitDateOnlyShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1649,7 +1649,7 @@ func TestJSONSchemaConverter_VisitDateOnlyShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitTimeOnlyShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1743,7 +1743,7 @@ func TestJSONSchemaConverter_VisitTimeOnlyShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitNilShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1837,7 +1837,7 @@ func TestJSONSchemaConverter_VisitNilShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitRecursiveShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1853,7 +1853,7 @@ func TestJSONSchemaConverter_VisitRecursiveShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				definitions: Definitions{},
+				definitions: Definitions[JSONSchema]{},
 			},
 			args: args{
 				s: &RecursiveShape{
@@ -1941,7 +1941,7 @@ func TestJSONSchemaConverter_VisitRecursiveShape(t *testing.T) {
 func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -1957,7 +1957,7 @@ func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields{
-				definitions: Definitions{},
+				definitions: Definitions[JSONSchema]{},
 			},
 			args: args{
 				s: &JSONShape{
@@ -1965,7 +1965,9 @@ func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 						Type: "json",
 					},
 					Schema: &JSONSchema{
-						Type: "object",
+						JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+							Type: "object",
+						},
 					},
 					Raw: `{}`,
 				},
@@ -2041,7 +2043,7 @@ func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}
@@ -2060,13 +2062,16 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			fields: fields{},
 			args: args{
 				parent: &JSONSchema{
-					Type:        "object",
-					Title:       "parent",
-					Description: "parent description",
-					Default:     "parent default",
-					Examples: []interface{}{
-						"parent",
+					JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+						Type:        "object",
+						Title:       "parent",
+						Description: "parent description",
+						Default:     "parent default",
+						Examples: []interface{}{
+							"parent",
+						},
 					},
+
 					Annotations: func() *orderedmap.OrderedMap[string, any] {
 						m := orderedmap.New[string, any](0)
 						m.Set("parent", "parent")
@@ -2074,12 +2079,14 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					}(),
 				},
 				child: &JSONSchema{
-					Type:        "object",
-					Title:       "child",
-					Description: "child description",
-					Default:     "child default",
-					Examples: []interface{}{
-						"child",
+					JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+						Type:        "object",
+						Title:       "child",
+						Description: "child description",
+						Default:     "child default",
+						Examples: []interface{}{
+							"child",
+						},
 					},
 					Annotations: func() *orderedmap.OrderedMap[string, any] {
 						m := orderedmap.New[string, any](0)
@@ -2123,7 +2130,9 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 			fields: fields{},
 			args: args{
 				parent: &JSONSchema{
-					Type: "object",
+					JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+						Type: "object",
+					},
 					Annotations: func() *orderedmap.OrderedMap[string, any] {
 						m := orderedmap.New[string, any](0)
 						m.Set("parent", "parent")
@@ -2131,7 +2140,9 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 					}(),
 				},
 				child: &JSONSchema{
-					Type: "object",
+					JSONSchemaGeneric: JSONSchemaGeneric[JSONSchema]{
+						Type: "object",
+					},
 				},
 			},
 			want: func(tt *testing.T, schema *JSONSchema) {
@@ -2163,7 +2174,7 @@ func TestJSONSchemaConverter_overrideCommonProperties(t *testing.T) {
 func TestJSONSchemaConverter_makeSchemaFromBaseShape(t *testing.T) {
 	type fields struct {
 		ShapeVisitor   ShapeVisitor[JSONSchema]
-		definitions    Definitions
+		definitions    Definitions[JSONSchema]
 		complexSchemas map[int64]*JSONSchema
 		opts           JSONSchemaConverterOptions
 	}

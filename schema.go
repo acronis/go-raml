@@ -14,28 +14,28 @@ const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 // Schema represents a JSON Schema object type.
 //
 // https://json-schema.org/draft-07/draft-handrews-json-schema-00.pdf
-type JSONSchema struct {
-	Version     string      `json:"$schema,omitempty"`
-	ID          string      `json:"$id,omitempty"`
-	Ref         string      `json:"$ref,omitempty"`
-	Definitions Definitions `json:"definitions,omitempty"`
-	Comment     string      `json:"$comment,omitempty"`
+type JSONSchemaGeneric[T any] struct {
+	Version     string         `json:"$schema,omitempty"`
+	ID          string         `json:"$id,omitempty"`
+	Ref         string         `json:"$ref,omitempty"`
+	Definitions Definitions[T] `json:"definitions,omitempty"`
+	Comment     string         `json:"$comment,omitempty"`
 
-	AllOf []*JSONSchema `json:"allOf,omitempty"`
-	AnyOf []*JSONSchema `json:"anyOf,omitempty"`
-	OneOf []*JSONSchema `json:"oneOf,omitempty"`
-	Not   *JSONSchema   `json:"not,omitempty"`
+	AllOf []*T `json:"allOf,omitempty"`
+	AnyOf []*T `json:"anyOf,omitempty"`
+	OneOf []*T `json:"oneOf,omitempty"`
+	Not   *T   `json:"not,omitempty"`
 
-	If   *JSONSchema `json:"if,omitempty"`
-	Then *JSONSchema `json:"then,omitempty"`
-	Else *JSONSchema `json:"else,omitempty"`
+	If   *T `json:"if,omitempty"`
+	Then *T `json:"then,omitempty"`
+	Else *T `json:"else,omitempty"`
 
-	Items *JSONSchema `json:"items,omitempty"`
+	Items *T `json:"items,omitempty"`
 
-	Properties           *orderedmap.OrderedMap[string, *JSONSchema] `json:"properties,omitempty"`
-	PatternProperties    *orderedmap.OrderedMap[string, *JSONSchema] `json:"patternProperties,omitempty"`
-	AdditionalProperties *bool                                       `json:"additionalProperties,omitempty"`
-	PropertyNames        *JSONSchema                                 `json:"propertyNames,omitempty"`
+	Properties           *orderedmap.OrderedMap[string, *T] `json:"properties,omitempty"`
+	PatternProperties    *orderedmap.OrderedMap[string, *T] `json:"patternProperties,omitempty"`
+	AdditionalProperties *bool                              `json:"additionalProperties,omitempty"`
+	PropertyNames        *T                                 `json:"propertyNames,omitempty"`
 
 	Type             string      `json:"type,omitempty"`
 	Enum             []any       `json:"enum,omitempty"`
@@ -63,23 +63,16 @@ type JSONSchema struct {
 	Description string `json:"description,omitempty"`
 	Default     any    `json:"default,omitempty"`
 	Examples    []any  `json:"examples,omitempty"`
-
-	Annotations      *orderedmap.OrderedMap[string, any]         `json:"x-annotations,omitempty"`
-	FacetDefinitions *orderedmap.OrderedMap[string, *JSONSchema] `json:"x-facet-definitions,omitempty"`
-	FacetData        *orderedmap.OrderedMap[string, any]         `json:"x-facet-data,omitempty"`
-
-	// Special boolean representation of the Schema
-	boolean *bool
 }
-
-var (
-	// TrueSchema defines a schema with a true value
-	TrueSchema = &JSONSchema{boolean: &[]bool{true}[0]}
-	// FalseSchema defines a schema with a false value
-	FalseSchema = &JSONSchema{boolean: &[]bool{false}[0]}
-)
 
 // Definitions hold schema definitions.
 // http://json-schema.org/latest/json-schema-validation.html#rfc.section.5.26
 // RFC draft-wright-json-schema-validation-00, section 5.26
-type Definitions map[string]*JSONSchema
+type Definitions[T any] map[string]*T
+
+type JSONSchema struct {
+	JSONSchemaGeneric[JSONSchema]
+	Annotations      *orderedmap.OrderedMap[string, any]         `json:"x-annotations,omitempty"`
+	FacetDefinitions *orderedmap.OrderedMap[string, *JSONSchema] `json:"x-facet-definitions,omitempty"`
+	FacetData        *orderedmap.OrderedMap[string, any]         `json:"x-facet-data,omitempty"`
+}
