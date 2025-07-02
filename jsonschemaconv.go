@@ -12,8 +12,8 @@ import (
 type WrapperFunc[T jsonSchemaWrapper[T]] func(conv *JSONSchemaConverter[T], core *JSONSchemaGeneric[T], src *BaseShape) T
 
 type JSONSchemaConverterOptions[T jsonSchemaWrapper[T]] struct {
-	omitRefs bool
-	wrap     WrapperFunc[T]
+	// omitRefs bool
+	wrap WrapperFunc[T]
 }
 
 type JSONSchemaConverterOpt[T jsonSchemaWrapper[T]] interface {
@@ -28,12 +28,12 @@ func WithWrapper[T jsonSchemaWrapper[T]](f WrapperFunc[T]) JSONSchemaConverterOp
 	return optWrapper[T]{f}
 }
 
-type optOmitRefs[T jsonSchemaWrapper[T]] struct{ omitRefs bool }
+// type optOmitRefs[T jsonSchemaWrapper[T]] struct{ omitRefs bool }
 
-func (o optOmitRefs[T]) apply(c *JSONSchemaConverterOptions[T]) { c.omitRefs = o.omitRefs }
-func WithOmitRefs[T jsonSchemaWrapper[T]](b bool) JSONSchemaConverterOpt[T] {
-	return optOmitRefs[T]{b}
-}
+// func (o optOmitRefs[T]) apply(c *JSONSchemaConverterOptions[T]) { c.omitRefs = o.omitRefs }
+// func WithOmitRefs[T jsonSchemaWrapper[T]](b bool) JSONSchemaConverterOpt[T] {
+// 	return optOmitRefs[T]{b}
+// }
 
 type JSONSchemaConverter[T jsonSchemaWrapper[T]] struct {
 	ShapeVisitor[T]

@@ -11,81 +11,81 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func Test_optOmitRefs_Apply(t *testing.T) {
-	type fields struct {
-		omitRefs bool
-	}
-	type args struct {
-		e *JSONSchemaConverterOptions[*JSONSchemaRAML]
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   func(tt *testing.T, options *JSONSchemaConverterOptions[*JSONSchemaRAML])
-	}{
-		{
-			name: "positive case",
-			fields: fields{
-				omitRefs: true,
-			},
-			args: args{
-				e: &JSONSchemaConverterOptions[*JSONSchemaRAML]{},
-			},
-			want: func(tt *testing.T, options *JSONSchemaConverterOptions[*JSONSchemaRAML]) {
-				if !options.omitRefs {
-					tt.Errorf("expected options.OmitRefs to be true, got false")
-				}
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			o := optOmitRefs[*JSONSchemaRAML]{
-				omitRefs: tt.fields.omitRefs,
-			}
-			o.apply(tt.args.e)
-			if tt.want != nil {
-				tt.want(t, tt.args.e)
-			}
-		})
-	}
-}
+// func Test_optOmitRefs_Apply(t *testing.T) {
+// 	type fields struct {
+// 		omitRefs bool
+// 	}
+// 	type args struct {
+// 		e *JSONSchemaConverterOptions[*JSONSchemaRAML]
+// 	}
+// 	tests := []struct {
+// 		name   string
+// 		fields fields
+// 		args   args
+// 		want   func(tt *testing.T, options *JSONSchemaConverterOptions[*JSONSchemaRAML])
+// 	}{
+// 		{
+// 			name: "positive case",
+// 			fields: fields{
+// 				omitRefs: true,
+// 			},
+// 			args: args{
+// 				e: &JSONSchemaConverterOptions[*JSONSchemaRAML]{},
+// 			},
+// 			want: func(tt *testing.T, options *JSONSchemaConverterOptions[*JSONSchemaRAML]) {
+// 				if !options.omitRefs {
+// 					tt.Errorf("expected options.OmitRefs to be true, got false")
+// 				}
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			o := optOmitRefs[*JSONSchemaRAML]{
+// 				omitRefs: tt.fields.omitRefs,
+// 			}
+// 			o.apply(tt.args.e)
+// 			if tt.want != nil {
+// 				tt.want(t, tt.args.e)
+// 			}
+// 		})
+// 	}
+// }
 
-func TestWithOmitRefs(t *testing.T) {
-	type args struct {
-		omitRefs bool
-	}
-	tests := []struct {
-		name string
-		args args
-		want func(tt *testing.T, options JSONSchemaConverterOpt[*JSONSchemaRAML])
-	}{
-		{
-			name: "positive case",
-			args: args{
-				omitRefs: true,
-			},
-			want: func(tt *testing.T, options JSONSchemaConverterOpt[*JSONSchemaRAML]) {
-				opt, ok := options.(optOmitRefs[*JSONSchemaRAML])
-				if !ok {
-					tt.Errorf("expected options to be of type optOmitRefs, got %T", options)
-				}
-				if !opt.omitRefs {
-					tt.Errorf("expected options.OmitRefs to be true, got false")
-				}
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := WithOmitRefs[*JSONSchemaRAML](tt.args.omitRefs)
-			if tt.want != nil {
-				tt.want(t, got)
-			}
-		})
-	}
-}
+// func TestWithOmitRefs(t *testing.T) {
+// 	type args struct {
+// 		omitRefs bool
+// 	}
+// 	tests := []struct {
+// 		name string
+// 		args args
+// 		want func(tt *testing.T, options JSONSchemaConverterOpt[*JSONSchemaRAML])
+// 	}{
+// 		{
+// 			name: "positive case",
+// 			args: args{
+// 				omitRefs: true,
+// 			},
+// 			want: func(tt *testing.T, options JSONSchemaConverterOpt[*JSONSchemaRAML]) {
+// 				opt, ok := options.(optOmitRefs[*JSONSchemaRAML])
+// 				if !ok {
+// 					tt.Errorf("expected options to be of type optOmitRefs, got %T", options)
+// 				}
+// 				if !opt.omitRefs {
+// 					tt.Errorf("expected options.OmitRefs to be true, got false")
+// 				}
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got := WithOmitRefs[*JSONSchemaRAML](tt.args.omitRefs)
+// 			if tt.want != nil {
+// 				tt.want(t, got)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestNewJSONSchemaConverter(t *testing.T) {
 	type args struct {
@@ -100,12 +100,12 @@ func TestNewJSONSchemaConverter(t *testing.T) {
 			name: "positive case",
 			args: args{
 				opts: []JSONSchemaConverterOpt[*JSONSchemaRAML]{
-					WithOmitRefs[*JSONSchemaRAML](true),
+					WithWrapper(RAMLWrapper),
 				},
 			},
 			want: func(tt *testing.T, converter *JSONSchemaConverter[*JSONSchemaRAML]) {
-				if !converter.opts.omitRefs {
-					tt.Errorf("expected converter.OmitRefs to be true, got false")
+				if converter.opts.wrap == nil {
+					tt.Errorf("expected converter.opts.wrap to be set, got nil")
 				}
 			},
 		},
