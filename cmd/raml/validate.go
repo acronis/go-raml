@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/acronis/go-raml"
+	"github.com/acronis/go-raml/v2"
 	"github.com/acronis/go-stacktrace"
 	"github.com/acronis/go-stacktrace/slogex"
 )

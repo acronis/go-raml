@@ -5,7 +5,7 @@ import (
 
 	"github.com/antlr4-go/antlr/v4"
 
-	"github.com/acronis/go-raml/rdt"
+	"github.com/acronis/go-raml/v2/rdt"
 )
 
 // RdtVisitor defines a struct that implements the visitor
