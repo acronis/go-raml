@@ -22,8 +22,10 @@ type JSONSchemaConverterOpt[T jsonSchemaWrapper[T]] interface {
 
 type optWrapper[T jsonSchemaWrapper[T]] struct{ f WrapperFunc[T] }
 
-// WithWrapper lets the caller provide a dialect wrapper.
+//nolint:unused // Actually used in JSONSchemaConverter constructor.
 func (o optWrapper[T]) apply(c *JSONSchemaConverterOptions[T]) { c.wrap = o.f }
+
+// WithWrapper lets the caller provide a dialect wrapper.
 func WithWrapper[T jsonSchemaWrapper[T]](f WrapperFunc[T]) JSONSchemaConverterOpt[T] {
 	return optWrapper[T]{f}
 }

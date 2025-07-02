@@ -28,7 +28,7 @@ func Test_ParseFromPathIntegration(t *testing.T) {
 		require.False(t, ok)
 	}
 
-	conv, err := NewJSONSchemaConverter(WithWrapper(RAMLWrapper))
+	conv, err := NewJSONSchemaConverter(WithWrapper(JSONSchemaWrapper))
 	require.NoError(t, err)
 	for _, frag := range rml.fragmentsCache {
 		switch f := frag.(type) {

@@ -100,7 +100,7 @@ func TestNewJSONSchemaConverter(t *testing.T) {
 			name: "positive case",
 			args: args{
 				opts: []JSONSchemaConverterOpt[*JSONSchemaRAML]{
-					WithWrapper(RAMLWrapper),
+					WithWrapper(JSONSchemaWrapper),
 				},
 			},
 			want: func(tt *testing.T, converter *JSONSchemaConverter[*JSONSchemaRAML]) {
@@ -141,7 +141,7 @@ func TestJSONSchemaConverter_Convert(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ObjectShape{
@@ -164,7 +164,7 @@ func TestJSONSchemaConverter_Convert(t *testing.T) {
 		{
 			name: "negative case: base shape must be unwrapped",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ObjectShape{
@@ -210,7 +210,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit object shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ObjectShape{
@@ -228,7 +228,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit array shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ArrayShape{
@@ -246,7 +246,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit string shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &StringShape{
@@ -264,7 +264,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit number shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &NumberShape{
@@ -282,7 +282,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit integer shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &IntegerShape{
@@ -300,7 +300,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit boolean shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &BooleanShape{
@@ -318,7 +318,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit nil shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &NilShape{
@@ -336,7 +336,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit file shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &FileShape{
@@ -354,7 +354,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit union shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &UnionShape{
@@ -372,7 +372,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit any shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &AnyShape{
@@ -390,7 +390,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit datetime shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeShape{
@@ -408,7 +408,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit date-only shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateOnlyShape{
@@ -426,7 +426,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit time-only shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &TimeOnlyShape{
@@ -444,7 +444,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit datetime-only shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeOnlyShape{
@@ -462,7 +462,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit schema shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &JSONShape{
@@ -481,7 +481,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit recursive shape",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &RecursiveShape{
@@ -507,7 +507,7 @@ func TestJSONSchemaConverter_Visit(t *testing.T) {
 		{
 			name: "positive case: visit nil",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{},
 			want: func(tt *testing.T, schema *JSONSchemaRAML) {
@@ -545,7 +545,7 @@ func TestJSONSchemaConverter_VisitObjectShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ObjectShape{
@@ -636,7 +636,7 @@ func TestJSONSchemaConverter_VisitArrayShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &ArrayShape{
@@ -702,7 +702,7 @@ func TestJSONSchemaConverter_VisitUnionShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &UnionShape{
@@ -764,7 +764,7 @@ func TestJSONSchemaConverter_VisitStringShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &StringShape{
@@ -854,7 +854,7 @@ func TestJSONSchemaConverter_VisitIntegerShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &IntegerShape{
@@ -961,7 +961,7 @@ func TestJSONSchemaConverter_VisitNumberShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &NumberShape{
@@ -1068,7 +1068,7 @@ func TestJSONSchemaConverter_VisitFileShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &FileShape{
@@ -1128,7 +1128,7 @@ func TestJSONSchemaConverter_VisitBooleanShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &BooleanShape{
@@ -1206,7 +1206,7 @@ func TestJSONSchemaConverter_VisitDateTimeShape(t *testing.T) {
 		{
 			name: "positive case: rfc3339 format",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeShape{
@@ -1275,7 +1275,7 @@ func TestJSONSchemaConverter_VisitDateTimeShape(t *testing.T) {
 		{
 			name: "positive case: rfc2616 format",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeShape{
@@ -1345,7 +1345,7 @@ func TestJSONSchemaConverter_VisitDateTimeShape(t *testing.T) {
 		{
 			name: "positive case: nil format",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeShape{
@@ -1435,7 +1435,7 @@ func TestJSONSchemaConverter_VisitDateTimeOnlyShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateTimeOnlyShape{
@@ -1526,7 +1526,7 @@ func TestJSONSchemaConverter_VisitDateOnlyShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &DateOnlyShape{
@@ -1612,7 +1612,7 @@ func TestJSONSchemaConverter_VisitTimeOnlyShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &TimeOnlyShape{
@@ -1701,7 +1701,7 @@ func TestJSONSchemaConverter_VisitNilShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &NilShape{
@@ -1790,7 +1790,7 @@ func TestJSONSchemaConverter_VisitRecursiveShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &RecursiveShape{
@@ -1887,7 +1887,7 @@ func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 		{
 			name: "promotes embedded schema and preserves RAML meta",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &JSONShape{
@@ -2002,7 +2002,7 @@ func TestJSONSchemaConverter_VisitJSONShape(t *testing.T) {
 		{
 			name: "fallback to promoted schema meta if RAML meta is empty",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				s: &JSONShape{
@@ -2074,7 +2074,7 @@ func TestJSONSchemaConverter_makeSchemaFromBaseShape(t *testing.T) {
 		{
 			name: "positive case",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				base: &BaseShape{
@@ -2218,7 +2218,7 @@ func TestJSONSchemaConverter_recast(t *testing.T) {
 		{
 			name: "nil src returns zero",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				src: nil,
@@ -2232,7 +2232,7 @@ func TestJSONSchemaConverter_recast(t *testing.T) {
 		{
 			name: "copies simple fields",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				src: &JSONSchema{
@@ -2303,7 +2303,7 @@ func TestJSONSchemaConverter_recast(t *testing.T) {
 		{
 			name: "recursively copies nested fields",
 			fields: fields[*JSONSchemaRAML]{
-				opts: WithWrapper(RAMLWrapper),
+				opts: WithWrapper(JSONSchemaWrapper),
 			},
 			args: args{
 				src: &JSONSchema{
@@ -2379,7 +2379,7 @@ func TestJSONSchemaConverter_recast(t *testing.T) {
 			fields: fields[*JSONSchemaRAML]{
 				opts: WithWrapper(func(conv *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchemaGeneric[*JSONSchemaRAML], _ *BaseShape) *JSONSchemaRAML {
 					core.Title = "wrapped"
-					return RAMLWrapper(conv, core, nil)
+					return JSONSchemaWrapper(conv, core, nil)
 				}),
 			},
 			args: args{

@@ -91,7 +91,7 @@ type JSONSchemaRAML struct {
 
 func (r *JSONSchemaRAML) Generic() *JSONSchemaGeneric[*JSONSchemaRAML] { return r.JSONSchemaGeneric }
 
-func RAMLWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchemaGeneric[*JSONSchemaRAML], b *BaseShape) *JSONSchemaRAML {
+func JSONSchemaWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchemaGeneric[*JSONSchemaRAML], b *BaseShape) *JSONSchemaRAML {
 	w := &JSONSchemaRAML{
 		JSONSchemaGeneric: core,
 		Annotations:       orderedmap.New[string, any](),
