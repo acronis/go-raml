@@ -7,7 +7,7 @@ import (
 
 	"github.com/acronis/go-stacktrace"
 
-	"github.com/acronis/go-raml/rdt"
+	"github.com/acronis/go-raml/v2/rdt"
 )
 
 /*
