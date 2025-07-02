@@ -2,73 +2,85 @@ package raml
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-type JSONSchemaConverterOpt interface {
-	Apply(*JSONSchemaConverterOptions)
+type WrapperFunc[T jsonSchemaWrapper[T]] func(conv *JSONSchemaConverter[T], core *JSONSchemaGeneric[T], src *BaseShape) T
+
+type JSONSchemaConverterOptions[T jsonSchemaWrapper[T]] struct {
+	// omitRefs bool
+	wrap WrapperFunc[T]
 }
 
-type optOmitRefs struct {
-	omitRefs bool
+type JSONSchemaConverterOpt[T jsonSchemaWrapper[T]] interface {
+	apply(*JSONSchemaConverterOptions[T])
 }
 
-func (o optOmitRefs) Apply(e *JSONSchemaConverterOptions) {
-	e.omitRefs = o.omitRefs
+type optWrapper[T jsonSchemaWrapper[T]] struct{ f WrapperFunc[T] }
+
+//nolint:unused // Actually used in JSONSchemaConverter constructor.
+func (o optWrapper[T]) apply(c *JSONSchemaConverterOptions[T]) { c.wrap = o.f }
+
+// WithWrapper lets the caller provide a dialect wrapper.
+func WithWrapper[T jsonSchemaWrapper[T]](f WrapperFunc[T]) JSONSchemaConverterOpt[T] {
+	return optWrapper[T]{f}
 }
 
-func WithOmitRefs(omitRefs bool) JSONSchemaConverterOpt {
-	return optOmitRefs{omitRefs: omitRefs}
+// type optOmitRefs[T jsonSchemaWrapper[T]] struct{ omitRefs bool }
+
+// func (o optOmitRefs[T]) apply(c *JSONSchemaConverterOptions[T]) { c.omitRefs = o.omitRefs }
+// func WithOmitRefs[T jsonSchemaWrapper[T]](b bool) JSONSchemaConverterOpt[T] {
+// 	return optOmitRefs[T]{b}
+// }
+
+type JSONSchemaConverter[T jsonSchemaWrapper[T]] struct {
+	ShapeVisitor[T]
+
+	definitions map[string]T
+
+	opts JSONSchemaConverterOptions[T]
 }
 
-type JSONSchemaConverterOptions struct {
-	omitRefs bool
-}
-
-type JSONSchemaConverter struct {
-	ShapeVisitor[JSONSchema]
-
-	definitions    Definitions
-	complexSchemas map[int64]*JSONSchema
-
-	opts JSONSchemaConverterOptions
-}
-
-func NewJSONSchemaConverter(opts ...JSONSchemaConverterOpt) *JSONSchemaConverter {
-	c := &JSONSchemaConverter{}
-	for _, opt := range opts {
-		opt.Apply(&c.opts)
+func NewJSONSchemaConverter[T jsonSchemaWrapper[T]](opt ...JSONSchemaConverterOpt[T]) (*JSONSchemaConverter[T], error) {
+	c := &JSONSchemaConverter[T]{definitions: make(map[string]T)}
+	for _, o := range opt {
+		o.apply(&c.opts)
 	}
-	return c
+	if c.opts.wrap == nil {
+		if _, ok := any((*JSONSchema)(nil)).(T); !ok {
+			return nil, errors.New("NewJSONSchemaConverter requires WithWrapper for customized schemas")
+		}
+	}
+	return c, nil
 }
 
-func (c *JSONSchemaConverter) Convert(s Shape) (*JSONSchema, error) {
+func (c *JSONSchemaConverter[T]) Convert(s Shape) (*JSONSchemaGeneric[T], error) {
 	// TODO: Need to pass *BaseShape
-	// TODO: JSONSchema converter should also work with non-unwrapped shapes.
 	if !s.Base().IsUnwrapped() {
 		return nil, fmt.Errorf("entrypoint shape must be unwrapped")
 	}
 
 	entrypointName := s.Base().Name
-	c.complexSchemas = make(map[int64]*JSONSchema)
-	c.definitions = make(Definitions)
-	schema := &JSONSchema{}
+	c.definitions = make(map[string]T)
 	// NOTE: Assign empty schema before traversing to definitions to occupy the name.
-	// TODO: Probably can be refactored in a better way.
-	c.definitions[entrypointName] = schema
-	*schema = *c.Visit(s)
+	var zero T
+	c.definitions[entrypointName] = zero
+	c.definitions[entrypointName] = c.Visit(s)
 
-	return &JSONSchema{
+	rootCore := &JSONSchemaGeneric[T]{
 		Version:     JSONSchemaVersion,
 		Ref:         "#/definitions/" + entrypointName,
 		Definitions: c.definitions,
-	}, nil
+	}
+
+	return rootCore, nil
 }
 
-func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
+func (c *JSONSchemaConverter[T]) Visit(s Shape) T {
 	switch shapeType := s.(type) {
 	case *ObjectShape:
 		return c.VisitObjectShape(shapeType)
@@ -103,13 +115,14 @@ func (c *JSONSchemaConverter) Visit(s Shape) *JSONSchema {
 	case *RecursiveShape:
 		return c.VisitRecursiveShape(shapeType)
 	default:
-		return nil
+		var zero T
+		return zero
 	}
 }
 
-func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().ID] = schema
+func (c *JSONSchemaConverter[T]) VisitObjectShape(s *ObjectShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 
 	schema.Type = TypeObject
 	schema.MinProperties = s.MinProperties
@@ -117,7 +130,7 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 	schema.AdditionalProperties = s.AdditionalProperties
 
 	if s.Properties != nil {
-		schema.Properties = orderedmap.New[string, *JSONSchema](s.Properties.Len())
+		schema.Properties = orderedmap.New[string, T](s.Properties.Len())
 		for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
 			schema.Properties.Set(k, c.Visit(v.Base.Shape))
@@ -127,19 +140,19 @@ func (c *JSONSchemaConverter) VisitObjectShape(s *ObjectShape) *JSONSchema {
 		}
 	}
 	if s.PatternProperties != nil {
-		schema.PatternProperties = orderedmap.New[string, *JSONSchema](s.PatternProperties.Len())
+		schema.PatternProperties = orderedmap.New[string, T](s.PatternProperties.Len())
 		for pair := s.PatternProperties.Oldest(); pair != nil; pair = pair.Next() {
 			k, v := pair.Key, pair.Value
 			k = k[1 : len(k)-1]
 			schema.PatternProperties.Set(k, c.Visit(v.Base.Shape))
 		}
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitArrayShape(s *ArrayShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().ID] = schema
+func (c *JSONSchemaConverter[T]) VisitArrayShape(s *ArrayShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 
 	schema.Type = "array"
 	schema.MinItems = s.MinItems
@@ -149,22 +162,23 @@ func (c *JSONSchemaConverter) VisitArrayShape(s *ArrayShape) *JSONSchema {
 	if s.Items != nil {
 		schema.Items = c.Visit(s.Items.Shape)
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitUnionShape(s *UnionShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
-	c.complexSchemas[s.Base().ID] = schema
+func (c *JSONSchemaConverter[T]) VisitUnionShape(s *UnionShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 
-	schema.AnyOf = make([]*JSONSchema, len(s.AnyOf))
+	schema.AnyOf = make([]T, len(s.AnyOf))
 	for i, item := range s.AnyOf {
 		schema.AnyOf[i] = c.Visit(item.Shape)
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitStringShape(s *StringShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitStringShape(s *StringShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 	schema.MinLength = s.MinLength
 	schema.MaxLength = s.MaxLength
@@ -177,11 +191,12 @@ func (c *JSONSchemaConverter) VisitStringShape(s *StringShape) *JSONSchema {
 			schema.Enum[i] = v.Value
 		}
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitIntegerShape(s *IntegerShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitIntegerShape(s *IntegerShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeInteger
 	if s.Minimum != nil {
 		schema.Minimum = json.Number(s.Minimum.String())
@@ -199,11 +214,12 @@ func (c *JSONSchemaConverter) VisitIntegerShape(s *IntegerShape) *JSONSchema {
 		}
 	}
 	// TODO: JSON Schema does not have a format for numbers
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitNumberShape(s *NumberShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitNumberShape(s *NumberShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeNumber
 	if s.Minimum != nil {
 		schema.Minimum = json.Number(strconv.FormatFloat(*s.Minimum, 'f', -1, 64))
@@ -221,11 +237,12 @@ func (c *JSONSchemaConverter) VisitNumberShape(s *NumberShape) *JSONSchema {
 		}
 	}
 	// TODO: JSON Schema does not have a format for numbers
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitFileShape(s *FileShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitFileShape(s *FileShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 	schema.MinLength = s.MinLength
 	schema.MaxLength = s.MaxLength
@@ -239,11 +256,12 @@ func (c *JSONSchemaConverter) VisitFileShape(s *FileShape) *JSONSchema {
 		}
 		schema.ContentMediaType = maybeStr
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitBooleanShape(s *BooleanShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitBooleanShape(s *BooleanShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeBoolean
 
 	if s.Enum != nil {
@@ -252,11 +270,12 @@ func (c *JSONSchemaConverter) VisitBooleanShape(s *BooleanShape) *JSONSchema {
 			schema.Enum[i] = v.Value
 		}
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitDateTimeShape(s *DateTimeShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 
 	if s.Format != nil {
@@ -271,139 +290,210 @@ func (c *JSONSchemaConverter) VisitDateTimeShape(s *DateTimeShape) *JSONSchema {
 	} else {
 		schema.Format = FormatDateTime
 	}
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitDateTimeOnlyShape(s *DateTimeOnlyShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitDateTimeOnlyShape(s *DateTimeOnlyShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 	schema.Pattern = "^[0-9]{4}-(?:0[0-9]|1[0-2])-(?:[0-2][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$"
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitDateOnlyShape(s *DateOnlyShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitDateOnlyShape(s *DateOnlyShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 	schema.Format = FormatDate
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitTimeOnlyShape(s *TimeOnlyShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitTimeOnlyShape(s *TimeOnlyShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeString
 	schema.Format = FormatTime
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitAnyShape(s *AnyShape) *JSONSchema {
+func (c *JSONSchemaConverter[T]) VisitAnyShape(s *AnyShape) T {
 	return c.makeSchemaFromBaseShape(s.Base())
 }
 
-func (c *JSONSchemaConverter) VisitNilShape(s *NilShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitNilShape(s *NilShape) T {
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 	schema.Type = TypeNull
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitRecursiveShape(s *RecursiveShape) *JSONSchema {
+func (c *JSONSchemaConverter[T]) VisitRecursiveShape(s *RecursiveShape) T {
 	// NOTE: Recursive schema will always produce ref.
 	// However, ref ignores all other keywords defined within the schema per JSON Schema spec.
 	// We keep the keywords just in case the schema is not used as a ref.
-	schema := c.makeSchemaFromBaseShape(s.Base())
+	node := c.makeSchemaFromBaseShape(s.Base())
+	schema := node.Generic()
 
 	head := s.Head.Shape
 	baseHead := head.Base()
 	// TODO: Type name is not unique, need pretty naming to avoid collisions.
 	definition := baseHead.Name
-	if c.definitions[definition] == nil {
-		defSchema := &JSONSchema{}
-		// NOTE: Assign empty defSchema before traversing to definitions to occupy the name.
-		c.definitions[definition] = defSchema
-		*defSchema = *c.Visit(head)
+	if _, ok := c.definitions[definition]; !ok {
+		// NOTE: Assign empty schema to definitions to occupy the name before traversing.
+		var placeholder T
+		c.definitions[definition] = placeholder
+		c.definitions[definition] = c.Visit(head)
 	}
 	schema.Ref = "#/definitions/" + definition
 
-	return schema
+	return node
 }
 
-func (c *JSONSchemaConverter) VisitJSONShape(s *JSONShape) *JSONSchema {
-	schema := c.makeSchemaFromBaseShape(s.Base())
+func (c *JSONSchemaConverter[T]) VisitJSONShape(s *JSONShape) T {
+	// Base RAML meta (annotations, facets) first …
+	node := c.makeSchemaFromBaseShape(s.Base())
+	dst := node.Generic()
+
+	// Recast the plain schema to T
+	recasted := c.recast(s.Schema)
+	src := recasted.Generic()
+
 	// NOTE: RAML type may override common properties like title, description, etc.
-	schema = c.overrideCommonProperties(schema, s.Schema)
+	// We can safely modify src since recast produces a copy.
+	if dst.Title != "" {
+		src.Title = dst.Title
+	}
+	if dst.Description != "" {
+		src.Description = dst.Description
+	}
+	if dst.Default != nil {
+		src.Default = dst.Default
+	}
+	if dst.Examples != nil {
+		src.Examples = dst.Examples
+	}
+
+	// Copy every other keyword from recast schema
+	*dst = *src
+
 	// NOTE: Nested JSON Schema may not have $schema keyword.
-	schema.Version = ""
-	return schema
+	dst.Version = ""
+	return node
 }
 
-func (c *JSONSchemaConverter) overrideCommonProperties(parent *JSONSchema, child *JSONSchema) *JSONSchema {
-	cs := *child
-	if parent.Title != "" {
-		cs.Title = parent.Title
+func (c *JSONSchemaConverter[T]) recast(src *JSONSchema) T {
+	var zero T
+	if src == nil {
+		return zero
 	}
-	if parent.Description != "" {
-		cs.Description = parent.Description
+
+	core := &JSONSchemaGeneric[T]{
+		Version: src.Version,
+		ID:      src.ID,
+		Ref:     src.Ref,
+		Comment: src.Comment,
+
+		If:   c.recast(src.If),
+		Then: c.recast(src.Then),
+		Else: c.recast(src.Else),
+		Not:  c.recast(src.Not),
+
+		Items: c.recast(src.Items),
+
+		AdditionalProperties: src.AdditionalProperties,
+		PropertyNames:        c.recast(src.PropertyNames),
+		Type:                 src.Type,
+		Enum:                 src.Enum,
+		Const:                src.Const,
+		MultipleOf:           src.MultipleOf,
+		Maximum:              src.Maximum,
+		Minimum:              src.Minimum,
+		MaxLength:            src.MaxLength,
+		MinLength:            src.MinLength,
+		Pattern:              src.Pattern,
+		MaxItems:             src.MaxItems,
+		MinItems:             src.MinItems,
+		UniqueItems:          src.UniqueItems,
+		MaxContains:          src.MaxContains,
+		MinContains:          src.MinContains,
+		MaxProperties:        src.MaxProperties,
+		MinProperties:        src.MinProperties,
+		Required:             src.Required,
+		ContentEncoding:      src.ContentEncoding,
+		ContentMediaType:     src.ContentMediaType,
+		Format:               src.Format,
+
+		Title:       src.Title,
+		Description: src.Description,
+		Default:     src.Default,
+		Examples:    src.Examples,
 	}
-	if parent.Default != nil {
-		cs.Default = parent.Default
-	}
-	if parent.Examples != nil {
-		cs.Examples = parent.Examples
-	}
-	if parent.Extras != nil {
-		if cs.Extras == nil {
-			cs.Extras = parent.Extras
-		} else {
-			for k, v := range parent.Extras {
-				cs.Extras[k] = v
-			}
+
+	if src.AnyOf != nil {
+		core.AnyOf = make([]T, len(src.AnyOf))
+		for i, it := range src.AnyOf {
+			core.AnyOf[i] = c.recast(it)
 		}
 	}
-	return &cs
+	if src.AllOf != nil {
+		core.AllOf = make([]T, len(src.AllOf))
+		for i, it := range src.AllOf {
+			core.AllOf[i] = c.recast(it)
+		}
+	}
+	if src.OneOf != nil {
+		core.OneOf = make([]T, len(src.OneOf))
+		for i, it := range src.OneOf {
+			core.OneOf[i] = c.recast(it)
+		}
+	}
+	if src.Properties != nil {
+		core.Properties = orderedmap.New[string, T](src.Properties.Len())
+		for p := src.Properties.Oldest(); p != nil; p = p.Next() {
+			core.Properties.Set(p.Key, c.recast(p.Value))
+		}
+	}
+	if src.PatternProperties != nil {
+		core.PatternProperties = orderedmap.New[string, T](src.PatternProperties.Len())
+		for p := src.PatternProperties.Oldest(); p != nil; p = p.Next() {
+			core.PatternProperties.Set(p.Key, c.recast(p.Value))
+		}
+	}
+	if src.Definitions != nil {
+		core.Definitions = make(map[string]T, len(src.Definitions))
+		for k, v := range src.Definitions {
+			core.Definitions[k] = c.recast(v)
+		}
+	}
+	if c.opts.wrap != nil {
+		return c.opts.wrap(c, core, nil)
+	}
+	return any(core).(T)
 }
 
-func (c *JSONSchemaConverter) makeSchemaFromBaseShape(base *BaseShape) *JSONSchema {
-	schema := &JSONSchema{
-		Extras: make(map[string]interface{}),
-	}
+func (c *JSONSchemaConverter[T]) makeSchemaFromBaseShape(base *BaseShape) T {
+	core := &JSONSchemaGeneric[T]{}
 	if base.DisplayName != nil {
-		schema.Title = *base.DisplayName
+		core.Title = *base.DisplayName
 	}
 	if base.Description != nil {
-		schema.Description = *base.Description
+		core.Description = *base.Description
 	}
 	if base.Default != nil {
-		schema.Default = base.Default.Value
+		core.Default = base.Default.Value
 	}
 	if base.Examples != nil {
 		for pair := base.Examples.Map.Oldest(); pair != nil; pair = pair.Next() {
 			ex := pair.Value
-			schema.Examples = append(schema.Examples, ex.Data.Value)
+			core.Examples = append(core.Examples, ex.Data.Value)
 		}
 	}
 	if base.Example != nil {
-		schema.Examples = []any{base.Example.Data.Value}
+		core.Examples = []any{base.Example.Data.Value}
 	}
-	for pair := base.CustomDomainProperties.Oldest(); pair != nil; pair = pair.Next() {
-		k, v := pair.Key, pair.Value
-		schema.Extras["x-domainExt-"+k] = v.Extension.Value
+	if c.opts.wrap != nil {
+		return c.opts.wrap(c, core, base)
 	}
-	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
-		k, v := pair.Key, pair.Value
-		m := schema.Extras["x-shapeExt-definitions"]
-		if m == nil {
-			m = make(map[string]interface{})
-			schema.Extras["x-shapeExt-definitions"] = m
-		}
-		shouldBeMap, ok := m.(map[string]interface{})
-		if !ok {
-			panic("invalid shape extension definitions")
-		}
-		shapeExtDefs := shouldBeMap
-		shapeExtDefs[k] = c.Visit(v.Base.Shape)
-	}
-	for pair := base.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
-		k, v := pair.Key, pair.Value
-		schema.Extras["x-shapeExt-data-"+k] = v.Value
-	}
-	return schema
+	return any(core).(T)
 }

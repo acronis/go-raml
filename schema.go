@@ -14,28 +14,33 @@ const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 // Schema represents a JSON Schema object type.
 //
 // https://json-schema.org/draft-07/draft-handrews-json-schema-00.pdf
-type JSONSchema struct {
-	Version     string      `json:"$schema,omitempty"`
-	ID          string      `json:"$id,omitempty"`
-	Ref         string      `json:"$ref,omitempty"`
-	Definitions Definitions `json:"definitions,omitempty"`
-	Comment     string      `json:"$comment,omitempty"`
+type JSONSchemaGeneric[T any] struct {
+	// TODO: Need to collect unknown "x-" annotations into a dict
+	Version string `json:"$schema,omitempty"`
+	ID      string `json:"$id,omitempty"`
+	Ref     string `json:"$ref,omitempty"`
+	Comment string `json:"$comment,omitempty"`
 
-	AllOf []*JSONSchema `json:"allOf,omitempty"`
-	AnyOf []*JSONSchema `json:"anyOf,omitempty"`
-	OneOf []*JSONSchema `json:"oneOf,omitempty"`
-	Not   *JSONSchema   `json:"not,omitempty"`
+	// Definitions hold schema definitions.
+	// http://json-schema.org/latest/json-schema-validation.html#rfc.section.5.26
+	// RFC draft-wright-json-schema-validation-00, section 5.26
+	Definitions map[string]T `json:"definitions,omitempty"`
 
-	If   *JSONSchema `json:"if,omitempty"`
-	Then *JSONSchema `json:"then,omitempty"`
-	Else *JSONSchema `json:"else,omitempty"`
+	AllOf []T `json:"allOf,omitempty"`
+	AnyOf []T `json:"anyOf,omitempty"`
+	OneOf []T `json:"oneOf,omitempty"`
+	Not   T   `json:"not,omitempty"`
 
-	Items *JSONSchema `json:"items,omitempty"`
+	If   T `json:"if,omitempty"`
+	Then T `json:"then,omitempty"`
+	Else T `json:"else,omitempty"`
 
-	Properties           *orderedmap.OrderedMap[string, *JSONSchema] `json:"properties,omitempty"`
-	PatternProperties    *orderedmap.OrderedMap[string, *JSONSchema] `json:"patternProperties,omitempty"`
-	AdditionalProperties *bool                                       `json:"additionalProperties,omitempty"`
-	PropertyNames        *JSONSchema                                 `json:"propertyNames,omitempty"`
+	Items T `json:"items,omitempty"`
+
+	Properties           *orderedmap.OrderedMap[string, T] `json:"properties,omitempty"`
+	PatternProperties    *orderedmap.OrderedMap[string, T] `json:"patternProperties,omitempty"`
+	AdditionalProperties *bool                             `json:"additionalProperties,omitempty"`
+	PropertyNames        T                                 `json:"propertyNames,omitempty"`
 
 	Type             string      `json:"type,omitempty"`
 	Enum             []any       `json:"enum,omitempty"`
@@ -63,22 +68,59 @@ type JSONSchema struct {
 	Description string `json:"description,omitempty"`
 	Default     any    `json:"default,omitempty"`
 	Examples    []any  `json:"examples,omitempty"`
-
-	// TODO: There's no better way to serialize custom properties on the same level in Go.
-	Extras map[string]any `json:"x-custom,omitempty"`
-
-	// Special boolean representation of the Schema
-	boolean *bool
 }
 
-var (
-	// TrueSchema defines a schema with a true value
-	TrueSchema = &JSONSchema{boolean: &[]bool{true}[0]}
-	// FalseSchema defines a schema with a false value
-	FalseSchema = &JSONSchema{boolean: &[]bool{false}[0]}
-)
+// jsonSchemaWrapper – every dialect node exposes the embedded canonical struct.
+type jsonSchemaWrapper[T any] interface{ Generic() *JSONSchemaGeneric[T] }
 
-// Definitions hold schema definitions.
-// http://json-schema.org/latest/json-schema-validation.html#rfc.section.5.26
-// RFC draft-wright-json-schema-validation-00, section 5.26
-type Definitions map[string]*JSONSchema
+// Plain, spec‑only flavour – just an alias.
+type JSONSchema struct {
+	JSONSchemaGeneric[*JSONSchema]
+}
+
+func (p *JSONSchema) Generic() *JSONSchemaGeneric[*JSONSchema] { return &p.JSONSchemaGeneric }
+
+// RAML‑extended node (x‑annotations, x‑facet‑*)
+
+type JSONSchemaRAML struct {
+	*JSONSchemaGeneric[*JSONSchemaRAML]
+	Annotations      *orderedmap.OrderedMap[string, any]             `json:"x-annotations,omitempty"`
+	FacetDefinitions *orderedmap.OrderedMap[string, *JSONSchemaRAML] `json:"x-facet-definitions,omitempty"`
+	FacetData        *orderedmap.OrderedMap[string, any]             `json:"x-facet-data,omitempty"`
+}
+
+func (r *JSONSchemaRAML) Generic() *JSONSchemaGeneric[*JSONSchemaRAML] { return r.JSONSchemaGeneric }
+
+func JSONSchemaWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchemaGeneric[*JSONSchemaRAML], b *BaseShape) *JSONSchemaRAML {
+	w := &JSONSchemaRAML{
+		JSONSchemaGeneric: core,
+		Annotations:       orderedmap.New[string, any](),
+		FacetDefinitions:  orderedmap.New[string, *JSONSchemaRAML](),
+		FacetData:         orderedmap.New[string, any](),
+	}
+	if b == nil {
+		return w
+	}
+	if n := b.CustomDomainProperties.Len(); n > 0 {
+		m := orderedmap.New[string, any](n)
+		for p := b.CustomDomainProperties.Oldest(); p != nil; p = p.Next() {
+			m.Set(p.Key, p.Value.Extension.Value)
+		}
+		w.Annotations = m
+	}
+	if n := b.CustomShapeFacetDefinitions.Len(); n > 0 {
+		m := orderedmap.New[string, *JSONSchemaRAML](n)
+		for p := b.CustomShapeFacetDefinitions.Oldest(); p != nil; p = p.Next() {
+			m.Set(p.Key, c.Visit(p.Value.Base.Shape))
+		}
+		w.FacetDefinitions = m
+	}
+	if n := b.CustomShapeFacets.Len(); n > 0 {
+		m := orderedmap.New[string, any](n)
+		for p := b.CustomShapeFacets.Oldest(); p != nil; p = p.Next() {
+			m.Set(p.Key, p.Value.Value)
+		}
+		w.FacetData = m
+	}
+	return w
+}
