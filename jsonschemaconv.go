@@ -58,26 +58,30 @@ func NewJSONSchemaConverter[T jsonSchemaWrapper[T]](opt ...JSONSchemaConverterOp
 	return c, nil
 }
 
-func (c *JSONSchemaConverter[T]) Convert(s Shape) (*JSONSchemaGeneric[T], error) {
+func (c *JSONSchemaConverter[T]) Convert(s Shape) (T, error) {
 	// TODO: Need to pass *BaseShape
+	var zero T
 	if !s.Base().IsUnwrapped() {
-		return nil, fmt.Errorf("entrypoint shape must be unwrapped")
+		return zero, fmt.Errorf("entrypoint shape must be unwrapped")
 	}
 
 	entrypointName := s.Base().Name
 	c.definitions = make(map[string]T)
 	// NOTE: Assign empty schema before traversing to definitions to occupy the name.
-	var zero T
 	c.definitions[entrypointName] = zero
 	c.definitions[entrypointName] = c.Visit(s)
 
-	rootCore := &JSONSchemaGeneric[T]{
+	core := &JSONSchemaGeneric[T]{
 		Version:     JSONSchemaVersion,
 		Ref:         "#/definitions/" + entrypointName,
 		Definitions: c.definitions,
 	}
 
-	return rootCore, nil
+	if c.opts.wrap != nil {
+		return c.opts.wrap(c, core, nil), nil
+	}
+
+	return any(core).(T), nil
 }
 
 func (c *JSONSchemaConverter[T]) Visit(s Shape) T {
@@ -430,37 +434,37 @@ func (c *JSONSchemaConverter[T]) recast(src *JSONSchema) T {
 		Examples:    src.Examples,
 	}
 
-	if src.AnyOf != nil {
+	if len(src.AnyOf) > 0 {
 		core.AnyOf = make([]T, len(src.AnyOf))
 		for i, it := range src.AnyOf {
 			core.AnyOf[i] = c.recast(it)
 		}
 	}
-	if src.AllOf != nil {
+	if len(src.AllOf) > 0 {
 		core.AllOf = make([]T, len(src.AllOf))
 		for i, it := range src.AllOf {
 			core.AllOf[i] = c.recast(it)
 		}
 	}
-	if src.OneOf != nil {
+	if len(src.OneOf) > 0 {
 		core.OneOf = make([]T, len(src.OneOf))
 		for i, it := range src.OneOf {
 			core.OneOf[i] = c.recast(it)
 		}
 	}
-	if src.Properties != nil {
+	if src.Properties.Len() > 0 {
 		core.Properties = orderedmap.New[string, T](src.Properties.Len())
 		for p := src.Properties.Oldest(); p != nil; p = p.Next() {
 			core.Properties.Set(p.Key, c.recast(p.Value))
 		}
 	}
-	if src.PatternProperties != nil {
+	if src.PatternProperties.Len() > 0 {
 		core.PatternProperties = orderedmap.New[string, T](src.PatternProperties.Len())
 		for p := src.PatternProperties.Oldest(); p != nil; p = p.Next() {
 			core.PatternProperties.Set(p.Key, c.recast(p.Value))
 		}
 	}
-	if src.Definitions != nil {
+	if len(src.Definitions) > 0 {
 		core.Definitions = make(map[string]T, len(src.Definitions))
 		for k, v := range src.Definitions {
 			core.Definitions[k] = c.recast(v)
