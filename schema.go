@@ -165,6 +165,7 @@ func (js *JSONSchemaGeneric[T]) DeepCopy() *JSONSchemaGeneric[T] {
 	return newJs
 }
 
+//nolint:funlen,gocognit,gocyclo,cyclop // Map returns the JSON Schema object as a map[string]any which is expected to have many conditional fields.
 func (js *JSONSchemaGeneric[T]) Map() map[string]any {
 	if js == nil {
 		return nil
