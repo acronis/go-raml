@@ -135,7 +135,7 @@ func TestJSONSchemaConverter_Convert(t *testing.T) {
 		name    string
 		fields  fields[*JSONSchemaRAML]
 		args    args
-		want    func(tt *testing.T, schema *JSONSchemaGeneric[*JSONSchemaRAML])
+		want    func(tt *testing.T, schema *JSONSchemaRAML)
 		wantErr bool
 	}{
 		{
@@ -152,7 +152,7 @@ func TestJSONSchemaConverter_Convert(t *testing.T) {
 					},
 				},
 			},
-			want: func(tt *testing.T, schema *JSONSchemaGeneric[*JSONSchemaRAML]) {
+			want: func(tt *testing.T, schema *JSONSchemaRAML) {
 				if schema == nil {
 					tt.Errorf("expected schema to be non-nil, got nil")
 				}
