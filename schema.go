@@ -2,6 +2,7 @@ package raml
 
 import (
 	"encoding/json"
+	"strconv"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
@@ -14,8 +15,13 @@ const JSONSchemaVersion = "http://json-schema.org/draft-07/schema"
 type Copyable[T any] interface {
 	// DeepCopy creates a deep copy of the JSON Schema object.
 	DeepCopy() T
+
 	// Generic returns the generic JSON Schema object.
 	ShallowCopy() T
+
+	// Map returns the JSON Schema object as a map[string]any.
+	// Implementers should return a map that is compatible for use in gojsonschema.NewRawLoader.
+	Map() map[string]any
 }
 
 // Schema represents a JSON Schema object type.
@@ -159,11 +165,189 @@ func (js *JSONSchemaGeneric[T]) DeepCopy() *JSONSchemaGeneric[T] {
 	return newJs
 }
 
+func (js *JSONSchemaGeneric[T]) Map() map[string]any {
+	if js == nil {
+		return nil
+	}
+	out := make(map[string]any)
+
+	if js.Version != "" {
+		out["$schema"] = js.Version
+	}
+	if js.ID != "" {
+		out["$id"] = js.ID
+	}
+	if js.Ref != "" {
+		out["$ref"] = js.Ref
+	}
+	if js.Comment != "" {
+		out["$comment"] = js.Comment
+	}
+
+	if js.Type != "" {
+		out["type"] = js.Type
+	}
+	if len(js.Enum) > 0 {
+		out["enum"] = js.Enum
+	}
+	if js.Const != nil {
+		out["const"] = js.Const
+	}
+
+	if js.MultipleOf != "" {
+		out["multipleOf"] = js.MultipleOf
+	}
+	if js.Maximum != "" {
+		out["maximum"] = js.Maximum
+	}
+	if js.Minimum != "" {
+		out["minimum"] = js.Minimum
+	}
+
+	if v := uint64PtrToNumber(js.MaxLength); v != "" {
+		out["maxLength"] = v
+	}
+	if v := uint64PtrToNumber(js.MinLength); v != "" {
+		out["minLength"] = v
+	}
+	if js.Pattern != "" {
+		out["pattern"] = js.Pattern
+	}
+	if v := uint64PtrToNumber(js.MaxItems); v != "" {
+		out["maxItems"] = v
+	}
+	if v := uint64PtrToNumber(js.MinItems); v != "" {
+		out["minItems"] = v
+	}
+	if b := boolPtr(js.UniqueItems); b != nil {
+		out["uniqueItems"] = b
+	}
+	if v := uint64PtrToNumber(js.MaxContains); v != "" {
+		out["maxContains"] = v
+	}
+	if v := uint64PtrToNumber(js.MinContains); v != "" {
+		out["minContains"] = v
+	}
+	if v := uint64PtrToNumber(js.MaxProperties); v != "" {
+		out["maxProperties"] = v
+	}
+	if v := uint64PtrToNumber(js.MinProperties); v != "" {
+		out["minProperties"] = v
+	}
+	if len(js.Required) > 0 {
+		arr := make([]any, len(js.Required))
+		for i, v := range js.Required {
+			arr[i] = v
+		}
+		out["required"] = arr
+	}
+
+	if js.ContentEncoding != "" {
+		out["contentEncoding"] = js.ContentEncoding
+	}
+	if js.ContentMediaType != "" {
+		out["contentMediaType"] = js.ContentMediaType
+	}
+
+	if js.Format != "" {
+		out["format"] = js.Format
+	}
+
+	if js.Title != "" {
+		out["title"] = js.Title
+	}
+	if js.Description != "" {
+		out["description"] = js.Description
+	}
+	if js.Default != nil {
+		out["default"] = js.Default
+	}
+	if len(js.Examples) > 0 {
+		out["examples"] = js.Examples
+	}
+
+	if len(js.Definitions) > 0 {
+		defs := make(map[string]any, len(js.Definitions))
+		for k, v := range js.Definitions {
+			defs[k] = v.Map()
+		}
+		out["definitions"] = defs
+	}
+
+	if len(js.AllOf) > 0 {
+		arr := make([]any, len(js.AllOf))
+		for i, v := range js.AllOf {
+			arr[i] = v.Map()
+		}
+		out["allOf"] = arr
+	}
+	if len(js.AnyOf) > 0 {
+		arr := make([]any, len(js.AnyOf))
+		for i, v := range js.AnyOf {
+			arr[i] = v.Map()
+		}
+		out["anyOf"] = arr
+	}
+	if len(js.OneOf) > 0 {
+		arr := make([]any, len(js.OneOf))
+		for i, v := range js.OneOf {
+			arr[i] = v.Map()
+		}
+		out["oneOf"] = arr
+	}
+
+	v := js.Not.Map()
+	if v != nil {
+		out["not"] = v
+	}
+	v = js.If.Map()
+	if v != nil {
+		out["if"] = v
+	}
+	v = js.Then.Map()
+	if v != nil {
+		out["then"] = v
+	}
+	v = js.Else.Map()
+	if v != nil {
+		out["else"] = v
+	}
+	v = js.Items.Map()
+	if v != nil {
+		out["items"] = v
+	}
+
+	if js.Properties.Len() > 0 {
+		o := make(map[string]any, js.Properties.Len())
+		for el := js.Properties.Oldest(); el != nil; el = el.Next() {
+			o[el.Key] = el.Value.Map()
+		}
+		out["properties"] = o
+	}
+	if js.PatternProperties.Len() > 0 {
+		o := make(map[string]any, js.PatternProperties.Len())
+		for el := js.PatternProperties.Oldest(); el != nil; el = el.Next() {
+			o[el.Key] = el.Value.Map()
+		}
+		out["patternProperties"] = o
+	}
+	if b := boolPtr(js.AdditionalProperties); b != nil {
+		out["additionalProperties"] = b
+	}
+	v = js.PropertyNames.Map()
+	if v != nil {
+		out["propertyNames"] = v
+	}
+
+	return out
+}
+
 // jsonSchemaWrapper – every dialect node exposes the embedded canonical struct.
 type jsonSchemaWrapper[T Copyable[T]] interface {
 	Generic() *JSONSchemaGeneric[T]
 	DeepCopy() T
 	ShallowCopy() T
+	Map() map[string]any
 }
 
 // Plain, spec‑only flavour – just an alias.
@@ -186,6 +370,13 @@ func (js *JSONSchema) DeepCopy() *JSONSchema {
 		return nil
 	}
 	return &JSONSchema{JSONSchemaGeneric: *js.JSONSchemaGeneric.DeepCopy()}
+}
+
+func (js *JSONSchema) Map() map[string]any {
+	if js == nil {
+		return nil
+	}
+	return js.JSONSchemaGeneric.Map()
 }
 
 // RAML‑extended node (x‑annotations, x‑facet‑*)
@@ -251,6 +442,35 @@ func (js *JSONSchemaRAML) DeepCopy() *JSONSchemaRAML {
 	return newJs
 }
 
+func (js *JSONSchemaRAML) Map() map[string]any {
+	if js == nil {
+		return nil
+	}
+	m := js.JSONSchemaGeneric.Map()
+	if js.Annotations != nil && js.Annotations.Len() > 0 {
+		annotations := make(map[string]any, js.Annotations.Len())
+		for p := js.Annotations.Oldest(); p != nil; p = p.Next() {
+			annotations[p.Key] = p.Value
+		}
+		m["x-annotations"] = annotations
+	}
+	if js.FacetDefinitions != nil && js.FacetDefinitions.Len() > 0 {
+		facetDefs := make(map[string]any, js.FacetDefinitions.Len())
+		for p := js.FacetDefinitions.Oldest(); p != nil; p = p.Next() {
+			facetDefs[p.Key] = p.Value.Map()
+		}
+		m["x-facet-definitions"] = facetDefs
+	}
+	if js.FacetData != nil && js.FacetData.Len() > 0 {
+		facetData := make(map[string]any, js.FacetData.Len())
+		for p := js.FacetData.Oldest(); p != nil; p = p.Next() {
+			facetData[p.Key] = p.Value
+		}
+		m["x-facet-data"] = facetData
+	}
+	return m
+}
+
 func JSONSchemaWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchemaGeneric[*JSONSchemaRAML], b *BaseShape) *JSONSchemaRAML {
 	if core == nil {
 		return nil
@@ -281,4 +501,18 @@ func JSONSchemaWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchema
 		w.FacetData = m
 	}
 	return w
+}
+
+func uint64PtrToNumber(p *uint64) json.Number {
+	if p == nil {
+		return ""
+	}
+	return json.Number(strconv.FormatUint(*p, 10))
+}
+
+func boolPtr(p *bool) any {
+	if p == nil {
+		return nil
+	}
+	return *p
 }
