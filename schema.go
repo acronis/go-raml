@@ -203,9 +203,25 @@ func (js *JSONSchemaRAML) ShallowCopy() *JSONSchemaRAML {
 	if js == nil {
 		return nil
 	}
-	newJs := &JSONSchemaRAML{}
-	*newJs = *js
-	newJs.JSONSchemaGeneric = js.JSONSchemaGeneric.ShallowCopy()
+	newJs := &JSONSchemaRAML{JSONSchemaGeneric: *js.JSONSchemaGeneric.ShallowCopy()}
+	if js.Annotations != nil {
+		newJs.Annotations = orderedmap.New[string, any](js.Annotations.Len())
+		for p := js.Annotations.Oldest(); p != nil; p = p.Next() {
+			newJs.Annotations.Set(p.Key, p.Value)
+		}
+	}
+	if js.FacetDefinitions != nil {
+		newJs.FacetDefinitions = orderedmap.New[string, *JSONSchemaRAML](js.FacetDefinitions.Len())
+		for p := js.FacetDefinitions.Oldest(); p != nil; p = p.Next() {
+			newJs.FacetDefinitions.Set(p.Key, p.Value)
+		}
+	}
+	if js.FacetData != nil {
+		newJs.FacetData = orderedmap.New[string, any](js.FacetData.Len())
+		for p := js.FacetData.Oldest(); p != nil; p = p.Next() {
+			newJs.FacetData.Set(p.Key, p.Value)
+		}
+	}
 	return newJs
 }
 
