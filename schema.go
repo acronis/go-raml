@@ -191,16 +191,16 @@ func (js *JSONSchema) DeepCopy() *JSONSchema {
 // RAML‑extended node (x‑annotations, x‑facet‑*)
 
 type JSONSchemaRAML struct {
-	*JSONSchemaGeneric[*JSONSchemaRAML] `yaml:",inline"`
-	Annotations                         *orderedmap.OrderedMap[string, any]             `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
-	FacetDefinitions                    *orderedmap.OrderedMap[string, *JSONSchemaRAML] `json:"x-facet-definitions,omitempty" yaml:"x-facet-definitions,omitempty"`
-	FacetData                           *orderedmap.OrderedMap[string, any]             `json:"x-facet-data,omitempty" yaml:"x-facet-data,omitempty"`
+	JSONSchemaGeneric[*JSONSchemaRAML] `yaml:",inline"`
+	Annotations                        *orderedmap.OrderedMap[string, any]             `json:"x-annotations,omitempty" yaml:"x-annotations,omitempty"`
+	FacetDefinitions                   *orderedmap.OrderedMap[string, *JSONSchemaRAML] `json:"x-facet-definitions,omitempty" yaml:"x-facet-definitions,omitempty"`
+	FacetData                          *orderedmap.OrderedMap[string, any]             `json:"x-facet-data,omitempty" yaml:"x-facet-data,omitempty"`
 }
 
-func (js *JSONSchemaRAML) Generic() *JSONSchemaGeneric[*JSONSchemaRAML] { return js.JSONSchemaGeneric }
+func (js *JSONSchemaRAML) Generic() *JSONSchemaGeneric[*JSONSchemaRAML] { return &js.JSONSchemaGeneric }
 
 func (js *JSONSchemaRAML) ShallowCopy() *JSONSchemaRAML {
-	if js == nil || js.JSONSchemaGeneric == nil {
+	if js == nil {
 		return nil
 	}
 	newJs := &JSONSchemaRAML{}
@@ -210,10 +210,10 @@ func (js *JSONSchemaRAML) ShallowCopy() *JSONSchemaRAML {
 }
 
 func (js *JSONSchemaRAML) DeepCopy() *JSONSchemaRAML {
-	if js == nil || js.JSONSchemaGeneric == nil {
+	if js == nil {
 		return nil
 	}
-	newJs := &JSONSchemaRAML{JSONSchemaGeneric: js.JSONSchemaGeneric.DeepCopy()}
+	newJs := &JSONSchemaRAML{JSONSchemaGeneric: *js.JSONSchemaGeneric.DeepCopy()}
 	if js.Annotations != nil {
 		newJs.Annotations = orderedmap.New[string, any](js.Annotations.Len())
 		for p := js.Annotations.Oldest(); p != nil; p = p.Next() {
@@ -239,7 +239,7 @@ func JSONSchemaWrapper(c *JSONSchemaConverter[*JSONSchemaRAML], core *JSONSchema
 	if core == nil {
 		return nil
 	}
-	w := &JSONSchemaRAML{JSONSchemaGeneric: core}
+	w := &JSONSchemaRAML{JSONSchemaGeneric: *core}
 	if b == nil {
 		return w
 	}
