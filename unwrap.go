@@ -349,7 +349,7 @@ func (r *RAML) unwrapParents(base *BaseShape) (*BaseShape, error) {
 	return source, nil
 }
 
-func (r *RAML) unwrapTarget(target Shape) error {
+func (r *RAML) UnwrapTarget(target Shape) error {
 	switch trg := target.(type) {
 	case *ArrayShape:
 		if err := r.unwrapArrayShape(trg); err != nil {
@@ -410,7 +410,7 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 	}
 
-	if errUnwrap := r.unwrapTarget(s); errUnwrap != nil {
+	if errUnwrap := r.UnwrapTarget(s); errUnwrap != nil {
 		return nil, StacktraceNewWrapped("unwrap target", errUnwrap, base.Location,
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 	}
