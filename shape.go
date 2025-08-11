@@ -130,6 +130,7 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 
 	// Avoid recursion caused by inheritance chain
 	if sourceBase.ShapeVisited {
+		// NOTE: We do not mark any recursions here. External code must handle this case.
 		return sourceBase, nil
 	}
 	sourceBase.ShapeVisited = true
