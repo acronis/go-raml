@@ -384,7 +384,7 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 	if base.IsUnwrapped() {
 		return base, nil
 	}
-	base.unwrapped = true
+	base.SetUnwrapped()
 
 	// NOTE: Type aliasing is not inheritance and is not used as a source. It must be unwrapped and returned as is.
 	if base.Alias != nil {
