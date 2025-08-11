@@ -337,7 +337,7 @@ func (r *RAML) unwrapParents(base *BaseShape) (*BaseShape, error) {
 			if errUnwrap != nil {
 				return nil, errUnwrap
 			}
-			_, errUnwrap = ss.Inherit(us)
+			us, errUnwrap = ss.Inherit(us)
 			if errUnwrap != nil {
 				return nil, StacktraceNewWrapped("multiple parents unwrap", errUnwrap, base.Location,
 					stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
@@ -380,16 +380,11 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 		return nil, fmt.Errorf("shape is nil")
 	}
 
-	if base.ShapeVisited {
-		return base, nil
-	}
-	base.ShapeVisited = true
-
 	// Skip already unwrapped shapes
 	if base.IsUnwrapped() {
-		base.ShapeVisited = false
 		return base, nil
 	}
+	base.unwrapped = true
 
 	// NOTE: Type aliasing is not inheritance and is not used as a source. It must be unwrapped and returned as is.
 	if base.Alias != nil {
@@ -398,8 +393,6 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 			return nil, StacktraceNewWrapped("alias unwrap", err, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 		}
-		base.unwrapped = true
-		base.ShapeVisited = false
 		r.PutShape(base)
 		return base.AliasTo(us)
 	}
@@ -410,8 +403,8 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 	}
 
-	if errUnwrap := r.UnwrapTarget(s); errUnwrap != nil {
-		return nil, StacktraceNewWrapped("unwrap target", errUnwrap, base.Location,
+	if err = r.UnwrapTarget(s); err != nil {
+		return nil, StacktraceNewWrapped("unwrap target", err, base.Location,
 			stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 	}
 
@@ -427,18 +420,14 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 	}
 
 	if source != nil {
+		// Base shape inherits properties of the source shape in-place.
 		is, errInherit := base.Inherit(source)
 		if errInherit != nil {
 			return nil, StacktraceNewWrapped("merge shapes", errInherit, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 		}
-		is.ShapeVisited = false
-		is.unwrapped = true
-		r.PutShape(is)
-		return is, nil
+		base = is
 	}
-	base.ShapeVisited = false
-	base.unwrapped = true
 	r.PutShape(base)
 	return base, nil
 }
