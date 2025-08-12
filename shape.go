@@ -128,6 +128,13 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 		return nil, err
 	}
 
+	// Avoid recursion caused by inheritance chain
+	if sourceBase.ShapeVisited {
+		// NOTE: We do not mark any recursions here. External code must handle this case.
+		return sourceBase, nil
+	}
+	sourceBase.ShapeVisited = true
+
 	source := sourceBase.Shape
 	target := s.Shape
 
@@ -156,6 +163,7 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 		return nil, StacktraceNewWrapped("merge shapes", err, target.Base().Location,
 			stacktrace.WithPosition(&target.Base().Position))
 	}
+	sourceBase.ShapeVisited = false
 	return s, nil
 }
 
