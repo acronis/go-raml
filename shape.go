@@ -537,7 +537,7 @@ func (r *RAML) MakeJSONShape(base *BaseShape, rawSchema string) (*JSONShape, err
 
 const HookBeforeRAMLMakeConcreteShapeYAML = "before:RAML.makeConcreteShapeYAML"
 
-// MakeConcreteShapeYAML creates a new concrete shape.
+// MakeConcreteShapeYAML creates a new concrete shape and assigns it to the base shape.
 func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFacets []*yaml.Node) (Shape, error) {
 	if err := r.callHooks(HookBeforeRAMLMakeConcreteShapeYAML, base, shapeType, shapeFacets); err != nil {
 		return nil, err
@@ -582,6 +582,7 @@ func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFac
 	case TypeJSON:
 		shape = &JSONShape{BaseShape: base}
 	}
+	base.SetShape(shape)
 
 	if err := shape.unmarshalYAMLNodes(shapeFacets); err != nil {
 		return nil, StacktraceNewWrapped("unmarshal yaml nodes", err, base.Location,
@@ -710,7 +711,6 @@ func (r *RAML) MakeNewShape(
 		return nil, nil, StacktraceNewWrapped("make concrete shape", err, location,
 			stacktrace.WithPosition(&base.Position))
 	}
-	base.SetShape(s)
 	return base, s, nil
 }
 
@@ -756,7 +756,6 @@ func (r *RAML) makeNewShapeYAML(v *yaml.Node, name string, location string) (*Ba
 	if _, ok := s.(*UnknownShape); ok {
 		r.unresolvedShapes.PushBack(base)
 	}
-	base.SetShape(s)
 	return base, nil
 }
 

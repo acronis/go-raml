@@ -57,6 +57,7 @@ func (visitor *RdtVisitor) VisitUnionMembers(node antlr.RuleNode, target *Unknow
 		if err != nil {
 			return nil, fmt.Errorf("visit children: %w", err)
 		}
+		// Replace with resolved shape
 		baseResolved.SetShape(s)
 		shapes = append(shapes, baseResolved)
 	}
@@ -84,7 +85,14 @@ func (visitor *RdtVisitor) VisitPrimitive(ctx *rdt.PrimitiveContext, target *Unk
 }
 
 func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *UnknownShape) (Shape, error) {
-	// Passed target shape becomes anonymous here because union shape takes its place later.
+	// Resolve target shape into union shape since this is the base.
+	shape, err := visitor.raml.MakeConcreteShapeYAML(target.Base(), TypeUnion, target.facets)
+	if err != nil {
+		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
+	}
+	unionShape := shape.(*UnionShape)
+
+	// Create new anonymous shape for union member and continue resolving the expression for it.
 	baseResolved, anonResolvedShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), anonResolvedShape.(*UnknownShape))
 	if err != nil {
@@ -96,53 +104,46 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
 	baseNil, _, _ := visitor.raml.MakeNewShape("", TypeNil, target.Location, &target.Position)
 
-	// We transfer base to new shape
-	// TODO: Need some kind of conversion interface.
-	base := target.Base()
-	base.Type = TypeUnion
-	return &UnionShape{
-		BaseShape: base,
-		UnionFacets: UnionFacets{
-			AnyOf: []*BaseShape{baseResolved, baseNil},
-		},
-	}, nil
+	unionShape.UnionFacets.AnyOf = []*BaseShape{baseResolved, baseNil}
+	return unionShape, nil
 }
 
 func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShape) (Shape, error) {
-	// Passed target shape becomes anonymous here because union shape takes its place later.
-	baseResolved, anonResolvedShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
-	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), anonResolvedShape.(*UnknownShape))
+	// Resolve target shape into array shape since this is the base.
+	shape, err := visitor.raml.MakeConcreteShapeYAML(target.Base(), TypeArray, target.facets)
+	if err != nil {
+		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
+	}
+	arrayShape := shape.(*ArrayShape)
+
+	// Create new anonymous shape for items and continue resolving the expression for it.
+	itemsBase, itemsShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
+	itemsShape, err = visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), itemsShape.(*UnknownShape))
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
 	}
 	// Replace with resolved shape
-	baseResolved.SetShape(s)
+	itemsBase.SetShape(itemsShape)
 
-	// We transfer base to new shape
-	// TODO: Need some kind of conversion interface.
-	base := target.Base()
-	base.Type = TypeArray
-	return &ArrayShape{
-		BaseShape: base,
-		ArrayFacets: ArrayFacets{
-			Items: baseResolved,
-		},
-	}, nil
+	arrayShape.ArrayFacets.Items = itemsBase
+	return arrayShape, nil
 }
 
 func (visitor *RdtVisitor) VisitUnion(ctx *rdt.UnionContext, target *UnknownShape) (Shape, error) {
+	// Resolve target shape into union shape since this is the base.
+	shape, err := visitor.raml.MakeConcreteShapeYAML(target.Base(), TypeUnion, target.facets)
+	if err != nil {
+		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
+	}
+	unionShape := shape.(*UnionShape)
+
 	ss, err := visitor.VisitUnionMembers(ctx, target)
 	if err != nil {
 		return nil, fmt.Errorf("visit children: %w", err)
 	}
-	base := target.Base()
-	base.Type = TypeUnion
-	return &UnionShape{
-		BaseShape: base,
-		UnionFacets: UnionFacets{
-			AnyOf: ss,
-		},
-	}, nil
+
+	unionShape.UnionFacets.AnyOf = ss
+	return unionShape, nil
 }
 
 func (visitor *RdtVisitor) VisitGroup(ctx *rdt.GroupContext, target *UnknownShape) (Shape, error) {

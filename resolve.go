@@ -84,31 +84,31 @@ func (r *RAML) resolveDomainExtension(de *DomainExtension) error {
 	return nil
 }
 
-func (r *RAML) resolveMultipleInheritance(base *BaseShape, shape *UnknownShape) (Shape, error) {
+func (r *RAML) resolveMultipleInheritance(base *BaseShape, shape *UnknownShape) error {
 	inherits := base.Inherits
 	for _, inherit := range inherits {
 		if err := r.resolveShape(inherit); err != nil {
-			return nil, fmt.Errorf("resolve inherit: %w", err)
+			return fmt.Errorf("resolve inherit: %w", err)
 		}
 	}
 	// Multiple inheritance validation to be performed in a separate validation stage
-	s, err := r.MakeConcreteShapeYAML(base, inherits[0].Type, shape.facets)
+	_, err := r.MakeConcreteShapeYAML(base, inherits[0].Type, shape.facets)
 	if err != nil {
-		return nil, fmt.Errorf("make concrete shape: %w", err)
+		return fmt.Errorf("make concrete shape: %w", err)
 	}
-	return s, nil
+	return nil
 }
 
-func (r *RAML) resolveLink(base *BaseShape, shape *UnknownShape) (Shape, error) {
+func (r *RAML) resolveLink(base *BaseShape, shape *UnknownShape) error {
 	linkShape := base.Link.Shape
 	if err := r.resolveShape(linkShape); err != nil {
-		return nil, fmt.Errorf("resolve link shape: %w", err)
+		return fmt.Errorf("resolve link shape: %w", err)
 	}
-	s, err := r.MakeConcreteShapeYAML(base, linkShape.Type, shape.facets)
+	_, err := r.MakeConcreteShapeYAML(base, linkShape.Type, shape.facets)
 	if err != nil {
-		return nil, fmt.Errorf("make concrete shape: %w", err)
+		return fmt.Errorf("make concrete shape: %w", err)
 	}
-	return s, nil
+	return nil
 }
 
 type CustomErrorListener struct {
@@ -153,24 +153,22 @@ func (r *RAML) resolveShape(base *BaseShape) error {
 	}
 
 	if base.Link != nil {
-		s, err := r.resolveLink(base, unknownShape)
+		err := r.resolveLink(base, unknownShape)
 		if err != nil {
 			return StacktraceNewWrapped("resolve link", err, base.Location,
 				stacktrace.WithPosition(&base.Position))
 		}
-		base.SetShape(s)
 		return nil
 	}
 
 	shapeType := base.Type
 	if shapeType == TypeComposite {
 		// Special case for multiple inheritance
-		s, err := r.resolveMultipleInheritance(base, unknownShape)
+		err := r.resolveMultipleInheritance(base, unknownShape)
 		if err != nil {
 			return StacktraceNewWrapped("resolve multiple inheritance", err, base.Location,
 				stacktrace.WithPosition(&base.Position))
 		}
-		base.SetShape(s)
 		return nil
 	}
 
@@ -196,11 +194,11 @@ func (r *RAML) resolveShape(base *BaseShape) error {
 		return customListener.Stacktrace
 	}
 
-	s, err := visitor.Visit(tree, unknownShape)
+	_, err := visitor.Visit(tree, unknownShape)
 	if err != nil {
 		return StacktraceNewWrapped("visit type expression", err, base.Location,
 			stacktrace.WithPosition(&base.Position))
 	}
-	base.SetShape(s)
+	// Do not set the resulting shape to the base shape, since it is already set in the visitor.
 	return nil
 }
