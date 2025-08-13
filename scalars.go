@@ -275,7 +275,7 @@ func (s *IntegerShape) unmarshalYAMLNode(node, valueNode *yaml.Node) error {
 
 func (s *IntegerShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -439,7 +439,7 @@ func (s *NumberShape) check() error {
 
 func (s *NumberShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -618,7 +618,7 @@ func (s *StringShape) check() error {
 
 func (s *StringShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -772,7 +772,7 @@ func (s *FileShape) check() error {
 
 func (s *FileShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -895,6 +895,9 @@ func (s *BooleanShape) check() error {
 }
 
 func (s *BooleanShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -998,10 +1001,10 @@ func (s *DateTimeShape) check() error {
 }
 
 func (s *DateTimeShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
+	}
 	for i := 0; i != len(v); i += 2 {
-		if i+1 >= len(v) {
-			return StacktraceNew("missing value", s.Location)
-		}
 		node := v[i]
 		valueNode := v[i+1]
 		if node.Value == "format" {
@@ -1082,7 +1085,7 @@ func (s *DateTimeOnlyShape) check() error {
 
 func (s *DateTimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -1154,6 +1157,9 @@ func (s *DateOnlyShape) check() error {
 }
 
 func (s *DateOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
+	if len(v)%2 != 0 {
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
+	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
 		valueNode := v[i+1]
@@ -1225,7 +1231,7 @@ func (s *TimeOnlyShape) check() error {
 
 func (s *TimeOnlyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -1290,7 +1296,7 @@ func (s *AnyShape) check() error {
 
 func (s *AnyShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
@@ -1358,7 +1364,7 @@ func (s *NilShape) check() error {
 
 func (s *NilShape) unmarshalYAMLNodes(v []*yaml.Node) error {
 	if len(v)%2 != 0 {
-		return StacktraceNew("odd number of nodes", s.Location)
+		return StacktraceNew("odd number of nodes", s.Location, stacktrace.WithPosition(&s.Position))
 	}
 	for i := 0; i != len(v); i += 2 {
 		node := v[i]
