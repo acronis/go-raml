@@ -1977,7 +1977,7 @@ func TestRAML_MakeBaseShape(t *testing.T) {
 	type args struct {
 		name     string
 		location string
-		position *stacktrace.Position
+		position stacktrace.Position
 	}
 	tests := []struct {
 		name   string
@@ -2487,7 +2487,7 @@ func TestRAML_MakeNewShape(t *testing.T) {
 		name      string
 		shapeType string
 		location  string
-		position  *stacktrace.Position
+		position  stacktrace.Position
 	}
 	tests := []struct {
 		name    string

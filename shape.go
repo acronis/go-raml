@@ -510,7 +510,7 @@ func identifyShapeType(shapeFacets []*yaml.Node) (string, error) {
 }
 
 func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
-	recursiveBase := r.MakeBaseShape(headBase.Name, headBase.Location, &headBase.Position)
+	recursiveBase := r.MakeBaseShape(headBase.Name, headBase.Location, headBase.Position)
 	recursiveBase.Name = headBase.Name
 	recursiveBase.Type = TypeRecursive
 	recursiveBase.Description = headBase.Description
@@ -593,20 +593,12 @@ func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFac
 }
 
 // MakeBaseShape creates a new base shape which is a base for all shapes.
-func (r *RAML) MakeBaseShape(name string, location string, position *stacktrace.Position) *BaseShape {
+func (r *RAML) MakeBaseShape(name string, location string, position stacktrace.Position) *BaseShape {
 	b := &BaseShape{
 		ID:       r.generateShapeID(),
 		Name:     name,
 		Location: location,
-		Position: func() stacktrace.Position {
-			if position == nil {
-				position = &stacktrace.Position{
-					Line:   1,
-					Column: 0,
-				}
-			}
-			return *position
-		}(),
+		Position: position,
 
 		raml:                        r,
 		CustomDomainProperties:      orderedmap.New[string, *DomainExtension](0),
@@ -703,7 +695,7 @@ func (r *RAML) MakeNewShape(
 	name string,
 	shapeType string,
 	location string,
-	position *stacktrace.Position,
+	position stacktrace.Position,
 ) (*BaseShape, Shape, error) {
 	base := r.MakeBaseShape(name, location, position)
 	s, err := r.MakeConcreteShapeYAML(base, shapeType, nil)
@@ -722,7 +714,7 @@ func (r *RAML) makeNewShapeYAML(v *yaml.Node, name string, location string) (*Ba
 		return nil, err
 	}
 
-	base := r.MakeBaseShape(name, location, &stacktrace.Position{Line: v.Line, Column: v.Column})
+	base := r.MakeBaseShape(name, location, stacktrace.Position{Line: v.Line, Column: v.Column})
 
 	shapeTypeNode, shapeFacets, err := base.decode(v)
 	if err != nil {

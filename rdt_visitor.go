@@ -52,7 +52,7 @@ func (visitor *RdtVisitor) VisitUnionMembers(node antlr.RuleNode, target *Unknow
 	// ^     ^ ^     ^ ^
 	// 0     1 2     3 4
 	for i := 0; i < len(children); i += 2 {
-		baseResolved, implicitAnonShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
+		baseResolved, implicitAnonShape, _ := visitor.raml.MakeNewShape("", "", target.Location, target.Position)
 		s, err := visitor.Visit(children[i].(antlr.ParseTree), implicitAnonShape.(*UnknownShape))
 		if err != nil {
 			return nil, fmt.Errorf("visit children: %w", err)
@@ -94,7 +94,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	unionShape := shape.(*UnionShape)
 
 	// Create new anonymous shape for union member and continue resolving the expression for it.
-	baseResolved, anonResolvedShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
+	baseResolved, anonResolvedShape, _ := visitor.raml.MakeNewShape("", "", target.Location, target.Position)
 	s, err := visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), anonResolvedShape.(*UnknownShape))
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
@@ -103,7 +103,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	baseResolved.SetShape(s)
 
 	// Nil shape is also anonymous here and doesn't share the base shape with the target.
-	baseNil, _, _ := visitor.raml.MakeNewShape("", TypeNil, target.Location, &target.Position)
+	baseNil, _, _ := visitor.raml.MakeNewShape("", TypeNil, target.Location, target.Position)
 
 	unionShape.UnionFacets.AnyOf = []*BaseShape{baseResolved, baseNil}
 	return unionShape, nil
@@ -119,7 +119,7 @@ func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShap
 	arrayShape := shape.(*ArrayShape)
 
 	// Create new anonymous shape for items and continue resolving the expression for it.
-	itemsBase, itemsShape, _ := visitor.raml.MakeNewShape("", "", target.Location, &target.Position)
+	itemsBase, itemsShape, _ := visitor.raml.MakeNewShape("", "", target.Location, target.Position)
 	itemsShape, err = visitor.Visit(ctx.GetChildren()[0].(antlr.ParseTree), itemsShape.(*UnknownShape))
 	if err != nil {
 		return nil, fmt.Errorf("visit: %w", err)
