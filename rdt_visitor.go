@@ -90,6 +90,7 @@ func (visitor *RdtVisitor) VisitOptional(ctx *rdt.OptionalContext, target *Unkno
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
 	}
+	//nolint:errcheck // No error check needed because MakeConcreteShapeYAML returns UnionShape for TypeUnion.
 	unionShape := shape.(*UnionShape)
 
 	// Create new anonymous shape for union member and continue resolving the expression for it.
@@ -114,6 +115,7 @@ func (visitor *RdtVisitor) VisitArray(ctx *rdt.ArrayContext, target *UnknownShap
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
 	}
+	//nolint:errcheck // No error check needed because MakeConcreteShapeYAML returns ArrayShape for TypeArray.
 	arrayShape := shape.(*ArrayShape)
 
 	// Create new anonymous shape for items and continue resolving the expression for it.
@@ -135,6 +137,7 @@ func (visitor *RdtVisitor) VisitUnion(ctx *rdt.UnionContext, target *UnknownShap
 	if err != nil {
 		return nil, fmt.Errorf("make concrete shape yaml: %w", err)
 	}
+	//nolint:errcheck // No error check needed because MakeConcreteShapeYAML returns UnionShape for TypeUnion.
 	unionShape := shape.(*UnionShape)
 
 	ss, err := visitor.VisitUnionMembers(ctx, target)
