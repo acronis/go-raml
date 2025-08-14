@@ -594,6 +594,10 @@ func (r *RAML) MakeConcreteShapeYAML(base *BaseShape, shapeType string, shapeFac
 
 // MakeBaseShape creates a new base shape which is a base for all shapes.
 func (r *RAML) MakeBaseShape(name string, location string, position stacktrace.Position) *BaseShape {
+	// If position is not set, use default position.
+	if position.Line == 0 && position.Column == 0 {
+		position.Line = 1
+	}
 	b := &BaseShape{
 		ID:       r.generateShapeID(),
 		Name:     name,

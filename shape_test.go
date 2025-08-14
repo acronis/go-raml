@@ -1990,7 +1990,6 @@ func TestRAML_MakeBaseShape(t *testing.T) {
 			args: args{
 				name:     "name",
 				location: "location",
-				position: stacktrace.Position{Line: 1, Column: 1},
 			},
 			want: func(t *testing.T, got *BaseShape) {
 				if got == nil {
