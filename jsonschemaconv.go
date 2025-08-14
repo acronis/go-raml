@@ -334,9 +334,12 @@ func (c *JSONSchemaConverter[T]) VisitNilShape(s *NilShape) T {
 
 func (c *JSONSchemaConverter[T]) VisitRecursiveShape(s *RecursiveShape) T {
 	// NOTE: Recursive schema will always produce ref.
-	// However, ref ignores all other keywords defined within the schema per JSON Schema spec.
-	// We keep the keywords just in case the schema is not used as a ref.
-	node := c.makeSchemaFromBaseShape(s.Base())
+	// Ref ignores all other keywords defined within the schema per JSON Schema spec.
+
+	// NOTE: We create empty schema because all base RAML types are allowed to have
+	// custom facets which can be recursive. RAML-JSON Schema wrapper
+	// The use of `makeSchemaFromBaseShape` will lead to infinite recursion.
+	node := c.makeEmptySchema()
 	schema := node.Generic()
 
 	head := s.Head.Shape
@@ -470,6 +473,14 @@ func (c *JSONSchemaConverter[T]) recast(src *JSONSchema) T {
 			core.Definitions[k] = c.recast(v)
 		}
 	}
+	if c.opts.wrap != nil {
+		return c.opts.wrap(c, core, nil)
+	}
+	return any(core).(T)
+}
+
+func (c *JSONSchemaConverter[T]) makeEmptySchema() T {
+	core := &JSONSchemaGeneric[T]{}
 	if c.opts.wrap != nil {
 		return c.opts.wrap(c, core, nil)
 	}

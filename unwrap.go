@@ -170,7 +170,7 @@ func (r *RAML) markShapeRecursions() error {
 
 const HookBeforeFindAndMarkRecursion HookKey = "RAML.FindAndMarkRecursion"
 
-// FindAndMarkRecursion finds and marks recursion in the shape.
+// FindAndMarkRecursion finds recursive shapes and replaces them with RecursiveShape.
 func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
 	if err := r.callHooks(HookBeforeFindAndMarkRecursion, base); err != nil {
 		return nil, err
@@ -195,12 +195,32 @@ func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
 	case *UnionShape:
 		err = r.findAndMarkRecursionInUnionShape(t)
 	}
-
-	base.ShapeVisited = false
 	if err != nil {
 		return nil, err
 	}
+
+	err = r.findAndMarkRecursionInCustomShapeFacetDefinitions(base)
+	if err != nil {
+		return nil, err
+	}
+
+	base.ShapeVisited = false
 	return nil, ErrNil
+}
+
+func (r *RAML) findAndMarkRecursionInCustomShapeFacetDefinitions(base *BaseShape) error {
+	for pair := base.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		prop := pair.Value
+		rs, err := r.FindAndMarkRecursion(prop.Base)
+		if err != nil {
+			return fmt.Errorf("find and mark recursion: %w", err)
+		}
+		if rs != nil {
+			prop.Base = rs
+			base.CustomShapeFacetDefinitions.Set(pair.Key, prop)
+		}
+	}
+	return nil
 }
 
 func (r *RAML) findAndMarkRecursionInArrayShape(t *ArrayShape) error {

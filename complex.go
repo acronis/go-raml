@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"github.com/zeebo/xxh3"
@@ -444,6 +445,10 @@ func (s *ObjectShape) validateProperty(
 }
 
 func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interface{}) error {
+	if missing := s.findMissingRequired(props); len(missing) > 0 {
+		return fmt.Errorf("missing required properties: %s", strings.Join(missing, ", "))
+	}
+
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
 	for k, item := range props {
 		// Explicitly defined properties have priority over pattern properties.
@@ -468,14 +473,23 @@ func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interf
 	return nil
 }
 
+func (s *ObjectShape) findMissingRequired(props map[string]interface{}) []string {
+	var missing []string
+	for pair := s.Properties.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.Required {
+			continue
+		}
+		if _, ok := props[pair.Key]; !ok {
+			missing = append(missing, pair.Key)
+		}
+	}
+	return missing
+}
+
 func (s *ObjectShape) validate(v interface{}, ctxPath string) error {
 	props, ok := v.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("invalid type, got %T, expected map[string]interface{}", v)
-	}
-
-	if err := s.validateProperties(ctxPath, props); err != nil {
-		return fmt.Errorf("validate properties: %w", err)
 	}
 
 	mapLen := uint64(len(props))
@@ -484,6 +498,10 @@ func (s *ObjectShape) validate(v interface{}, ctxPath string) error {
 	}
 	if s.MaxProperties != nil && mapLen > *s.MaxProperties {
 		return fmt.Errorf("object must have not more than %d properties", *s.MaxProperties)
+	}
+
+	if err := s.validateProperties(ctxPath, props); err != nil {
+		return fmt.Errorf("validate properties: %w", err)
 	}
 
 	return nil
