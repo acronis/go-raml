@@ -29,7 +29,18 @@ types:
   Obj2: object
   MultiObjInline: [Obj1, Obj2]
 
-  MultiObj: 
+  ParentWithCustomFacet:
+    facets:
+      myfacet:
+
+  ChildWithFacet:
+    type: ParentWithCustomFacet
+    myfacet: test
+
+  DescendantWithInheritedFacet:
+    type: ChildWithFacet
+
+  MultiObj:
     type: [Obj1, Obj2]
 
   MyFileType:
@@ -64,7 +75,7 @@ types:
 
     facets:
       custom: string
-    
+
     minLength: 0
     maxLength: 15
     pattern: ^Test Example$
@@ -82,15 +93,15 @@ types:
 
   ImplicitStringType:
     displayName: Implicit string type
-  
+
   ImplicitObjectType:
     displayName: Inline string type
     additionalProperties: false
-  
+
   ObjectNoPropertiesType:
     displayName: Object type (no properties)
     type: object
-  
+
   ObjectWithPropertiesType:
     displayName: Object type (with properties)
     type: object
@@ -107,7 +118,7 @@ types:
   ArrayTypeNoItems:
     displayName: Array type no items type
     type: array
-  
+
   ArrayShape:
     displayName: Array type
     type: array
@@ -129,7 +140,7 @@ types:
 
   NullableTypeNotation:
     type: string?
-  
+
   UnionNullableType:
     (Annotation): Test Example
     type: string | nil
