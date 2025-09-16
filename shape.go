@@ -142,6 +142,18 @@ func (s *BaseShape) Inherit(sourceBase *BaseShape) (*BaseShape, error) {
 		s.Description = sourceBase.Description
 	}
 
+	// Inherit custom shape facets
+	if s.CustomShapeFacets == nil {
+		s.CustomShapeFacets = sourceBase.CustomShapeFacets
+	} else if sourceBase.CustomShapeFacets != nil {
+		for pair := sourceBase.CustomShapeFacets.Oldest(); pair != nil; pair = pair.Next() {
+			k, sourceNode := pair.Key, pair.Value
+			if _, present := s.CustomShapeFacets.Get(k); !present {
+				s.CustomShapeFacets.Set(k, sourceNode)
+			}
+		}
+	}
+
 	// If source type is any, return target as is
 	if _, ok := source.(*AnyShape); ok {
 		return s, nil

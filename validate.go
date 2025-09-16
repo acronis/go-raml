@@ -328,19 +328,20 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 	inherits := base.Inherits
 	shapeFacetDefs := base.CustomShapeFacetDefinitions
 	validationFacetDefs := make(map[string]Property)
-	if len(inherits) == 0 {
-		return nil
-	}
-	// Custom facets must be validated against direct parent only.
-	// Descendants do not inherit facets and their definitions from upper levels during unwrap, so we traverse the chain.
-	parent := inherits[0]
-	for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
-		f := pair.Value
-		if _, ok := shapeFacetDefs.Get(f.Name); ok {
-			return StacktraceNew("duplicate custom facet", f.Base.Location,
-				stacktrace.WithPosition(&f.Base.Position), stacktrace.WithInfo("facet", f.Name))
+	for {
+		if len(inherits) == 0 {
+			break
 		}
-		validationFacetDefs[f.Name] = f
+		parent := inherits[0]
+		for pair := parent.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+			f := pair.Value
+			if _, ok := shapeFacetDefs.Get(f.Name); ok {
+				return StacktraceNew("duplicate custom facet", f.Base.Location,
+					stacktrace.WithPosition(&f.Base.Position), stacktrace.WithInfo("facet", f.Name))
+			}
+			validationFacetDefs[f.Name] = f
+		}
+		inherits = parent.Inherits
 	}
 
 	// Validate all unknown facets against facet definitions
@@ -361,7 +362,6 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 	}
 
 	// If we encounter an undefined facet - it's an error.
-	// This guards against both definition mistake and invalid unwrap logic.
 	for pair := shapeFacets.Oldest(); pair != nil; pair = pair.Next() {
 		k, f := pair.Key, pair.Value
 		if _, ok := validationFacetDefs[k]; !ok {
