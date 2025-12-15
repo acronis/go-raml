@@ -7,48 +7,59 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func (r *RAML) unwrapTypes(
-	types *orderedmap.OrderedMap[string, *BaseShape],
-	f *Library,
-	isAnnotationType bool,
-) *stacktrace.StackTrace {
+func (r *RAML) unwrapTypes() *stacktrace.StackTrace {
 	var st *stacktrace.StackTrace
-	for pair := types.Oldest(); pair != nil; pair = pair.Next() {
-		base := pair.Value
-		if base == nil {
-			se := StacktraceNew("shape is nil", f.Location,
-				stacktrace.WithType(StacktraceTypeUnwrapping))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
+	for location, shapes := range r.fragmentTypeDefinitions {
+		for _, shape := range shapes {
+			if shape == nil {
+				se := StacktraceNew("shape is nil", location,
+					stacktrace.WithType(StacktraceTypeUnwrapping))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
 			}
-			continue
-		}
-		us, err := r.UnwrapShape(base)
-		if err != nil {
-			se := StacktraceNewWrapped("unwrap shape", err, f.Location,
-				stacktrace.WithType(StacktraceTypeUnwrapping), stacktrace.WithPosition(&base.Position))
-			if st == nil {
-				st = se
-			} else {
-				st = st.Append(se)
+			_, err := r.UnwrapShape(shape)
+			if err != nil {
+				se := StacktraceNewWrapped("unwrap shape", err, location,
+					stacktrace.WithType(StacktraceTypeUnwrapping), stacktrace.WithPosition(&shape.Position))
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+				continue
 			}
-			continue
-		}
-		types.Set(pair.Key, us)
-		if isAnnotationType {
-			r.PutAnnotationTypeIntoFragment(us.Name, f.Location, base)
-		} else {
-			r.PutTypeIntoFragment(us.Name, f.Location, base)
 		}
 	}
 	return st
 }
 
-func (r *RAML) unwrapLibrary(f *Library) *stacktrace.StackTrace {
-	st := r.unwrapTypes(f.AnnotationTypes, f, true)
-	se := r.unwrapTypes(f.Types, f, false)
+func (r *RAML) unwrapTraitDefinitions(traitsDefs *orderedmap.OrderedMap[string, *TraitDefinition]) {
+	for pair := traitsDefs.Oldest(); pair != nil; pair = pair.Next() {
+		trait := pair.Value
+		if trait.Link != nil {
+			traitsDefs.Set(pair.Key, trait.Link.Trait)
+		}
+	}
+}
+
+func (r *RAML) unwrapSecuritySchemeDefinitions(securitySchemeDefs *orderedmap.OrderedMap[string, *SecuritySchemeDefinition]) {
+	for pair := securitySchemeDefs.Oldest(); pair != nil; pair = pair.Next() {
+		securitySchemeDef := pair.Value
+		if securitySchemeDef.Link != nil {
+			securitySchemeDefs.Set(pair.Key, securitySchemeDef.Link.SecurityScheme)
+		}
+	}
+}
+
+func (r *RAML) unwrapAPIFragment(f *APIFragment) *stacktrace.StackTrace {
+	r.unwrapTraitDefinitions(f.Traits)
+	r.unwrapSecuritySchemeDefinitions(f.SecuritySchemes)
+	st := r.applyTraits(f)
+	se := r.applySecuritySchemes(f)
 	if se != nil {
 		if st == nil {
 			st = se
@@ -59,25 +70,38 @@ func (r *RAML) unwrapLibrary(f *Library) *stacktrace.StackTrace {
 	return st
 }
 
-func (r *RAML) unwrapDataType(f *DataType) *stacktrace.StackTrace {
+func (r *RAML) unwrapLibrary(f *Library) *stacktrace.StackTrace {
+	r.unwrapTraitDefinitions(f.Traits)
+	r.unwrapSecuritySchemeDefinitions(f.SecuritySchemes)
+	return nil
+}
+
+func (r *RAML) unwrapDataTypeFragment(f *DataTypeFragment) *stacktrace.StackTrace {
 	if f.Shape == nil {
 		return StacktraceNew("shape is nil", f.Location,
 			stacktrace.WithType(StacktraceTypeUnwrapping))
 	}
-	us, err := r.UnwrapShape(f.Shape)
+	_, err := r.UnwrapShape(f.Shape)
 	if err != nil {
 		return StacktraceNewWrapped("unwrap shape", err, f.Location,
 			stacktrace.WithType(StacktraceTypeUnwrapping), stacktrace.WithPosition(&f.Shape.Position))
 	}
-	f.Shape = us
-	r.PutTypeIntoFragment(us.Name, f.Location, f.Shape)
 	return nil
 }
 
 func (r *RAML) unwrapFragments() *stacktrace.StackTrace {
-	var st *stacktrace.StackTrace
+	st := r.unwrapTypes()
 	for _, frag := range r.fragmentsCache {
 		switch f := frag.(type) {
+		case *APIFragment:
+			se := r.unwrapAPIFragment(f)
+			if se != nil {
+				if st == nil {
+					st = se
+				} else {
+					st = st.Append(se)
+				}
+			}
 		case *Library:
 			se := r.unwrapLibrary(f)
 			if se != nil {
@@ -87,8 +111,8 @@ func (r *RAML) unwrapFragments() *stacktrace.StackTrace {
 					st = st.Append(se)
 				}
 			}
-		case *DataType:
-			se := r.unwrapDataType(f)
+		case *DataTypeFragment:
+			se := r.unwrapDataTypeFragment(f)
 			if se != nil {
 				if st == nil {
 					st = se
@@ -99,6 +123,85 @@ func (r *RAML) unwrapFragments() *stacktrace.StackTrace {
 		}
 	}
 	return st
+}
+
+func (r *RAML) applyTraits(api *APIFragment) *stacktrace.StackTrace {
+	for _, endPoint := range r.endPoints {
+		for _, trait := range endPoint.Traits {
+			// Endpoint-level traits are propagated to operations
+			for pair := endPoint.Operations.Oldest(); pair != nil; pair = pair.Next() {
+				operation := pair.Value
+				operation.Traits = append(operation.Traits, trait)
+			}
+		}
+		for pair := endPoint.Operations.Oldest(); pair != nil; pair = pair.Next() {
+			// Operation-level traits apply to a single operation
+			operation := pair.Value
+			for _, trait := range operation.Traits {
+				if err := r.applyTrait(api, trait, operation); err != nil {
+					return StacktraceNewWrapped("apply trait", err, trait.Location, stacktrace.WithPosition(&trait.Position),
+						stacktrace.WithType(StacktraceTypeUnwrapping))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RAML) applyTrait(api *APIFragment, trait *Trait, operation *Operation) *stacktrace.StackTrace {
+	traitDef, err := api.GetTraitDefinition(trait.Name)
+	if err != nil {
+		return StacktraceNewWrapped("get trait definition", err, trait.Location,
+			stacktrace.WithPosition(&trait.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
+	}
+	traitOperation, err := traitDef.compile(trait.Params)
+	if err != nil {
+		return StacktraceNewWrapped("compile trait", err, trait.Location,
+			stacktrace.WithPosition(&trait.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
+	}
+	operation.merge(traitOperation)
+	return nil
+}
+
+func (r *RAML) applySecuritySchemes(api *APIFragment) *stacktrace.StackTrace {
+	for _, endPoint := range r.endPoints {
+		for _, security := range endPoint.SecuredBy {
+			// Endpoint-level security schemes are propagated to operations
+			for pair := endPoint.Operations.Oldest(); pair != nil; pair = pair.Next() {
+				operation := pair.Value
+				operation.SecuredBy = append(operation.SecuredBy, security)
+			}
+		}
+		for pair := endPoint.Operations.Oldest(); pair != nil; pair = pair.Next() {
+			// Operation-level traits apply to a single operation
+			operation := pair.Value
+			for _, security := range operation.SecuredBy {
+				if err := r.applySecurityScheme(api, security); err != nil {
+					return StacktraceNewWrapped("apply security scheme", err, security.Location, stacktrace.WithPosition(&security.Position),
+						stacktrace.WithType(StacktraceTypeUnwrapping))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (r *RAML) applySecurityScheme(api *APIFragment, securityScheme *SecurityScheme) *stacktrace.StackTrace {
+	// TODO: Probably move to resolution stage
+	// NOTE: If definition is already set, this is null security scheme.
+	if securityScheme.Definition != nil {
+		return nil
+	}
+	securitySchemeDef, err := api.GetSecuritySchemeDefinition(securityScheme.Name)
+	if err != nil {
+		return StacktraceNewWrapped("get security scheme definition", err, securityScheme.Location,
+			stacktrace.WithPosition(&securityScheme.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
+	}
+	// TODO: Compile with parameters
+	securityScheme.Definition = securitySchemeDef
+	// NOTE: Security scheme description is not applied to the operation.
+	// TODO: Maybe some checks can be implemented? Like method shadowing security status codes, headers and query parameters?
+	return nil
 }
 
 func (r *RAML) unwrapDomainExtensions() *stacktrace.StackTrace {
@@ -124,21 +227,16 @@ func (r *RAML) unwrapDomainExtensions() *stacktrace.StackTrace {
 // UnwrapShapes unwraps all shapes in the RAML in-place.
 func (r *RAML) UnwrapShapes() error {
 	// We need to invalidate old cache and re-populate it because references will no longer be valid after unwrapping.
-	r.fragmentTypes = make(map[string]map[string]*BaseShape)
-	r.fragmentAnnotationTypes = make(map[string]map[string]*BaseShape)
 	r.shapes = make([]*BaseShape, 0, len(r.shapes))
-	st := r.unwrapFragments()
-	if st != nil {
-		return st
+	if err := r.unwrapFragments(); err != nil {
+		return fmt.Errorf("unwrap fragments: %w", err)
 	}
-	err := r.markShapeRecursions()
-	if err != nil {
+	if err := r.markShapeRecursions(); err != nil {
 		return fmt.Errorf("mark shape recursions: %w", err)
 	}
 	// Links to definedBy must be updated after unwrapping.
-	st = r.unwrapDomainExtensions()
-	if st != nil {
-		return st
+	if err := r.unwrapDomainExtensions(); err != nil {
+		return fmt.Errorf("unwrap domain extensions: %w", err)
 	}
 	return nil
 }
@@ -159,7 +257,7 @@ func (r *RAML) markShapeRecursions() error {
 					return err
 				}
 			}
-		case *DataType:
+		case *DataTypeFragment:
 			if _, err := r.FindAndMarkRecursion(f.Shape); err != nil {
 				return err
 			}

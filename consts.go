@@ -79,6 +79,7 @@ const (
 	FacetUniqueItems          = "uniqueItems"
 	FacetDiscriminator        = "discriminator"
 	FacetDiscriminatorValue   = "discriminatorValue"
+	FacetValue                = "value"
 	FacetDescription          = "description"
 	FacetDisplayName          = "displayName"
 	FacetStrict               = "strict"
@@ -89,6 +90,20 @@ const (
 	FacetExamples             = "examples"
 	FacetDefault              = "default"
 	FacetAllowedTargets       = "allowedTargets"
+	FacetHeaders              = "headers"
+	FacetQueryParameters      = "queryParameters"
+	FacetQueryString          = "queryString"
+	FacetResponses            = "responses"
+	FacetBody                 = "body"
+	FacetAnnotations          = "annotations"
+	FacetProtocols            = "protocols"
+	FacetSchemes              = "schemes"
+	FacetSecuredBy            = "securedBy"
+	FacetIs                   = "is"
+	FacetTraits               = "traits"
+	FacetResourceTypes        = "resourceTypes"
+	FacetUses                 = "uses"
+	FacetUriParameters        = "uriParameters"
 )
 
 const (
@@ -109,4 +124,37 @@ const (
 	StacktraceTypeValidating stacktrace.Type = "validating"
 	StacktraceTypeReading    stacktrace.Type = "reading"
 	StacktraceTypeLoading    stacktrace.Type = "loading"
+)
+
+type SecuritySchemeType string
+
+const (
+	BasicAuthType       SecuritySchemeType = "Basic Authentication"
+	DigestAuthType      SecuritySchemeType = "Digest Authentication"
+	PassThroughAuthType SecuritySchemeType = "Pass Through"
+	OAuth1AuthType      SecuritySchemeType = "OAuth 1.0"
+	OAuth2AuthType      SecuritySchemeType = "OAuth 2.0"
+	NullAuthType        SecuritySchemeType = "Null"
+)
+
+type DomainLocation string
+
+const (
+	APIDomain                    DomainLocation = "API"
+	DocumentationItemDomain      DomainLocation = "DocumentationItem"
+	ResourceDomain               DomainLocation = "Resource"
+	MethodDomain                 DomainLocation = "Method"
+	ResponseDomain               DomainLocation = "Response"
+	RequestBodyDomain            DomainLocation = "RequestBody"
+	ResponseBodyDomain           DomainLocation = "ResponseBody"
+	TypeDeclarationDomain        DomainLocation = "TypeDeclaration"
+	ExampleDomain                DomainLocation = "Example"
+	ResourceTypeDomain           DomainLocation = "ResourceType"
+	TraitDomain                  DomainLocation = "Trait"
+	SecuritySchemeDomain         DomainLocation = "SecurityScheme"
+	SecuritySchemeSettingsDomain DomainLocation = "SecuritySchemeSettings"
+	AnnotationTypeDomain         DomainLocation = "AnnotationType"
+	LibraryDomain                DomainLocation = "Library"
+	OverlayDomain                DomainLocation = "Overlay"
+	ExtensionDomain              DomainLocation = "Extension"
 )

@@ -232,62 +232,67 @@ With all these features, more creative cases can be covered than the use cases m
 The following sections are currently implemented. See notes for each point:
 
 - [ ] RAML API definitions
+  - [ ] Resource Types
+  - [ ] Traits
+  - [x] Endpoint definitions
+  - [ ] Security schemes
+  - [x] Documentation
 - [x] RAML Data Types
-    - [x] Defining Types
-    - [x] Type Declarations
-    - [x] Built-in Types
-        - [x] The "Any" Type
-        - [x] Object Type
-            - [x] Property Declarations (explicit and pattern properties)
-            - [x] Additional Properties
-            - [x] Object Type Specialization
-            - [x] Using Discriminator
-        - [x] Array Type
-        - [x] Scalar Types
-            - [x] String
-            - [x] Number
-            - [x] Integer
-            - [x] Boolean
-            - [x] Date
-            - [x] File
-            - [x] Nil Type
-        - [x] Union Type (mostly supported, lacks enum support)
-        - [x] JSON Schema types (supported, but validation is not implemented)
-        - [x] Recursive types
-    - [x] User-defined Facets
-    - [x] Determine Default Types
-    - [x] Type Expressions
-    - [x] Type Inheritance
-    - [ ] Multiple Inheritance (supported, but not fully compliant)
-    - [x] Inline Type Declarations
-    - [x] Defining Examples in RAML
-        - [x] Multiple Examples
-        - [x] Single Example
-        - [x] Validation against defined data type
+  - [x] Defining Types
+  - [x] Type Declarations
+  - [x] Built-in Types
+    - [x] The "Any" Type
+    - [x] Object Type
+      - [x] Property Declarations (explicit and pattern properties)
+      - [x] Additional Properties
+      - [x] Object Type Specialization
+      - [x] Using Discriminator
+    - [x] Array Type
+    - [x] Scalar Types
+      - [x] String
+      - [x] Number
+      - [x] Integer
+      - [x] Boolean
+      - [x] Date
+      - [x] File
+      - [x] Nil Type
+    - [x] Union Type (mostly supported, lacks enum support)
+    - [ ] JSON Schema types (supported, but validation is not implemented)
+    - [x] Recursive types
+  - [x] User-defined Facets
+  - [x] Determine Default Types
+  - [x] Type Expressions
+  - [x] Type Inheritance
+  - [ ] Multiple Inheritance (supported, but not fully compliant)
+  - [x] Inline Type Declarations
+  - [x] Defining Examples in RAML
+    - [x] Multiple Examples
+    - [x] Single Example
+    - [x] Validation against defined data type
 - [ ] Annotations
-    - [x] Declaring Annotation Types
-    - [ ] Applying Annotations
-        - [ ] Annotating Scalar-valued Nodes
-        - [ ] Annotation Targets
-        - [x] Annotating types
+  - [x] Declaring Annotation Types
+  - [ ] Applying Annotations
+    - [ ] Annotating Scalar-valued Nodes
+    - [ ] Annotation Targets
+    - [x] Annotating types
 - [ ] Modularization
-    - [ ] Includes
-        - [x] Library
-            - [x] NamedExample
-            - [x] DataType
-            - [ ] AnnotationTypeDeclaration
-            - [ ] DocumentationItem
-            - [ ] ResourceType
-            - [ ] Trait
-            - [ ] Overlay
-            - [ ] Extension
-            - [ ] SecurityScheme
+  - [ ] Includes
+    - [x] Library
+    - [x] NamedExample
+    - [x] DataType
+    - [x] AnnotationTypeDeclaration
+    - [x] DocumentationItem
+    - [x] ResourceType
+    - [x] Trait
+    - [ ] Overlay
+    - [ ] Extension
+    - [x] SecurityScheme
 - [ ] Conversion
-    - [x] Conversion to JSON Schema
-    - [ ] Conversion to RAML
+  - [x] Conversion to JSON Schema
+  - [ ] Conversion to RAML
 - [ ] CLI
-    - [x] Validate
-    - [ ] Convert to JSON Schema
+  - [x] Validate RAML
+  - [ ] Convert RAML data type to JSON Schema
 
 ## Comparison with existing libraries
 

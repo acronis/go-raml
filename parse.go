@@ -35,6 +35,22 @@ func ReadHead(f io.ReadSeeker) (string, error) {
 // IdentifyFragment returns the kind of the fragment by its head.
 func IdentifyFragment(head string) (FragmentKind, error) {
 	switch head {
+	case "#%RAML 1.0":
+		return FragmentAPI, nil
+	case "#%RAML 1.0 DocumentationItem":
+		return FragmentDocumentationItem, nil
+	case "#%RAML 1.0 ResourceType":
+		return FragmentResourceType, nil
+	case "#%RAML 1.0 Trait":
+		return FragmentTrait, nil
+	case "#%RAML 1.0 AnnotationTypeDeclaration":
+		return FragmentAnnotationTypeDeclaration, nil
+	case "#%RAML 1.0 SecurityScheme":
+		return FragmentSecurityScheme, nil
+	// case "#%RAML 1.0 Overlay":
+	// 	return FragmentOverlay, nil
+	// case "#%RAML 1.0 Extension":
+	// 	return FragmentExtension, nil
 	case "#%RAML 1.0 Library":
 		return FragmentLibrary, nil
 	case "#%RAML 1.0 DataType":
@@ -57,8 +73,8 @@ func ReadRawFile(path string) (io.ReadCloser, error) {
 	return f, nil
 }
 
-// decodeDataType decodes a data type (*DataType) from a file.
-func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
+// decodeDataType decodes a data type (*DataTypeFragment) from a file.
+func (r *RAML) decodeDataType(f io.Reader, path string) (*DataTypeFragment, error) {
 	// TODO: This is a temporary workaround for JSON data types.
 	if strings.HasSuffix(path, ".json") {
 		data, err := io.ReadAll(f)
@@ -77,7 +93,7 @@ func (r *RAML) decodeDataType(f io.Reader, path string) (*DataType, error) {
 
 	decoder := yaml.NewDecoder(f)
 
-	dt := r.MakeDataType(path)
+	dt := r.MakeDataTypeFragment(path)
 	if err := decoder.Decode(&dt); err != nil {
 		return nil, StacktraceNewWrapped("decode fragment", err, path,
 			stacktrace.WithType(StacktraceTypeParsing))
@@ -120,7 +136,7 @@ func CheckFragmentKind(f *os.File, kind FragmentKind) error {
 
 const HookBeforeParseDataType = "before:RAML.parseDataType"
 
-func (r *RAML) parseDataType(path string) (*DataType, error) {
+func (r *RAML) parseDataType(path string) (*DataTypeFragment, error) {
 	if err := r.callHooks(HookBeforeParseDataType, path); err != nil {
 		return nil, err
 	}
@@ -131,13 +147,13 @@ func (r *RAML) parseDataType(path string) (*DataType, error) {
 
 	if dt := r.GetFragment(path); dt != nil {
 		// log.Printf("reusing fragment %s", path)
-		return dt.(*DataType), nil
+		return dt.(*DataTypeFragment), nil
 	}
 
 	f, err := openFragmentFile(path)
 	if err != nil {
 		return nil, StacktraceNewWrapped("open fragment file", err, path,
-			stacktrace.WithType(StacktraceTypeReading))
+			stacktrace.WithType(StacktraceTypeLoading))
 	}
 
 	defer func(f *os.File) {
@@ -178,6 +194,114 @@ func openFragmentFile(path string) (*os.File, error) {
 	return f, nil
 }
 
+func (r *RAML) decodeApi(f io.Reader, path string) (*APIFragment, error) {
+	decoder := yaml.NewDecoder(f)
+
+	api := r.MakeAPIFragment(path)
+	if err := decoder.Decode(&api); err != nil {
+		return nil, StacktraceNewWrapped("decode fragment", err, path,
+			stacktrace.WithType(StacktraceTypeParsing))
+	}
+
+	var st *stacktrace.StackTrace
+
+	r.PutFragment(path, api)
+
+	// Resolve included libraries in a separate stage.
+	baseDir := filepath.Dir(api.Location)
+	for pair := api.Uses.Oldest(); pair != nil; pair = pair.Next() {
+		include := pair.Value
+
+		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
+		if err != nil {
+			se := StacktraceNewWrapped("parse uses library", err, path,
+				stacktrace.WithType(StacktraceTypeParsing), stacktrace.WithPosition(&include.Position))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+		}
+		include.Link = sublib
+	}
+	if st != nil {
+		return nil, st
+	}
+	return api, nil
+}
+
+func (r *RAML) decodeTraitFragment(f io.Reader, path string) (*TraitFragment, error) {
+	decoder := yaml.NewDecoder(f)
+
+	traitFrag := r.MakeTraitFragment(path)
+	if err := decoder.Decode(&traitFrag); err != nil {
+		return nil, StacktraceNewWrapped("decode fragment", err, path,
+			stacktrace.WithType(StacktraceTypeParsing))
+	}
+
+	var st *stacktrace.StackTrace
+
+	r.PutFragment(path, traitFrag)
+
+	// Resolve included libraries in a separate stage.
+	baseDir := filepath.Dir(traitFrag.Location)
+	for pair := traitFrag.Uses.Oldest(); pair != nil; pair = pair.Next() {
+		include := pair.Value
+
+		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
+		if err != nil {
+			se := StacktraceNewWrapped("parse uses library", err, path,
+				stacktrace.WithType(StacktraceTypeParsing), stacktrace.WithPosition(&include.Position))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+		}
+		include.Link = sublib
+	}
+	if st != nil {
+		return nil, st
+	}
+	return traitFrag, nil
+}
+
+func (r *RAML) decodeSecuritySchemeFragment(f io.Reader, path string) (*SecuritySchemeFragment, error) {
+	decoder := yaml.NewDecoder(f)
+
+	securitySchemeFrag := r.MakeSecuritySchemeFragment(path)
+	if err := decoder.Decode(&securitySchemeFrag); err != nil {
+		return nil, StacktraceNewWrapped("decode fragment", err, path,
+			stacktrace.WithType(StacktraceTypeParsing))
+	}
+
+	var st *stacktrace.StackTrace
+
+	r.PutFragment(path, securitySchemeFrag)
+
+	// Resolve included libraries in a separate stage.
+	baseDir := filepath.Dir(securitySchemeFrag.Location)
+	for pair := securitySchemeFrag.Uses.Oldest(); pair != nil; pair = pair.Next() {
+		include := pair.Value
+
+		sublib, err := r.parseLibrary(filepath.Join(baseDir, include.Value))
+		if err != nil {
+			se := StacktraceNewWrapped("parse uses library", err, path,
+				stacktrace.WithType(StacktraceTypeParsing), stacktrace.WithPosition(&include.Position))
+			if st == nil {
+				st = se
+			} else {
+				st = st.Append(se)
+			}
+		}
+		include.Link = sublib
+	}
+	if st != nil {
+		return nil, st
+	}
+	return securitySchemeFrag, nil
+}
+
 func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 	decoder := yaml.NewDecoder(f)
 
@@ -212,6 +336,76 @@ func (r *RAML) decodeLibrary(f io.Reader, path string) (*Library, error) {
 		return nil, st
 	}
 	return lib, nil
+}
+
+func (r *RAML) parseTraitFragment(path string) (*TraitFragment, error) {
+	var err error
+
+	if traitFrag := r.GetFragment(path); traitFrag != nil {
+		// slog.Debug("reusing fragment", slog.String("path", path))
+		return traitFrag.(*TraitFragment), nil
+	}
+
+	f, err := openFragmentFile(path)
+	if err != nil {
+		return nil, StacktraceNewWrapped("open fragment file", err, path,
+			stacktrace.WithType(StacktraceTypeLoading))
+	}
+
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			log.Fatalf("close file error: %v", err)
+		}
+	}(f)
+
+	if err = CheckFragmentKind(f, FragmentTrait); err != nil {
+		return nil, StacktraceNewWrapped("check fragment kind", err, path,
+			stacktrace.WithType(StacktraceTypeReading))
+	}
+
+	traitFrag, err := r.decodeTraitFragment(f, path)
+	if err != nil {
+		return nil, StacktraceNewWrapped("decode trait fragment", err, path,
+			stacktrace.WithType(StacktraceTypeParsing))
+	}
+
+	return traitFrag, nil
+}
+
+func (r *RAML) parseSecuritySchemeFragment(path string) (*SecuritySchemeFragment, error) {
+	var err error
+
+	if securitySchemeFrag := r.GetFragment(path); securitySchemeFrag != nil {
+		// slog.Debug("reusing fragment", slog.String("path", path))
+		return securitySchemeFrag.(*SecuritySchemeFragment), nil
+	}
+
+	f, err := openFragmentFile(path)
+	if err != nil {
+		return nil, StacktraceNewWrapped("open fragment file", err, path,
+			stacktrace.WithType(StacktraceTypeLoading))
+	}
+
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			log.Fatalf("close file error: %v", err)
+		}
+	}(f)
+
+	if err = CheckFragmentKind(f, FragmentSecurityScheme); err != nil {
+		return nil, StacktraceNewWrapped("check fragment kind", err, path,
+			stacktrace.WithType(StacktraceTypeReading))
+	}
+
+	securitySchemeFrag, err := r.decodeSecuritySchemeFragment(f, path)
+	if err != nil {
+		return nil, StacktraceNewWrapped("decode security scheme fragment", err, path,
+			stacktrace.WithType(StacktraceTypeParsing))
+	}
+
+	return securitySchemeFrag, nil
 }
 
 func (r *RAML) parseLibrary(path string) (*Library, error) {
@@ -279,7 +473,8 @@ func (r *RAML) parseNamedExample(path string) (*NamedExample, error) {
 
 	f, err := openFragmentFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("open fragment file: %w", err)
+		return nil, StacktraceNewWrapped("open fragment file", err, path,
+			stacktrace.WithType(StacktraceTypeLoading))
 	}
 
 	defer func(f *os.File) {
@@ -375,6 +570,27 @@ func (r *RAML) parseFragment(f io.ReadSeeker, fragmentPath string, pOpts *parser
 				stacktrace.WithType(StacktraceTypeParsing))
 		}
 		r.SetEntryPoint(ne)
+	case FragmentAPI:
+		api, errDecode := r.decodeApi(f, fragmentPath)
+		if errDecode != nil {
+			return StacktraceNewWrapped("parse api", errDecode, fragmentPath,
+				stacktrace.WithType(StacktraceTypeParsing))
+		}
+		r.SetEntryPoint(api)
+	case FragmentTrait:
+		traitFrag, errDecode := r.decodeTraitFragment(f, fragmentPath)
+		if errDecode != nil {
+			return StacktraceNewWrapped("parse trait", errDecode, fragmentPath,
+				stacktrace.WithType(StacktraceTypeParsing))
+		}
+		r.SetEntryPoint(traitFrag)
+	case FragmentSecurityScheme:
+		securitySchemeFrag, errDecode := r.decodeSecuritySchemeFragment(f, fragmentPath)
+		if errDecode != nil {
+			return StacktraceNewWrapped("parse security scheme fragment", errDecode, fragmentPath,
+				stacktrace.WithType(StacktraceTypeParsing))
+		}
+		r.SetEntryPoint(securitySchemeFrag)
 	default:
 		return StacktraceNew("unknown fragment kind", fragmentPath,
 			stacktrace.WithInfo("head", head), stacktrace.WithType(StacktraceTypeParsing))

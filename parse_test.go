@@ -13,6 +13,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ParseFromPathApiIntegration(t *testing.T) {
+	start := time.Now()
+	rml, err := ParseFromPath(`./fixtures/api.raml`, OptWithUnwrap(), OptWithValidate())
+	require.NoError(t, err)
+	elapsed := time.Since(start)
+	shapesAll := rml.GetShapes()
+	t.Logf("ParseFromPathApiIntegration took %d ms, location %s, total shapes %d", elapsed.Milliseconds(), rml.entryPoint.GetLocation(), len(shapesAll))
+
+	// api := rml.EntryPoint().(*APIFragment)
+	// endPoint, _ := api.EndPoints.Get("/")
+	// operation, _ := endPoint.Operations.Get("get")
+	// queryParam, _ := operation.QueryParameters.Get("name")
+	// if err = queryParam.Base.Validate("test"); err != nil {
+	// 	t.Errorf("Validate schema: %s", err)
+	// }
+	// header, _ := operation.Headers.Get("X-My-Header")
+	// if err = header.Base.Validate("test"); err != nil {
+	// 	t.Errorf("Validate schema: %s", err)
+	// }
+	// body, _ := operation.Request.Bodies.Get("application/json")
+	// if err = body.Shape.Validate("test"); err != nil {
+	// 	t.Errorf("Validate schema: %s", err)
+	// }
+	// response, _ := operation.Responses.Get(200)
+	// body, _ = response.Bodies.Get("application/json")
+	// if err = body.Shape.Validate("test"); err != nil {
+	// 	t.Errorf("Validate schema: %s", err)
+	// }
+
+	printMemUsage(t)
+}
+
 func Test_ParseFromPathIntegration(t *testing.T) {
 	start := time.Now()
 	rml, err := ParseFromPath(`./fixtures/library.raml`, OptWithUnwrap(), OptWithValidate())
@@ -62,7 +94,7 @@ func Test_ParseFromPathIntegration(t *testing.T) {
 				// os.WriteFile(fmt.Sprintf("./out/%s_%d.json", s.Name, s.ID), b, 0644)
 				// fmt.Println(string(b))
 			}
-		case *DataType:
+		case *DataTypeFragment:
 			_, errConv := conv.Convert(f.Shape.Shape)
 			if errConv != nil {
 				t.Errorf("Convert shape: %s", errConv)
@@ -285,7 +317,7 @@ func TestRAML_decodeDataType(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    func(tt *testing.T, got *DataType)
+		want    func(tt *testing.T, got *DataTypeFragment)
 		wantErr bool
 	}{
 		{
@@ -297,7 +329,7 @@ func TestRAML_decodeDataType(t *testing.T) {
 				f:    &mockReadSeeker{P: []byte("#%RAML 1.0 DataType\ntype: string")},
 				path: "./fixtures/test.raml",
 			},
-			want: func(tt *testing.T, got *DataType) {
+			want: func(tt *testing.T, got *DataTypeFragment) {
 				require.NotNil(tt, got)
 				require.Equal(tt, "string", got.Shape.Type)
 			},
@@ -311,7 +343,7 @@ func TestRAML_decodeDataType(t *testing.T) {
 				path: "./fixtures/test.json",
 				f:    &mockReadSeeker{P: []byte("{\"type\": \"string\"}")},
 			},
-			want: func(tt *testing.T, got *DataType) {
+			want: func(tt *testing.T, got *DataTypeFragment) {
 				require.NotNil(tt, got)
 				require.Equal(tt, "json", got.Shape.Type)
 			},
@@ -327,7 +359,7 @@ func TestRAML_decodeDataType(t *testing.T) {
 				f:    &mockReadSeeker{P: []byte("#%RAML 1.0 DataType\nuses:\n  common: common.raml\ntype: common.A")},
 				path: "./fixtures/test.raml",
 			},
-			want: func(tt *testing.T, got *DataType) {
+			want: func(tt *testing.T, got *DataTypeFragment) {
 				require.NotNil(tt, got)
 				require.NotNil(tt, got.Uses)
 			},
@@ -501,7 +533,7 @@ func TestRAML_parseDataType(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    func(tt *testing.T, got *DataType)
+		want    func(tt *testing.T, got *DataTypeFragment)
 		wantErr bool
 	}{
 		{
@@ -512,7 +544,7 @@ func TestRAML_parseDataType(t *testing.T) {
 			args: args{
 				path: "./fixtures/dtype.raml",
 			},
-			want: func(tt *testing.T, got *DataType) {
+			want: func(tt *testing.T, got *DataTypeFragment) {
 				require.NotNil(tt, got)
 				require.Equal(tt, "string", got.Shape.Type)
 			},
@@ -521,7 +553,7 @@ func TestRAML_parseDataType(t *testing.T) {
 			name: "positive: get fragment from cache",
 			fields: fields{
 				fragmentsCache: map[string]Fragment{
-					"test": &DataType{
+					"test": &DataTypeFragment{
 						Shape: &BaseShape{
 							Type: "string",
 						},
@@ -531,7 +563,7 @@ func TestRAML_parseDataType(t *testing.T) {
 			args: args{
 				path: "test",
 			},
-			want: func(tt *testing.T, got *DataType) {
+			want: func(tt *testing.T, got *DataTypeFragment) {
 				require.NotNil(tt, got)
 				require.Equal(tt, "string", got.Shape.Type)
 			},
