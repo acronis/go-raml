@@ -3,6 +3,7 @@ package raml
 import (
 	"container/list"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -14,12 +15,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func writeToDiskHelper(t *testing.T, tt struct {
+	name string
+	typeName string
+	outSchema *JSONSchemaRAML
+}) {
+	outputDir := "./test_output"
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		t.Errorf("Failed to create output directory: %v", err)
+	}
+	outputPath := filepath.Join(outputDir, tt.name+"_"+tt.typeName+".json")
+	var jsonData []byte
+	jsonData, err := json.MarshalIndent(tt.outSchema, "", "  ")
+	if err != nil {
+		t.Errorf("Failed to marshal JSON Schema: %v", err)
+	}
+	if err := os.WriteFile(outputPath, jsonData, 0644); err != nil {
+		t.Errorf("Failed to write JSON Schema to file: %v", err)
+	}
+	t.Logf("Successfully wrote JSON Schema to %s", outputPath)
+}
+
+
 func Test_ParseFixturesIntegration(t *testing.T) {
 	// Define test cases for valid fixtures that should parse successfully
 	validTests := []struct {
 		name string
 		path string
 	}{
+		{
+			name: "library_recursive_trait.raml",
+			path: "./fixtures/library_recursive_trait.raml",
+		},
 		{
 			name: "library.raml",
 			path: "./fixtures/library.raml",
@@ -78,19 +105,25 @@ func Test_ParseFixturesIntegration(t *testing.T) {
 				case *Library:
 					for pair := f.AnnotationTypes.Oldest(); pair != nil; pair = pair.Next() {
 						s := pair.Value
-						_, errConv := conv.Convert(s.Shape)
-						require.NoError(t, errConv, "Failed to convert annotation type shape in %s: %v", tt.path, errConv)
+						typeName := pair.Key
+						outSchema, err := conv.Convert(s.Shape)
+						writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+						require.NoError(t, err, "Failed to convert annotation type shape in %s: %v", tt.path, err)
 						convertedCount++
 					}
 					for pair := f.Types.Oldest(); pair != nil; pair = pair.Next() {
 						s := pair.Value
-						_, errConv := conv.Convert(s.Shape)
-						require.NoError(t, errConv, "Failed to convert type shape in %s: %v", tt.path, errConv)
+						typeName := pair.Key
+						outSchema, err := conv.Convert(s.Shape)
+						writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+						require.NoError(t, err, "Failed to convert type shape in %s: %v", tt.path, err)
 						convertedCount++
 					}
 				case *DataType:
-					_, errConv := conv.Convert(f.Shape.Shape)
-					require.NoError(t, errConv, "Failed to convert data type shape in %s: %v", tt.path, errConv)
+					typeName := f.Shape.Name
+					outSchema, err := conv.Convert(f.Shape.Shape)
+					writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+					require.NoError(t, err, "Failed to convert data type shape in %s: %v", tt.path, err)
 					convertedCount++
 				}
 			}
@@ -136,8 +169,12 @@ func Test_ParseFixturesIntegration(t *testing.T) {
 			path: "./fixtures/library_invalid_unwrap.raml",
 		},
 		{
-			name: "named_example_invalid_decode.raml",
-			path: "./fixtures/named_example_invalid_decode.raml",
+			name: "library_invalid_recursive_trait.raml",
+			path: "./fixtures/library_invalid_inherited_recursive_trait.raml",
+		},
+		{
+			name: "library_invalid_trait_example.raml",
+			path: "./fixtures/library_invalid_trait_example.raml",
 		},
 	}
 

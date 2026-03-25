@@ -285,6 +285,16 @@ func (r *RAML) validateShapeCommons(s *BaseShape) error {
 			}
 		}
 	}
+
+	// Validate trait definition shapes
+	for pair := s.CustomShapeFacetDefinitions.Oldest(); pair != nil; pair = pair.Next() {
+		facetDef := pair.Value
+		if err := r.validateShapeCommons(facetDef.Base); err != nil {
+			return StacktraceNewWrapped("validate custom facet definition", err, facetDef.Base.Location,
+				stacktrace.WithPosition(&facetDef.Base.Position), stacktrace.WithInfo("facet", pair.Key))
+		}
+	}
+
 	return nil
 }
 

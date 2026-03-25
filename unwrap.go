@@ -199,12 +199,16 @@ func (r *RAML) FindAndMarkRecursion(base *BaseShape) (*BaseShape, error) {
 		return nil, err
 	}
 
+	// Reset the context to avoid generating recursive shape
+	// for trait that points to the same type that defines this trait.
+	// This is OK because traits cannot have nested traits and
+	// cannot be used as a source for inheritance.
+	base.ShapeVisited = false
 	err = r.findAndMarkRecursionInCustomShapeFacetDefinitions(base)
 	if err != nil {
 		return nil, err
 	}
 
-	base.ShapeVisited = false
 	return nil, ErrNil
 }
 
@@ -435,6 +439,8 @@ func (r *RAML) UnwrapShape(base *BaseShape) (*BaseShape, error) {
 			return nil, StacktraceNewWrapped("custom shape facet definition unwrap", errUnwrap, base.Location,
 				stacktrace.WithPosition(&base.Position), stacktrace.WithType(StacktraceTypeUnwrapping))
 		}
+		// Reset custom shape facet definitions since traits cannot have nested traits.
+		us.CustomShapeFacetDefinitions = orderedmap.New[string, Property]()
 		prop.Base = us
 		base.CustomShapeFacetDefinitions.Set(pair.Key, prop)
 	}

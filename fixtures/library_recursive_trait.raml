@@ -1,0 +1,26 @@
+#%RAML 1.0 Library
+
+types:
+  SelfRecursiveTraitAlias:
+    type: object
+    facets:
+      my_trait: SelfRecursiveTraitAlias
+    properties:
+      attr1: string
+
+  SelfRecursiveTraitNestedAlias:
+    type: object
+    facets:
+      test_trait:
+        properties:
+          my_trait: SelfRecursiveTraitNestedAlias
+    properties:
+      attr1: string
+
+  SelfRecursiveTraitInheritedOptional:
+    type: object
+    facets:
+      my_trait?:
+        type: SelfRecursiveTraitInheritedOptional
+    properties:
+      attr1: string

@@ -1,0 +1,10 @@
+#%RAML 1.0 Library
+
+types:
+  SelfRecursiveTrait:
+    type: object
+    facets:
+      my_trait:
+        type: SelfRecursiveTrait
+    properties:
+      attr1: string

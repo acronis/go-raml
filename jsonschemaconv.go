@@ -337,7 +337,7 @@ func (c *JSONSchemaConverter[T]) VisitRecursiveShape(s *RecursiveShape) T {
 	// Ref ignores all other keywords defined within the schema per JSON Schema spec.
 
 	// NOTE: We create empty schema because all base RAML types are allowed to have
-	// custom facets which can be recursive. RAML-JSON Schema wrapper
+	// custom facets which can be recursive.
 	// The use of `makeSchemaFromBaseShape` will lead to infinite recursion.
 	node := c.makeEmptySchema()
 	schema := node.Generic()

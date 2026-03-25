@@ -6,3 +6,4 @@ cover.html
 cover.out
 .build
 /.idea
+test_output/

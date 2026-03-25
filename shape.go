@@ -528,7 +528,8 @@ func (r *RAML) MakeRecursiveShape(headBase *BaseShape) *BaseShape {
 	recursiveBase.Description = headBase.Description
 	recursiveBase.CustomDomainProperties = headBase.CustomDomainProperties
 	recursiveBase.CustomShapeFacets = headBase.CustomShapeFacets
-	recursiveBase.CustomShapeFacetDefinitions = headBase.CustomShapeFacetDefinitions
+	// Recursive shapes must not provide facet definitions,
+	// they are provided by the head shape.
 	s := &RecursiveShape{BaseShape: recursiveBase, Head: headBase}
 	recursiveBase.SetShape(s)
 	return recursiveBase
