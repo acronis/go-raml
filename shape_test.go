@@ -2206,7 +2206,7 @@ func TestRAML_makeShapeType(t *testing.T) {
 			args: args{
 				shapeTypeNode: &yaml.Node{
 					Kind:  yaml.ScalarNode,
-					Tag:   "!include",
+					Tag:   TagInclude,
 					Value: "dtype.raml",
 				},
 				base:     &BaseShape{},
@@ -2362,7 +2362,7 @@ func TestRAML_makeShapeType(t *testing.T) {
 			args: args{
 				shapeTypeNode: &yaml.Node{
 					Kind:  yaml.ScalarNode,
-					Tag:   "!include",
+					Tag:   TagInclude,
 					Value: "dtype.raml",
 				},
 				base:     &BaseShape{},
@@ -2406,7 +2406,7 @@ func TestRAML_makeShapeType(t *testing.T) {
 					Content: []*yaml.Node{
 						{
 							Kind: yaml.ScalarNode,
-							Tag:  "!include",
+							Tag:  TagInclude,
 						},
 					},
 				},
@@ -2779,7 +2779,7 @@ func TestBaseShape_decodeExamples(t *testing.T) {
 				valueNode: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "fixtures/named_example.raml",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 			},
 		},

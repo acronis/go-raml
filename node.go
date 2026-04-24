@@ -53,6 +53,7 @@ func (r *RAML) makeIncludedNode(node *yaml.Node, location string) (*Node, error)
 			log.Fatal(fmt.Errorf("close file error: %w", err))
 		}
 	}(rdr)
+	r.TrackIncludedFile(fragmentPath)
 	var value any
 	ext := filepath.Ext(node.Value)
 	switch ext {
@@ -75,7 +76,7 @@ func (r *RAML) makeIncludedNode(node *yaml.Node, location string) (*Node, error)
 		if errDecode := d.Decode(&data); errDecode != nil {
 			return nil, StacktraceNewWrapped("include: yaml decode", errDecode, fragmentPath, WithNodePosition(node))
 		}
-		value, err = yamlNodeToDataNode(&data, fragmentPath, false)
+		value, err = r.yamlNodeToDataNode(&data, fragmentPath, false)
 		if err != nil {
 			return nil, StacktraceNewWrapped("include: yaml node to data node", err, fragmentPath,
 				WithNodePosition(node))
@@ -111,7 +112,7 @@ func (r *RAML) makeRootNode(node *yaml.Node, location string) (*Node, error) {
 }
 
 func (r *RAML) makeYamlNode(node *yaml.Node, location string) (*Node, error) {
-	data, err := yamlNodeToDataNode(node, location, false)
+	data, err := r.yamlNodeToDataNode(node, location, false)
 	if err != nil {
 		return nil, StacktraceNewWrapped("yaml node to data node", err, location, WithNodePosition(node))
 	}
@@ -123,7 +124,7 @@ func (r *RAML) makeYamlNode(node *yaml.Node, location string) (*Node, error) {
 	}, nil
 }
 
-func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
+func (r *RAML) scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
 	switch node.Tag {
 	default:
 		var val any
@@ -144,24 +145,25 @@ func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any
 		// !includestr sounds like a good candidate.
 		baseDir := filepath.Dir(location)
 		fragmentPath := filepath.Join(baseDir, node.Value)
+		r.TrackIncludedFile(fragmentPath)
 		// TODO: Need to refactor and move out IO logic from this function.
-		r, err := ReadRawFile(filepath.Join(baseDir, node.Value))
+		rdr, err := ReadRawFile(filepath.Join(baseDir, node.Value))
 		if err != nil {
 			return nil, StacktraceNewWrapped("include: read raw file", err, location, WithNodePosition(node),
 				stacktrace.WithInfo("path", fragmentPath))
 		}
-		defer func(r io.ReadCloser) {
-			err = r.Close()
+		defer func(rdr io.ReadCloser) {
+			err = rdr.Close()
 			if err != nil {
 				log.Fatal(fmt.Errorf("close file error: %w", err))
 			}
-		}(r)
+		}(rdr)
 		// TODO: This logic should be more complex because content type may depend on the header reported
 		//  by remote server.
 		ext := filepath.Ext(node.Value)
 		switch ext {
 		default:
-			v, errRead := io.ReadAll(r)
+			v, errRead := io.ReadAll(rdr)
 			if errRead != nil {
 				return nil, StacktraceNewWrapped("include: read all", errRead, fragmentPath,
 					WithNodePosition(node))
@@ -169,17 +171,17 @@ func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any
 			return string(v), nil
 		case ".yaml", ".yml":
 			var data yaml.Node
-			d := yaml.NewDecoder(r)
+			d := yaml.NewDecoder(rdr)
 			if errDecode := d.Decode(&data); errDecode != nil {
 				return nil, StacktraceNewWrapped("include: yaml decode", errDecode, fragmentPath,
 					WithNodePosition(node))
 			}
-			return yamlNodeToDataNode(&data, fragmentPath, true)
+			return r.yamlNodeToDataNode(&data, fragmentPath, true)
 		}
 	}
 }
 
-func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
+func (r *RAML) yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
 	switch node.Kind {
 	default:
 		return nil, StacktraceNew("unexpected kind", location,
@@ -187,9 +189,9 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 	case yaml.AliasNode:
 		return nil, StacktraceNew("alias nodes are not supported", location, WithNodePosition(node))
 	case yaml.DocumentNode:
-		return yamlNodeToDataNode(node.Content[0], location, isInclude)
+		return r.yamlNodeToDataNode(node.Content[0], location, isInclude)
 	case yaml.ScalarNode:
-		return scalarNodeToDataNode(node, location, isInclude)
+		return r.scalarNodeToDataNode(node, location, isInclude)
 	case yaml.MappingNode:
 		properties := make(map[string]any, len(node.Content)/2)
 		if len(node.Content)%2 != 0 {
@@ -199,7 +201,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 		for i := 0; i != len(node.Content); i += 2 {
 			key := node.Content[i].Value
 			value := node.Content[i+1]
-			data, err := yamlNodeToDataNode(value, location, isInclude)
+			data, err := r.yamlNodeToDataNode(value, location, isInclude)
 			if err != nil {
 				return nil, StacktraceNewWrapped("yaml node to data node", err, location,
 					WithNodePosition(value))
@@ -210,7 +212,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 	case yaml.SequenceNode:
 		items := make([]any, len(node.Content))
 		for i, item := range node.Content {
-			data, err := yamlNodeToDataNode(item, location, isInclude)
+			data, err := r.yamlNodeToDataNode(item, location, isInclude)
 			if err != nil {
 				return nil, StacktraceNewWrapped("yaml node to data node", err, location, WithNodePosition(item))
 			}
