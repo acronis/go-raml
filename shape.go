@@ -690,7 +690,7 @@ func (r *RAML) makeShapeType(
 			if node.Kind != yaml.ScalarNode {
 				return "", nil, StacktraceNew("node kind must be scalar", location,
 					WithNodePosition(node))
-			} else if node.Tag == "!include" {
+			} else if node.Tag == TagInclude {
 				return "", nil, StacktraceNew("!include is not allowed in multiple inheritance",
 					location, WithNodePosition(node))
 			}
@@ -772,7 +772,7 @@ func (s *BaseShape) decodeExamples(valueNode *yaml.Node) error {
 		return StacktraceNew("example and examples cannot be defined together", s.Location,
 			WithNodePosition(valueNode))
 	}
-	if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == "!include" {
+	if valueNode.Kind == yaml.ScalarNode && valueNode.Tag == TagInclude {
 		baseDir := filepath.Dir(s.Location)
 		n, err := s.raml.parseNamedExample(filepath.Join(baseDir, valueNode.Value))
 		if err != nil {

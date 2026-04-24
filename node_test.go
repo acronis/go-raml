@@ -292,7 +292,7 @@ func TestRAML_makeRootNode(t *testing.T) {
 			},
 			args: args{
 				node: &yaml.Node{
-					Tag: "!include",
+					Tag: TagInclude,
 				},
 			},
 			wantErr: true,
@@ -477,7 +477,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 				node: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "filename.yaml",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 				location: tempDir + "/location.raml",
 			},
@@ -494,7 +494,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 				node: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "filename.txt",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 				location: tempDir + "/location.raml",
 			},
@@ -511,7 +511,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 				node: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "notfound.yaml",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 				location: tempDir + "/location.raml",
 			},
@@ -523,7 +523,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 				node: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "filename.yaml",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 				location:  tempDir + "/location.raml",
 				isInclude: true,
@@ -536,7 +536,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 				node: &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Value: "err.yaml",
-					Tag:   "!include",
+					Tag:   TagInclude,
 				},
 				location: tempDir + "/location.raml",
 			},
@@ -553,7 +553,7 @@ func Test_scalarNodeToDataNode(t *testing.T) {
 			if tt.prepare != nil {
 				tt.prepare(t)
 			}
-			got, err := scalarNodeToDataNode(tt.args.node, tt.args.location, tt.args.isInclude)
+			got, err := new(RAML).scalarNodeToDataNode(tt.args.node, tt.args.location, tt.args.isInclude)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("scalarNodeToDataNode() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -674,7 +674,7 @@ func Test_yamlNodeToDataNode(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := yamlNodeToDataNode(tt.args.node, tt.args.location, tt.args.isInclude)
+			got, err := new(RAML).yamlNodeToDataNode(tt.args.node, tt.args.location, tt.args.isInclude)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("yamlNodeToDataNode() error = %v, wantErr %v", err, tt.wantErr)
 				return

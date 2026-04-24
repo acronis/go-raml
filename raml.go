@@ -15,6 +15,7 @@ type RAML struct {
 	fragmentsCache          map[string]Fragment // Library, NamedExample, DataType
 	fragmentTypes           map[string]map[string]*BaseShape
 	fragmentAnnotationTypes map[string]map[string]*BaseShape
+	includedFiles           map[string]struct{} // files pulled in via !include
 	// entryPoint is a Library, NamedExample or DataType fragment that is used as an entry point for the resolution.
 	entryPoint Fragment
 	// basePath   string
@@ -139,9 +140,23 @@ func New(ctx context.Context) *RAML {
 		fragmentTypes:           make(map[string]map[string]*BaseShape),
 		fragmentAnnotationTypes: make(map[string]map[string]*BaseShape),
 		fragmentsCache:          make(map[string]Fragment),
+		includedFiles:           make(map[string]struct{}),
 		domainExtensions:        make([]*DomainExtension, 0),
 		ctx:                     ctx,
 	}
+}
+
+// TrackIncludedFile records a file path that was pulled in via !include.
+func (r *RAML) TrackIncludedFile(path string) {
+	if r.includedFiles == nil {
+		r.includedFiles = make(map[string]struct{})
+	}
+	r.includedFiles[path] = struct{}{}
+}
+
+// GetIncludedFiles returns the set of file paths pulled in via !include.
+func (r *RAML) GetIncludedFiles() map[string]struct{} {
+	return r.includedFiles
 }
 
 // Shapes returns all shapes.
@@ -199,6 +214,15 @@ func (r *RAML) PutAnnotationTypeIntoFragment(name string, location string, shape
 // GetFragment returns a fragment.
 func (r *RAML) GetFragment(location string) Fragment {
 	return r.fragmentsCache[location]
+}
+
+// GetFragmentLocations returns the set of file paths of all parsed RAML fragments.
+func (r *RAML) GetFragmentLocations() map[string]struct{} {
+	locations := make(map[string]struct{}, len(r.fragmentsCache))
+	for loc := range r.fragmentsCache {
+		locations[loc] = struct{}{}
+	}
+	return locations
 }
 
 // PutFragment puts a fragment.
