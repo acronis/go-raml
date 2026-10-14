@@ -100,7 +100,7 @@ func (s *ArrayShape) validate(v interface{}, ctxPath string) error {
 		ctxPathA := ctxPath + "[" + strconv.Itoa(ii) + "]"
 		if s.Items != nil {
 			if err := s.Items.Shape.validate(item, ctxPathA); err != nil {
-				return fmt.Errorf("validate array item %s: %w", ctxPathA, err)
+				return withPath(ctxPathA, fmt.Errorf("validate array item %s: %w", ctxPathA, err))
 			}
 		}
 		if validateUniqueItems {
@@ -439,14 +439,14 @@ func (s *ObjectShape) validateProperty(
 		return false, nil
 	}
 	if err := p.Base.Shape.validate(item, ctxPathK); err != nil {
-		return true, fmt.Errorf("validate property %s: %w", ctxPathK, err)
+		return true, withPath(ctxPathK, fmt.Errorf("validate property %s: %w", ctxPathK, err))
 	}
 	return true, nil
 }
 
 func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interface{}) error {
 	if missing := s.findMissingRequired(props); len(missing) > 0 {
-		return fmt.Errorf("missing required properties: %s", strings.Join(missing, ", "))
+		return withPath(ctxPath, fmt.Errorf("missing required properties: %s", strings.Join(missing, ", ")))
 	}
 
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !*s.AdditionalProperties
@@ -456,18 +456,18 @@ func (s *ObjectShape) validateProperties(ctxPath string, props map[string]interf
 
 		found, err := s.validateProperty(k, item, ctxPathK)
 		if err != nil {
-			return fmt.Errorf("validate property %s: %w", ctxPathK, err)
+			return withPath(ctxPathK, fmt.Errorf("validate property %s: %w", ctxPathK, err))
 		}
 		if found {
 			continue
 		}
 		if restrictedAdditionalProperties {
-			return fmt.Errorf("unexpected additional property \"%s\"", k)
+			return withPath(ctxPathK, fmt.Errorf("unexpected additional property \"%s\"", k))
 		}
 
 		_, err = s.validatePatternProperty(k, item, ctxPathK)
 		if err != nil {
-			return fmt.Errorf("validate pattern property %s: %w", ctxPathK, err)
+			return withPath(ctxPathK, fmt.Errorf("validate pattern property %s: %w", ctxPathK, err))
 		}
 	}
 	return nil
