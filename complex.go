@@ -85,7 +85,7 @@ func (s *ArrayShape) validate(v any, ctxPath string) error {
 		for ii, item := range i {
 			ctxPathA := ctxPath + "[" + strconv.Itoa(ii) + "]"
 			if err := s.Items.validateAt(item, ctxPathA); err != nil {
-				return fmt.Errorf("validate array item %s: %w", ctxPathA, err)
+				return withPath(ctxPathA, fmt.Errorf("validate array item %s: %w", ctxPathA, err))
 			}
 		}
 	}
@@ -423,14 +423,14 @@ func (s *ObjectShape) validateProperty(
 		return false, nil
 	}
 	if err := p.Base.validateAt(item, ctxPathK); err != nil {
-		return true, fmt.Errorf("validate property %s: %w", ctxPathK, err)
+		return true, withPath(ctxPathK, fmt.Errorf("validate property %s: %w", ctxPathK, err))
 	}
 	return true, nil
 }
 
 func (s *ObjectShape) validateProperties(ctxPath string, props map[string]any) error {
 	if missing := s.findMissingRequired(props); len(missing) > 0 {
-		return fmt.Errorf("missing required properties: %s", strings.Join(missing, ", "))
+		return withPath(ctxPath, fmt.Errorf("missing required properties: %s", strings.Join(missing, ", ")))
 	}
 
 	restrictedAdditionalProperties := s.AdditionalProperties != nil && !s.AdditionalProperties.Value
@@ -442,7 +442,7 @@ func (s *ObjectShape) validateProperties(ctxPath string, props map[string]any) e
 		}
 		ctxPathK := ctxPath + "." + pair.Key
 		if err := pair.Value.Base.validateAt(item, ctxPathK); err != nil {
-			return fmt.Errorf("validate property %s: %w", ctxPathK, err)
+			return withPath(ctxPathK, fmt.Errorf("validate property %s: %w", ctxPathK, err))
 		}
 	}
 	// Check for additional or pattern properties not defined in the schema.
@@ -455,12 +455,12 @@ func (s *ObjectShape) validateProperties(ctxPath string, props map[string]any) e
 		// Explicitly defined properties have priority over pattern properties.
 		ctxPathK := ctxPath + "." + k
 		if restrictedAdditionalProperties {
-			return fmt.Errorf("unexpected additional property \"%s\"", k)
+			return withPath(ctxPathK, fmt.Errorf("unexpected additional property \"%s\"", k))
 		}
 
 		_, err := s.validatePatternProperty(k, item, ctxPathK)
 		if err != nil {
-			return fmt.Errorf("validate pattern property %s: %w", ctxPathK, err)
+			return withPath(ctxPathK, fmt.Errorf("validate pattern property %s: %w", ctxPathK, err))
 		}
 	}
 	return nil

@@ -71,8 +71,11 @@ func (r *RAML) validateDomainExtensions(unwrapCache map[int64]*BaseShape) *stack
 			db = us
 		}
 		if err := db.Validate(item.Extension.Value.Raw); err != nil {
+			// Point at the property the error is about, not at the start of
+			// the whole annotation value.
+			pos := item.Extension.errorPosition(err)
 			acc.Add(StacktraceNewWrapped("check domain extension", err, item.Extension.Location,
-				stacktrace.WithPosition(&item.Extension.ValuePos),
+				stacktrace.WithPosition(&pos),
 				stacktrace.WithType(StacktraceTypeValidating)))
 			continue
 		}
@@ -217,8 +220,9 @@ func (r *RAML) validateShapeFacets(base *BaseShape) error {
 			continue
 		}
 		if err := facetDef.Base.Validate(f.Value.Raw); err != nil {
+			pos := f.errorPosition(err)
 			return StacktraceNewWrapped("validate custom facet", err, f.Location,
-				stacktrace.WithPosition(&f.ValuePos), stacktrace.WithInfo("facet", k))
+				stacktrace.WithPosition(&pos), stacktrace.WithInfo("facet", k))
 		}
 	}
 
