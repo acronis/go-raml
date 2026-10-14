@@ -88,7 +88,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/complex-05/invalid-enum.raml",
 			msgContains: "value must be one of (enum_defaultValue, enum_value1, enum_value2)",
-			line:        32, col: 7, endLine: 37, endCol: 25,
+			line:        36, col: 7, endLine: 36, endCol: 33,
 		},
 		// error chain: "apply resource types" -> "compile resource type" -> "missing required parameter"
 		{
@@ -99,7 +99,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/complex-08/invalid-undefined-property.raml",
 			msgContains: "validate properties: unexpected additional property \"hi\"",
-			line:        14, col: 13, endLine: 20, endCol: 31,
+			line:        17, col: 15, endLine: 17, endCol: 20,
 		},
 		// error chain: "validate shapes" -> "check domain extension: invalid type, got string, expected []any"
 		{
@@ -159,7 +159,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/resource-03/invalid-not-allowed-prop.raml",
 			msgContains: "unexpected additional property \"z\"",
-			line:        18, col: 7, endLine: 25, endCol: 15,
+			line:        25, col: 11, endLine: 25, endCol: 15,
 		},
 		// error chain: "validate shapes" -> "check domain extension" -> "validate properties" -> "validate pattern property $.role: C:\\Sources\\go-raml\\raml-tck\\Annotations\\resource-04\\invalid-pattern-prop.raml:8:7" -> "validate pattern property: invalid type, got string, expected map[string]any"
 		{
@@ -183,7 +183,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/resource-07/invalid-enum-val.raml",
 			msgContains: "value must be one of (low, medium, high)",
-			line:        14, col: 5, endLine: 15, endCol: 19,
+			line:        15, col: 5, endLine: 15, endCol: 19,
 		},
 		// error chain: "validate shapes" -> "validate shape commons" -> "unknown facet"
 		{
@@ -195,13 +195,13 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/root-01/invalid-enum-val.raml",
 			msgContains: "value must be one of (W, A)",
-			line:        11, col: 7, endLine: 12, endCol: 15,
+			line:        12, col: 7, endLine: 12, endCol: 15,
 		},
 		// error chain: "validate shapes" -> "check domain extension: validate properties: validate property $.q: invalid type, got string, expected bool"
 		{
 			fixture:     "Annotations/root-02/invalid-boolean-val.raml",
 			msgContains: "invalid type, got string, expected bool",
-			line:        11, col: 7, endLine: 12, endCol: 15,
+			line:        11, col: 7, endLine: 11, endCol: 15,
 		},
 		// error chain: "validate shapes" -> "check domain extension: validate properties: missing required properties: items"
 		{
@@ -213,7 +213,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Annotations/root-04/invalid-bools-array.raml",
 			msgContains: "invalid type, got string, expected bool",
-			line:        10, col: 5, endLine: 12, endCol: 13,
+			line:        11, col: 8, endLine: 11, endCol: 13,
 		},
 		// error chain: "validate shapes" -> "check domain extension" -> "validate pattern property" -> "validate properties" -> "validate pattern property $.persons.156798654.Alice: C:\\Sources\\go-raml\\raml-tck\\Annotations\\root-05\\invalid-inheritance.raml:10:7" -> "validate pattern property: validate properties: missing required properties: name"
 		{
@@ -2199,7 +2199,7 @@ func Test_TCKInvalidErrors(t *testing.T) {
 		{
 			fixture:     "Types/annotations-used-in-type-03/invalid-wrong-nested-property-type.raml",
 			msgContains: "invalid type, got int, expected string",
-			line:        22, col: 29, endLine: 22, endCol: 41,
+			line:        22, col: 31, endLine: 22, endCol: 41,
 		},
 		// error chain: "validate shapes" -> "validate shape commons" -> "validate example" -> "validate properties" -> "validate property $.unionArray" -> "validate array item $.unionArray[0]: C:\\Sources\\go-raml\\raml-tck\\Types\\array-of-datatype-unions-01\\invalid-example-property.raml:21:7" -> "value does not match any type" -> "validate union member: validate properties: missing required properties: property2" -> "validate union member: validate properties: missing required properties: property3"
 		{
