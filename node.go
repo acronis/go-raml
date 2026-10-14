@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -32,7 +33,10 @@ type Node struct {
 
 	Location string
 	stacktrace.Position
-	raml *RAML
+	// positions locates the values inside Value in the source, see
+	// nodePositions. It is nil for a Node that was not read from YAML.
+	positions nodePositions
+	raml      *RAML
 }
 
 func (n *Node) String() string {
@@ -111,15 +115,17 @@ func (r *RAML) makeRootNode(node *yaml.Node, location string) (*Node, error) {
 }
 
 func (r *RAML) makeYamlNode(node *yaml.Node, location string) (*Node, error) {
-	data, err := yamlNodeToDataNode(node, location, false)
+	positions := make(nodePositions)
+	data, err := yamlNodeToDataNodeAt(node, location, false, "$", positions)
 	if err != nil {
 		return nil, StacktraceNewWrapped("yaml node to data node", err, location, WithNodePosition(node))
 	}
 	return &Node{
-		Value:    data,
-		Location: location,
-		Position: stacktrace.Position{Line: node.Line, Column: node.Column},
-		raml:     r,
+		Value:     data,
+		Location:  location,
+		Position:  stacktrace.Position{Line: node.Line, Column: node.Column},
+		positions: positions,
+		raml:      r,
 	}, nil
 }
 
@@ -180,6 +186,15 @@ func scalarNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any
 }
 
 func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, error) {
+	return yamlNodeToDataNodeAt(node, location, isInclude, "$", nil)
+}
+
+// yamlNodeToDataNodeAt converts the node to data. When positions is not nil,
+// it records the position of every mapping key and sequence item under its
+// JSON path, built as validation builds ctxPath: "$", "$[0]", "$.key".
+func yamlNodeToDataNodeAt(
+	node *yaml.Node, location string, isInclude bool, path string, positions nodePositions,
+) (any, error) {
 	switch node.Kind {
 	default:
 		return nil, StacktraceNew("unexpected kind", location,
@@ -187,7 +202,7 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 	case yaml.AliasNode:
 		return nil, StacktraceNew("alias nodes are not supported", location, WithNodePosition(node))
 	case yaml.DocumentNode:
-		return yamlNodeToDataNode(node.Content[0], location, isInclude)
+		return yamlNodeToDataNodeAt(node.Content[0], location, isInclude, path, positions)
 	case yaml.ScalarNode:
 		return scalarNodeToDataNode(node, location, isInclude)
 	case yaml.MappingNode:
@@ -199,7 +214,11 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 		for i := 0; i != len(node.Content); i += 2 {
 			key := node.Content[i].Value
 			value := node.Content[i+1]
-			data, err := yamlNodeToDataNode(value, location, isInclude)
+			keyPath := path + "." + key
+			if positions != nil {
+				positions[keyPath] = stacktrace.Position{Line: node.Content[i].Line, Column: node.Content[i].Column}
+			}
+			data, err := yamlNodeToDataNodeAt(value, location, isInclude, keyPath, positions)
 			if err != nil {
 				return nil, StacktraceNewWrapped("yaml node to data node", err, location,
 					WithNodePosition(value))
@@ -210,7 +229,11 @@ func yamlNodeToDataNode(node *yaml.Node, location string, isInclude bool) (any, 
 	case yaml.SequenceNode:
 		items := make([]any, len(node.Content))
 		for i, item := range node.Content {
-			data, err := yamlNodeToDataNode(item, location, isInclude)
+			itemPath := path + "[" + strconv.Itoa(i) + "]"
+			if positions != nil {
+				positions[itemPath] = stacktrace.Position{Line: item.Line, Column: item.Column}
+			}
+			data, err := yamlNodeToDataNodeAt(item, location, isInclude, itemPath, positions)
 			if err != nil {
 				return nil, StacktraceNewWrapped("yaml node to data node", err, location, WithNodePosition(item))
 			}
