@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/acronis/go-raml/v2/orderedmap"
 	"github.com/zeebo/xxh3"
 	"gopkg.in/yaml.v3"
 

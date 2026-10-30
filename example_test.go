@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/acronis/go-raml/v2/orderedmap"
 	"github.com/acronis/go-stacktrace"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"gopkg.in/yaml.v3"
 )
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/acronis/go-raml/v2/orderedmap"
 	"gopkg.in/yaml.v3"
 
 	"github.com/acronis/go-stacktrace"

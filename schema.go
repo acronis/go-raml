@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/acronis/go-raml/v2/orderedmap"
 )
 
 // Adapted from https://github.com/invopop/jsonschema/blob/main/schema.go

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
-	orderedmap "github.com/wk8/go-ordered-map/v2"
+	"github.com/acronis/go-raml/v2/orderedmap"
 )
 
 type WrapperFunc[T jsonSchemaWrapper[T]] func(conv *JSONSchemaConverter[T], core *JSONSchemaGeneric[T], src *BaseShape) T
