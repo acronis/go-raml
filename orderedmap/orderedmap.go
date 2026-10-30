@@ -3,8 +3,8 @@
 //
 // All operations are constant-time.
 //
-// Github repo: https://github.com/wk8/go-ordered-map
-//
+// The package is a copy of github.com/wk8/go-ordered-map/v2 v2.1.8 (Apache License 2.0, see LICENSE)
+// with JSON encoding on the standard library instead of github.com/mailru/easyjson.
 package orderedmap
 
 import (

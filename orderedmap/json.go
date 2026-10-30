@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"unicode/utf8"
 
+	"strconv"
+
 	"github.com/buger/jsonparser"
-	"github.com/mailru/easyjson/jwriter"
 )
 
 var (
@@ -23,81 +24,151 @@ func (om *OrderedMap[K, V]) MarshalJSON() ([]byte, error) { //nolint:funlen
 		return []byte("null"), nil
 	}
 
-	writer := jwriter.Writer{}
-	writer.RawByte('{')
+	var buf bytes.Buffer
+	buf.WriteByte('{')
 
 	for pair, firstIteration := om.Oldest(), true; pair != nil; pair = pair.Next() {
 		if firstIteration {
 			firstIteration = false
 		} else {
-			writer.RawByte(',')
+			buf.WriteByte(',')
 		}
 
 		switch key := any(pair.Key).(type) {
 		case string:
-			writer.String(key)
+			writeJSONString(&buf, key)
 		case encoding.TextMarshaler:
-			writer.RawByte('"')
-			writer.Raw(key.MarshalText())
-			writer.RawByte('"')
+			text, err := key.MarshalText()
+			if err != nil {
+				return nil, err
+			}
+			buf.WriteByte('"')
+			buf.Write(text)
+			buf.WriteByte('"')
 		case int:
-			writer.IntStr(key)
+			writeQuotedInt(&buf, int64(key))
 		case int8:
-			writer.Int8Str(key)
+			writeQuotedInt(&buf, int64(key))
 		case int16:
-			writer.Int16Str(key)
+			writeQuotedInt(&buf, int64(key))
 		case int32:
-			writer.Int32Str(key)
+			writeQuotedInt(&buf, int64(key))
 		case int64:
-			writer.Int64Str(key)
+			writeQuotedInt(&buf, key)
 		case uint:
-			writer.UintStr(key)
+			writeQuotedUint(&buf, uint64(key))
 		case uint8:
-			writer.Uint8Str(key)
+			writeQuotedUint(&buf, uint64(key))
 		case uint16:
-			writer.Uint16Str(key)
+			writeQuotedUint(&buf, uint64(key))
 		case uint32:
-			writer.Uint32Str(key)
+			writeQuotedUint(&buf, uint64(key))
 		case uint64:
-			writer.Uint64Str(key)
+			writeQuotedUint(&buf, key)
 		default:
 
 			// this switch takes care of wrapper types around primitive types, such as
 			// type myType string
 			switch keyValue := reflect.ValueOf(key); keyValue.Type().Kind() {
 			case reflect.String:
-				writer.String(keyValue.String())
+				writeJSONString(&buf, keyValue.String())
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				writer.Int64Str(keyValue.Int())
+				writeQuotedInt(&buf, keyValue.Int())
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				writer.Uint64Str(keyValue.Uint())
+				writeQuotedUint(&buf, keyValue.Uint())
 			default:
 				return nil, fmt.Errorf("unsupported key type: %T", key)
 			}
 		}
 
-		writer.RawByte(':')
-		// the error is checked at the end of the function
-		writer.Raw(json.Marshal(pair.Value)) //nolint:errchkjson
+		buf.WriteByte(':')
+		value, err := json.Marshal(pair.Value)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(value)
 	}
 
-	writer.RawByte('}')
-
-	return dumpWriter(&writer)
-}
-
-func dumpWriter(writer *jwriter.Writer) ([]byte, error) {
-	if writer.Error != nil {
-		return nil, writer.Error
-	}
-
-	var buf bytes.Buffer
-	buf.Grow(writer.Size())
-	if _, err := writer.DumpTo(&buf); err != nil {
-		return nil, err
-	}
+	buf.WriteByte('}')
 
 	return buf.Bytes(), nil
+}
+
+func writeQuotedInt(buf *bytes.Buffer, n int64) {
+	buf.WriteByte('"')
+	buf.WriteString(strconv.FormatInt(n, 10))
+	buf.WriteByte('"')
+}
+
+func writeQuotedUint(buf *bytes.Buffer, n uint64) {
+	buf.WriteByte('"')
+	buf.WriteString(strconv.FormatUint(n, 10))
+	buf.WriteByte('"')
+}
+
+const hexChars = "0123456789abcdef"
+
+// writeJSONString writes s as a JSON string with HTML-safe escaping.
+// The output matches github.com/mailru/easyjson/jwriter.Writer.String used by github.com/wk8/go-ordered-map/v2:
+// \t, \r, \n, \\ and \" use short escapes, other control characters and <, >, & use \u00XX,
+// invalid UTF-8 bytes become \ufffd, U+2028 and U+2029 are escaped.
+func writeJSONString(buf *bytes.Buffer, s string) {
+	buf.WriteByte('"')
+
+	p := 0 // start of the pending part that needs no escaping
+	for i := 0; i < len(s); {
+		c := s[i]
+
+		if c < utf8.RuneSelf {
+			if c >= 0x20 && c != '"' && c != '\\' && c != '<' && c != '>' && c != '&' {
+				i++
+				continue
+			}
+
+			buf.WriteString(s[p:i])
+			switch c {
+			case '\t':
+				buf.WriteString(`\t`)
+			case '\r':
+				buf.WriteString(`\r`)
+			case '\n':
+				buf.WriteString(`\n`)
+			case '\\':
+				buf.WriteString(`\\`)
+			case '"':
+				buf.WriteString(`\"`)
+			default:
+				buf.WriteString(`\u00`)
+				buf.WriteByte(hexChars[c>>4])
+				buf.WriteByte(hexChars[c&0xf])
+			}
+
+			i++
+			p = i
+			continue
+		}
+
+		r, width := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && width == 1 {
+			buf.WriteString(s[p:i])
+			buf.WriteString(`\ufffd`)
+			i++
+			p = i
+			continue
+		}
+
+		if r == '\u2028' || r == '\u2029' {
+			buf.WriteString(s[p:i])
+			buf.WriteString(`\u202`)
+			buf.WriteByte(hexChars[r&0xf])
+			i += width
+			p = i
+			continue
+		}
+		i += width
+	}
+	buf.WriteString(s[p:])
+	buf.WriteByte('"')
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
