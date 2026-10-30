@@ -3,8 +3,8 @@ package raml
 import (
 	"fmt"
 
+	"github.com/acronis/go-raml/v2/orderedmap"
 	"github.com/acronis/go-stacktrace"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 func (r *RAML) unwrapShape(shape *BaseShape, unwrapCache map[int64]*BaseShape) (*BaseShape, *stacktrace.StackTrace) {

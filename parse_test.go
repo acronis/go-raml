@@ -16,8 +16,8 @@ import (
 )
 
 func writeToDiskHelper(t *testing.T, tt struct {
-	name string
-	typeName string
+	name      string
+	typeName  string
 	outSchema *JSONSchemaRAML
 }) {
 	outputDir := "./test_output"
@@ -35,7 +35,6 @@ func writeToDiskHelper(t *testing.T, tt struct {
 	}
 	t.Logf("Successfully wrote JSON Schema to %s", outputPath)
 }
-
 
 func Test_ParseFixturesIntegration(t *testing.T) {
 	// Define test cases for valid fixtures that should parse successfully
@@ -107,7 +106,11 @@ func Test_ParseFixturesIntegration(t *testing.T) {
 						s := pair.Value
 						typeName := pair.Key
 						outSchema, err := conv.Convert(s.Shape)
-						writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+						writeToDiskHelper(t, struct {
+							name      string
+							typeName  string
+							outSchema *JSONSchemaRAML
+						}{name: tt.name, typeName: typeName, outSchema: outSchema})
 						require.NoError(t, err, "Failed to convert annotation type shape in %s: %v", tt.path, err)
 						convertedCount++
 					}
@@ -115,14 +118,22 @@ func Test_ParseFixturesIntegration(t *testing.T) {
 						s := pair.Value
 						typeName := pair.Key
 						outSchema, err := conv.Convert(s.Shape)
-						writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+						writeToDiskHelper(t, struct {
+							name      string
+							typeName  string
+							outSchema *JSONSchemaRAML
+						}{name: tt.name, typeName: typeName, outSchema: outSchema})
 						require.NoError(t, err, "Failed to convert type shape in %s: %v", tt.path, err)
 						convertedCount++
 					}
 				case *DataType:
 					typeName := f.Shape.Name
 					outSchema, err := conv.Convert(f.Shape.Shape)
-					writeToDiskHelper(t, struct{name string; typeName string; outSchema *JSONSchemaRAML}{name: tt.name, typeName: typeName, outSchema: outSchema})
+					writeToDiskHelper(t, struct {
+						name      string
+						typeName  string
+						outSchema *JSONSchemaRAML
+					}{name: tt.name, typeName: typeName, outSchema: outSchema})
 					require.NoError(t, err, "Failed to convert data type shape in %s: %v", tt.path, err)
 					convertedCount++
 				}
