@@ -4,9 +4,9 @@
 // All operations are constant-time.
 //
 // The package is a temporary vendored copy of github.com/wk8/go-ordered-map/v2 v2.1.8
-// (Apache License 2.0, see LICENSE) with JSON encoding on the standard library instead of
-// github.com/mailru/easyjson. It is to be replaced with github.com/wk8/go-ordered-map/v2
-// once an upstream release drops easyjson, see https://github.com/wk8/go-ordered-map/issues/52.
+// (Apache License 2.0, see LICENSE) with JSON encoding on the standard library.
+// It is to be replaced with github.com/wk8/go-ordered-map/v2 once an upstream release
+// encodes JSON without a third-party package, see https://github.com/wk8/go-ordered-map/issues/52.
 package orderedmap
 
 import (
