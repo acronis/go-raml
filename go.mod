@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/acronis/go-stacktrace v0.4.0
 	github.com/antlr4-go/antlr/v4 v4.13.0
-	github.com/bahlo/generic-list-go v0.2.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/stretchr/testify v1.9.0
 	github.com/zeebo/xxh3 v1.0.2
