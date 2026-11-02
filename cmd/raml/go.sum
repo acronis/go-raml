@@ -1,13 +1,11 @@
-github.com/acronis/go-raml/v2 v2.1.0 h1:l4ZjRly/NOOzIi20sJhHjNNV6/ZyWoEyq7H39+okIVY=
-github.com/acronis/go-raml/v2 v2.1.0/go.mod h1:ZxWg9HJapQWYnF447ThsjIiILVvu/+Z7CK+CqutN7kg=
+github.com/acronis/go-raml/v2 v2.1.1 h1:tRjqudGTsEFPajZNFBQ4orPvHmnHl0sgQDesWT5dppc=
+github.com/acronis/go-raml/v2 v2.1.1/go.mod h1:ZAPd9VxLRI6RdnKGKSTvgt+cl/vo5FYxVCS4wZ5UWA8=
 github.com/acronis/go-stacktrace v0.4.0 h1:rL+6LxDnQ1/KcaCvF6ftC1Hjg91rjuPjPxS7+xH81xk=
 github.com/acronis/go-stacktrace v0.4.0/go.mod h1:7Yf4nTbD//u5yR21BhiLzitxh8lU8Vb8SakHhoRAyqQ=
 github.com/acronis/go-stacktrace/slogex v0.3.0 h1:PdHLMwPql8V7ZnmzzfCuZsrP7xCDpqfyNSfGDu8+OgI=
 github.com/acronis/go-stacktrace/slogex v0.3.0/go.mod h1:iahItfhMndrugljHM87vXza344Lqu7YF4wMUNapf6xw=
 github.com/antlr4-go/antlr/v4 v4.13.1 h1:SqQKkuVZ+zWkMMNkjy5FZe5mr5WURWnlpmOuzYWrPrQ=
 github.com/antlr4-go/antlr/v4 v4.13.1/go.mod h1:GKmUxMtwp6ZgGwZSva4eWPC5mS6vUAmOABFgjdkM7Nw=
-github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
-github.com/bahlo/generic-list-go v0.2.0/go.mod h1:2KvAjgMlE5NNynlg/5iLrrCCZ2+5xWbdbCW3pNTGyYg=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=

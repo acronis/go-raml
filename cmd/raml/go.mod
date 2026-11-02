@@ -3,7 +3,7 @@ module github.com/acronis/go-raml/cmd/raml
 go 1.22.6
 
 require (
-	github.com/acronis/go-raml/v2 v2.1.0
+	github.com/acronis/go-raml/v2 v2.1.1
 	github.com/acronis/go-stacktrace v0.4.0
 	github.com/acronis/go-stacktrace/slogex v0.3.0
 	github.com/dusted-go/logging v1.3.0
@@ -13,7 +13,6 @@ require (
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
-	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
