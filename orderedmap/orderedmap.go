@@ -4,27 +4,26 @@
 // All operations are constant-time.
 //
 // The package is a temporary vendored copy of github.com/wk8/go-ordered-map/v2 v2.1.8
-// (Apache License 2.0, see LICENSE) with JSON encoding on the standard library.
+// (Apache License 2.0, see LICENSE) with JSON encoding and the pair list on the standard library.
 // It is to be replaced with github.com/wk8/go-ordered-map/v2 once an upstream release
 // encodes JSON without a third-party package, see https://github.com/wk8/go-ordered-map/issues/52.
 package orderedmap
 
 import (
+	"container/list"
 	"fmt"
-
-	list "github.com/bahlo/generic-list-go"
 )
 
 type Pair[K comparable, V any] struct {
 	Key   K
 	Value V
 
-	element *list.Element[*Pair[K, V]]
+	element *list.Element // Value holds the *Pair[K, V] that owns the element
 }
 
 type OrderedMap[K comparable, V any] struct {
 	pairs map[K]*Pair[K, V]
-	list  *list.List[*Pair[K, V]]
+	list  *list.List
 }
 
 type initConfig[K comparable, V any] struct {
@@ -86,7 +85,7 @@ func invalidOption() { panic(invalidOptionMessage) }
 
 func (om *OrderedMap[K, V]) initialize(capacity int) {
 	om.pairs = make(map[K]*Pair[K, V], capacity)
-	om.list = list.New[*Pair[K, V]]()
+	om.list = list.New()
 }
 
 // Get looks for the given key, and returns the value associated with it,
@@ -177,7 +176,7 @@ func (om *OrderedMap[K, V]) Oldest() *Pair[K, V] {
 	if om == nil || om.list == nil {
 		return nil
 	}
-	return listElementToPair(om.list.Front())
+	return listElementToPair[K, V](om.list.Front())
 }
 
 // Newest returns a pointer to the newest pair. It's meant to be used to iterate on the ordered map's
@@ -187,24 +186,24 @@ func (om *OrderedMap[K, V]) Newest() *Pair[K, V] {
 	if om == nil || om.list == nil {
 		return nil
 	}
-	return listElementToPair(om.list.Back())
+	return listElementToPair[K, V](om.list.Back())
 }
 
 // Next returns a pointer to the next pair.
 func (p *Pair[K, V]) Next() *Pair[K, V] {
-	return listElementToPair(p.element.Next())
+	return listElementToPair[K, V](p.element.Next())
 }
 
 // Prev returns a pointer to the previous pair.
 func (p *Pair[K, V]) Prev() *Pair[K, V] {
-	return listElementToPair(p.element.Prev())
+	return listElementToPair[K, V](p.element.Prev())
 }
 
-func listElementToPair[K comparable, V any](element *list.Element[*Pair[K, V]]) *Pair[K, V] {
+func listElementToPair[K comparable, V any](element *list.Element) *Pair[K, V] {
 	if element == nil {
 		return nil
 	}
-	return element.Value
+	return element.Value.(*Pair[K, V])
 }
 
 // KeyNotFoundError may be returned by functions in this package when they're called with keys that are not present
@@ -241,8 +240,8 @@ func (om *OrderedMap[K, V]) MoveBefore(key, markKey K) error {
 	return nil
 }
 
-func (om *OrderedMap[K, V]) getElements(keys ...K) ([]*list.Element[*Pair[K, V]], error) {
-	elements := make([]*list.Element[*Pair[K, V]], len(keys))
+func (om *OrderedMap[K, V]) getElements(keys ...K) ([]*list.Element, error) {
+	elements := make([]*list.Element, len(keys))
 	for i, k := range keys {
 		pair, present := om.pairs[k]
 		if !present {

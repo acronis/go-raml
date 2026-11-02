@@ -382,3 +382,73 @@ func TestNilMap(t *testing.T) {
 		assert.Nil(t, om.Newest())
 	})
 }
+
+func TestMoveEdgeCases(t *testing.T) {
+	newMap := func() *OrderedMap[int, string] {
+		return New[int, string](WithInitialData(
+			Pair[int, string]{Key: 1, Value: "a"},
+			Pair[int, string]{Key: 2, Value: "b"},
+			Pair[int, string]{Key: 3, Value: "c"},
+		))
+	}
+	keys := []int{1, 2, 3}
+	values := []string{"a", "b", "c"}
+
+	t.Run("missing key or mark leaves the order unchanged", func(t *testing.T) {
+		om := newMap()
+		assert.Equal(t, &KeyNotFoundError[int]{4}, om.MoveAfter(4, 1))
+		assert.Equal(t, &KeyNotFoundError[int]{4}, om.MoveAfter(1, 4))
+		assert.Equal(t, &KeyNotFoundError[int]{4}, om.MoveBefore(4, 1))
+		assert.Equal(t, &KeyNotFoundError[int]{4}, om.MoveBefore(1, 4))
+		assert.Equal(t, &KeyNotFoundError[int]{4}, om.MoveToBack(4))
+		_, err := om.GetAndMoveToFront(4)
+		assert.Equal(t, &KeyNotFoundError[int]{4}, err)
+		assertOrderedPairsEqual(t, om, keys, values)
+	})
+
+	t.Run("moving relative to itself is a no-op", func(t *testing.T) {
+		om := newMap()
+		assert.NoError(t, om.MoveAfter(2, 2))
+		assert.NoError(t, om.MoveBefore(2, 2))
+		assertOrderedPairsEqual(t, om, keys, values)
+	})
+
+	t.Run("moving to the current position is a no-op", func(t *testing.T) {
+		om := newMap()
+		assert.NoError(t, om.MoveToFront(1))
+		assert.NoError(t, om.MoveToBack(3))
+		assert.NoError(t, om.MoveAfter(2, 1))
+		assert.NoError(t, om.MoveBefore(2, 3))
+		assertOrderedPairsEqual(t, om, keys, values)
+	})
+
+	t.Run("moved and deleted pairs keep neighbours consistent", func(t *testing.T) {
+		om := newMap()
+		assert.NoError(t, om.MoveAfter(1, 3))
+		assertOrderedPairsEqual(t, om, []int{2, 3, 1}, []string{"b", "c", "a"})
+		assert.Equal(t, 2, om.Oldest().Key)
+		assert.Equal(t, 1, om.Newest().Key)
+		assert.Nil(t, om.Oldest().Prev())
+		assert.Nil(t, om.Newest().Next())
+
+		_, present := om.Delete(3)
+		assert.True(t, present)
+		_, present = om.Delete(3)
+		assert.False(t, present)
+		assert.Equal(t, 1, om.GetPair(2).Next().Key)
+		assert.Equal(t, 2, om.GetPair(1).Prev().Key)
+
+		om.Set(3, "c")
+		assert.NoError(t, om.MoveBefore(3, 2))
+		assertOrderedPairsEqual(t, om, []int{3, 2, 1}, []string{"c", "b", "a"})
+	})
+
+	t.Run("deleting the last pair empties the map", func(t *testing.T) {
+		om := New[int, string]()
+		om.Set(1, "a")
+		om.Delete(1)
+		assert.Nil(t, om.Oldest())
+		assert.Nil(t, om.Newest())
+		assert.Equal(t, 0, om.Len())
+	})
+}
