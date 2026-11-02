@@ -109,7 +109,7 @@ func writeQuotedUint(buf *bytes.Buffer, n uint64) {
 const hexChars = "0123456789abcdef"
 
 // writeJSONString writes s as a JSON string with HTML-safe escaping.
-// The output matches github.com/mailru/easyjson/jwriter.Writer.String used by github.com/wk8/go-ordered-map/v2:
+// The output matches the JSON strings of github.com/wk8/go-ordered-map/v2 v2.1.8:
 // \t, \r, \n, \\ and \" use short escapes, other control characters and <, >, & use \u00XX,
 // invalid UTF-8 bytes become \ufffd, U+2028 and U+2029 are escaped.
 func writeJSONString(buf *bytes.Buffer, s string) {
